@@ -1,13 +1,13 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <title>Silent Check SSO</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Silent SSO</title>
   </head>
   <body>
     <script>
-      // Wymagane przez Keycloak do trybu check-sso bez przekierowań pełnoekranowych
-      parent.postMessage(location.href, location.origin);
+      parent.postMessage(location.href, location.origin)
     </script>
   </body>
-  </html>
+</html>

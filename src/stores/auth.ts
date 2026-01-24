@@ -7,6 +7,10 @@ type UserProfile = {
   firstName?: string
   lastName?: string
   email?: string
+  roles?: string[]
+  id?: string
+  hierarchicalId?: string
+  crmNumber?: string
 }
 
 type AuthConfig = {
@@ -63,7 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
     else localStorage.removeItem('crm_token')
   }
 
-  async function init(silent = true) {
+  async function init() {
     if (!config.enabled) return
     if (initializing.value) return
     initializing.value = true
@@ -78,10 +82,9 @@ export const useAuthStore = defineStore('auth', () => {
       keycloak.value = markRaw(kc)
 
       const initOptions = {
-        onLoad: silent ? 'check-sso' : 'login-required',
+        onLoad: 'login-required',
         pkceMethod: 'S256',
         checkLoginIframe: false,
-        silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
       } as const
 
       const authenticated = await kc.init(initOptions)
@@ -129,7 +132,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function ensureInitialized() {
     if (!config.enabled) return
     if (initAttempted.value) return
-    await init(true)
+    await init()
   }
 
   async function login(redirectUri?: string) {
@@ -140,7 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
       saveToken('dev-token')
       return
     }
-    await init(true)
+    await init()
     const kc = keycloak.value
     if (!kc) throw new Error('Keycloak nie jest zainicjalizowany')
     await kc.login({ redirectUri })

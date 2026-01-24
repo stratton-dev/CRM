@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { api } from '@/api/client'
+import AppIcon from '@/components/AppIcon.vue'
 
-type Customer = { id: number; name: string; email?: string; phone?: string }
+type Customer = { id: number | string; name: string; email?: string; phone?: string }
 
 const loading = ref(false)
 const rows = ref<Customer[]>([])
@@ -11,8 +12,14 @@ const error = ref<string | null>(null)
 onMounted(async () => {
   loading.value = true
   try {
-    const { data } = await api.get('/customers') // GET /api/customers
-    rows.value = Array.isArray(data?.data) ? data.data : data
+    const { data } = await api.get('/v1/clients', { params: { per_page: 200 } })
+    const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+    rows.value = list.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      email: item.crm_profile?.contact_email || item.email || undefined,
+      phone: item.crm_profile?.contact_phone || item.phone || undefined,
+    }))
   } catch (e: any) {
     error.value = e?.message || 'Failed to load customers'
   } finally {
@@ -40,7 +47,12 @@ onMounted(async () => {
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="4" class="px-4 py-3">Loading…</td>
+            <td colspan="4" class="px-4 py-3 text-gray-500">
+              <div class="flex items-center gap-2">
+                <AppIcon name="refresh" class="w-4 h-4 animate-spin" />
+                <span>Ładowanie...</span>
+              </div>
+            </td>
           </tr>
           <tr v-else-if="error">
             <td colspan="4" class="px-4 py-3 text-red-600">{{ error }}</td>

@@ -24,6 +24,10 @@ export default defineConfig(async () => ({
     port: 1420,
     strictPort: true,
     host: host || false,
+     allowedHosts: [
+      "crm.stratton.loc",
+      ".stratton.loc"
+    ],
     hmr: host
       ? {
           protocol: "ws",

@@ -11,6 +11,9 @@
   --color-stratton-700: #001024;
   --color-stratton-800: #000A18;
   --color-stratton-900: #00050D;
+  --color-stratton-gold: #C5A059;
+  --color-stratton-dark: #0F172A;
+  --color-stratton-blue: #1E3A8A;
 }
 
 /* Alias utilities to match calc naming */
@@ -24,6 +27,9 @@
 @utility textstratton700 { color: var(--color-stratton-700); }
 @utility textstratton800 { color: var(--color-stratton-800); }
 @utility textstratton900 { color: var(--color-stratton-900); }
+@utility text-stratton-gold { color: var(--color-stratton-gold); }
+@utility text-stratton-dark { color: var(--color-stratton-dark); }
+@utility text-stratton-blue { color: var(--color-stratton-blue); }
 
 @utility bgstratton50 { background-color: var(--color-stratton-50); }
 @utility bgstratton100 { background-color: var(--color-stratton-100); }
@@ -35,6 +41,9 @@
 @utility bgstratton700 { background-color: var(--color-stratton-700); }
 @utility bgstratton800 { background-color: var(--color-stratton-800); }
 @utility bgstratton900 { background-color: var(--color-stratton-900); }
+@utility bg-stratton-gold { background-color: var(--color-stratton-gold); }
+@utility bg-stratton-dark { background-color: var(--color-stratton-dark); }
+@utility bg-stratton-blue { background-color: var(--color-stratton-blue); }
 
 @utility borderstratton50 { border-color: var(--color-stratton-50); }
 @utility borderstratton100 { border-color: var(--color-stratton-100); }
@@ -46,9 +55,42 @@
 @utility borderstratton700 { border-color: var(--color-stratton-700); }
 @utility borderstratton800 { border-color: var(--color-stratton-800); }
 @utility borderstratton900 { border-color: var(--color-stratton-900); }
+@utility border-stratton-gold { border-color: var(--color-stratton-gold); }
 
 /* Route transition */
 .route-enter-from,
 .route-leave-to { opacity: 0; transform: translateY(8px); }
 .route-enter-active,
 .route-leave-active { transition: opacity 220ms ease, transform 220ms ease; }
+
+/* Unified form controls */
+.crm-form :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea
+) {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #fff;
+  color: #0f172a;
+}
+
+.crm-form :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea
+):focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+.crm-form :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea
+)[disabled] {
+  background-color: #f8fafc;
+  color: #94a3b8;
+}
