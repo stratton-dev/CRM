@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     zip unzip git curl \
     && docker-php-ext-install soap \
     && docker-php-ext-install pdo pdo_pgsql \
+    && docker-php-ext-install pcntl \
     && docker-php-ext-install opcache \
     && rm -rf /var/lib/apt/lists/*
 

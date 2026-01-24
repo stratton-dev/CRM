@@ -1,0 +1,9 @@
+- [ ] ClientValidationService
+- [ ] CreateMeetingAction
+- [ ] MeetingRulesService
+- [ ] GenerateCalculationAction
+- [ ] OfferRulesService
+- [ ] Events & Listeners
+- [ ] Permissions
+- [ ] API Routes
+- [ ] Public Offer Flow

@@ -73,6 +73,22 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'keycloak' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/keycloak.log'),
+            'level' => env('LOG_KEYCLOAK_LEVEL', env('LOG_LEVEL', 'debug')),
+            'days' => env('LOG_KEYCLOAK_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'users' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/users.log'),
+            'level' => env('LOG_USERS_LEVEL', env('LOG_LEVEL', 'debug')),
+            'days' => env('LOG_USERS_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
