@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useMailboxStore } from '@/stores/mailbox'
 import { useClientStore } from '@/stores/client'
+import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore'
 import { api } from '@/api/client'
 
 const router = useRouter()
@@ -16,6 +17,7 @@ const auth = useAuthStore()
 const session = useSessionStore()
 const mailbox = useMailboxStore()
 const clientStore = useClientStore()
+const calculatorStore = useCalculatorStore()
 const { clients } = storeToRefs(clientStore)
 
 const defaultRecipient = 'klient@firma.pl'
@@ -27,6 +29,7 @@ const isLoadingClient = ref(false)
 const resolvedClientId = ref<string | null>(null)
 const clientData = ref<{ id: string; name: string; contactEmail?: string | null; contactName?: string | null } | null>(null)
 const hasPrefilled = ref(false)
+const attachmentSummary = ref<Array<{ name: string }>>([])
 
 const meetingId = computed(() => {
   const raw = route.query.meetingId
@@ -35,6 +38,21 @@ const meetingId = computed(() => {
 
 const clientIdFromQuery = computed(() => {
   const raw = route.query.clientId
+  return Array.isArray(raw) ? raw[0] : raw
+})
+
+const templateKey = computed(() => {
+  const raw = route.query.template
+  return Array.isArray(raw) ? raw[0] : raw
+})
+
+const decisionEmailFromQuery = computed(() => {
+  const raw = route.query.decisionEmail
+  return Array.isArray(raw) ? raw[0] : raw
+})
+
+const decisionNameFromQuery = computed(() => {
+  const raw = route.query.decisionName
   return Array.isArray(raw) ? raw[0] : raw
 })
 
@@ -60,9 +78,31 @@ Zespół Stratton
 `
 }
 
+const buildUserSignature = () => {
+  const user = session.currentUser
+  if (!user) return ''
+  const lines = [user.name, user.phone || '', user.email || ''].filter((line) => line && String(line).trim().length > 0)
+  return lines.join('\n')
+}
+
+const buildOfferCalculatorContent = () => {
+  const signature = buildUserSignature()
+  return `Zgodnie z ustaleniami podjętymi podczas naszej rozmowy przesyłam na wskazany adres mailowy omówione informacje. Jednocześnie informuję o prawie do odwołania zgody na przekazywanie kolejnych informacji na ten adres mailowy.
+
+Przygotowane dokumenty są dostępne w załączeniu do tej wiadomości.
+
+Pozdrawiam
+${signature || 'Zespół Stratton'}
+`
+}
+
 const setDefaultContent = () => {
   if (hasPrefilled.value || content.value.trim()) return
-  content.value = buildEmailContent(clientData.value?.contactName || null)
+  if (templateKey.value === 'offer-calculator') {
+    content.value = buildOfferCalculatorContent()
+  } else {
+    content.value = buildEmailContent(clientData.value?.contactName || null)
+  }
   hasPrefilled.value = true
 }
 
@@ -101,10 +141,14 @@ const resolveClientFromStore = (clientId: string) => {
 const applyRecipientDefaults = () => {
   if (!clientData.value) return
   if (!emailTo.value || emailTo.value === defaultRecipient) {
-    emailTo.value = clientData.value.contactEmail || ''
+    emailTo.value = decisionEmailFromQuery.value || clientData.value.contactEmail || ''
   }
   if (subject.value === defaultSubject && clientData.value.name) {
-    subject.value = `${defaultSubject} - ${clientData.value.name}`
+    if (templateKey.value === 'offer-calculator') {
+      subject.value = `Oferta i kalkulator - ${clientData.value.name}`
+    } else {
+      subject.value = `${defaultSubject} - ${clientData.value.name}`
+    }
   }
   setDefaultContent()
 }
@@ -124,6 +168,13 @@ const resolveClient = async () => {
   }
 
   if (!resolvedClientId.value) {
+    if (decisionEmailFromQuery.value && (!emailTo.value || emailTo.value === defaultRecipient)) {
+      emailTo.value = decisionEmailFromQuery.value
+    }
+    if (templateKey.value !== 'offer-calculator' && decisionNameFromQuery.value && !content.value.trim()) {
+      content.value = buildEmailContent(decisionNameFromQuery.value)
+      hasPrefilled.value = true
+    }
     setDefaultContent()
     return
   }
@@ -138,6 +189,20 @@ const resolveClient = async () => {
 
 onMounted(() => {
   resolveClient()
+  if (templateKey.value === 'offer-calculator') {
+    calculatorStore.setContext({
+      meetingId: meetingId.value ? String(meetingId.value) : null,
+      clientId: clientIdFromQuery.value ? String(clientIdFromQuery.value) : null,
+    })
+    calculatorStore.buildOfferEmailAttachments().then((payload) => {
+      if (!payload) return
+      const list = [
+        { name: payload.offerFileName },
+        payload.excelBase64 ? { name: payload.excelFileName } : null,
+      ].filter(Boolean) as Array<{ name: string }>
+      attachmentSummary.value = list
+    })
+  }
 })
 
 const cancel = () => {
@@ -164,8 +229,37 @@ const sendEmail = async () => {
     toast.warning('Uzupełnij adres i temat wiadomości.')
     return
   }
-  await mailbox.sendEmail(user, emailTo.value, subject.value, content.value)
-  toast.success('Pomyślnie wysłano ofertę!')
+  try {
+    let attachments: Array<{ filename: string; content?: string; content_type?: string; encoding?: string; html?: string; convert_to_pdf?: boolean }> | undefined
+    if (templateKey.value === 'offer-calculator') {
+      const offerPayload = await calculatorStore.buildOfferEmailAttachments()
+      if (!offerPayload) {
+        toast.warning('Brak danych oferty do załączenia.')
+      } else {
+        attachments = [
+          {
+            filename: offerPayload.offerFileName,
+            html: offerPayload.offerHtml,
+            convert_to_pdf: true,
+          },
+        ]
+        if (offerPayload.excelBase64) {
+          attachments.push({
+            filename: offerPayload.excelFileName,
+            content: offerPayload.excelBase64,
+            content_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            encoding: 'base64',
+          })
+        }
+      }
+    }
+    await mailbox.sendEmail(user, emailTo.value, subject.value, content.value, attachments)
+    toast.success('Pomyślnie wysłano ofertę!')
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
+    toast.error(message)
+    return
+  }
 
   setTimeout(() => {
     if (resolvedClientId.value) {
@@ -202,17 +296,13 @@ const sendEmail = async () => {
       </div>
 
       <div class="p-6 space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
           <div>
             <label class="block text-xs font-semibold text-gray-500 mb-1">Do:</label>
             <div class="relative">
               <input v-model="emailTo" type="email" class="w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 pl-8 text-sm py-2" />
               <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
             </div>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-500 mb-1">DW:</label>
-            <input type="email" value="kancelaria@stratton.pl" disabled class="w-full bg-gray-50 text-gray-500 border-gray-300 rounded-md text-sm py-2" />
           </div>
         </div>
 
@@ -224,7 +314,14 @@ const sendEmail = async () => {
         <div>
           <label class="block text-xs font-semibold text-gray-500 mb-2">Załączniki:</label>
           <div class="text-xs text-gray-500">
-            {{ isLoadingClient ? 'Ładowanie danych klienta...' : 'Brak załączników.' }}
+            <template v-if="attachmentSummary.length">
+              <ul class="list-disc pl-4">
+                <li v-for="file in attachmentSummary" :key="file.name">{{ file.name }}</li>
+              </ul>
+            </template>
+            <template v-else>
+              {{ isLoadingClient ? 'Ładowanie danych klienta...' : 'Brak załączników.' }}
+            </template>
           </div>
         </div>
 

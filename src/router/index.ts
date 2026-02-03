@@ -53,6 +53,12 @@ router.beforeEach(async (to) => {
   }
   await viewPermissions.ensureLoaded()
   const role = session.currentUser?.role || auth.user?.roles?.find((r) => typeof r === 'string')
+  if (String(to.name || '') === 'settings') {
+    if (!viewPermissions.isSettingsAllowed(role)) {
+      return { path: '/app/dashboard' }
+    }
+    return true
+  }
   if (!viewPermissions.isViewAllowed(String(to.name || ''), role)) {
     return { path: '/app/dashboard' }
   }

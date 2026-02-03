@@ -11,8 +11,19 @@ type DashboardCalculation = {
   company: string
   nip?: string | null
   meeting_id?: string | null
+  client_id?: string | null
   calculation_date?: string | null
   valid_until?: string | null
+  status?: string | null
+}
+type DashboardOverdueInvoice = {
+  id: number | string
+  number: string
+  company: string
+  amount_gross: number
+  issue_date?: string | null
+  due_date?: string | null
+  days_overdue?: number | null
   status?: string | null
 }
 
@@ -28,6 +39,7 @@ const fallbackKpis: DashboardKpi[] = [
 const fallbackCalculations: DashboardCalculation[] = [
   { id: 1, company: 'MegaBud S.A.', nip: '555-666-77-88', meeting_id: 'M-2044/01', calculation_date: new Date().toISOString(), valid_until: new Date().toISOString(), status: 'OFERTA' },
 ]
+const fallbackOverdue: DashboardOverdueInvoice[] = []
 
 export const useDashboardStore = defineStore('dashboard', () => {
   const auth = useAuthStore()
@@ -35,6 +47,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const news = ref<DashboardNews[]>([])
   const kpis = ref<DashboardKpi[]>([])
   const calculations = ref<DashboardCalculation[]>([])
+  const overdueInvoices = ref<DashboardOverdueInvoice[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -43,9 +56,10 @@ export const useDashboardStore = defineStore('dashboard', () => {
     news.value = [...fallbackNews]
     kpis.value = [...fallbackKpis]
     calculations.value = [...fallbackCalculations]
+    overdueInvoices.value = [...fallbackOverdue]
   }
 
-  const fetchDashboard = async (userId?: string | null) => {
+  const fetchDashboard = async (userId?: string | null, params?: { from_date?: string; to_date?: string }) => {
     if (!auth.enabled) {
       hydrateFallback()
       return
@@ -54,12 +68,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
     error.value = null
     try {
       const { data } = await api.get('/v1/crm-dashboard', {
-        params: userId ? { user_id: userId } : undefined,
+        params: {
+          ...(userId ? { user_id: userId } : {}),
+          ...(params || {}),
+        },
       })
       events.value = Array.isArray(data?.events) ? data.events : []
       news.value = Array.isArray(data?.news) ? data.news : []
       kpis.value = Array.isArray(data?.kpis) ? data.kpis : []
       calculations.value = Array.isArray(data?.calculations) ? data.calculations : []
+      overdueInvoices.value = Array.isArray(data?.overdue_invoices) ? data.overdue_invoices : []
     } catch (err: any) {
       error.value = err?.message || 'Nie udało się pobrać danych pulpitu.'
     } finally {
@@ -72,6 +90,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     news,
     kpis,
     calculations,
+    overdueInvoices,
     loading,
     error,
     fetchDashboard,

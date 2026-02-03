@@ -1,0 +1,946 @@
+--- /Users/luksz/projekty2025/stratton/crm/tmp/offer-compare/reference.txt	2026-02-03 13:05:23
++++ /Users/luksz/projekty2025/stratton/crm/tmp/offer-compare/generated.txt	2026-02-03 13:05:23
+@@ -1,377 +1,697 @@
+-nie wiem czy ta strona z tytułem jest ważna i czy
+-robić jakąś stronę tytułową, możemy zrobić najwyżej
+-wyeliminujemy
++STRATTON PRIME
++Oferta Eliton Prime™
++PRZYGOTOWANO DLA:
+ 
+-spis treści:
+-1.ogólne informacje o koszcie aktualnym i wynik z analizy- czyli opisujemy
+-aktualna sytuacje klienta oraz jego cele
+-2.wizualizacja opłat i wynagrodzeń po wdrożeniu eliton prime
+-3.scenariusz rocznycch oszczędności
+-4.symulacja miesiąc do miesiąca
+-5. tabela listy płac dla 10 pracowników w modelu eliton
+-6.gwarancje / korzysci / konstrukcja prawna
+-7.harmonogram wdrożenie i umowa oraz termin ważności wraz z ceną eliton i
+-eliton plus
+-8.firmy podobne do tej i ich osiągnięcia- dodaj dane kontaktowe raz jeszcze z
+-nr oferty
++Przykładowa Sp. z o.o.
++NIP: 1234567890
++3.02.2026
+ 
+-nie wiem czy spis treści też jest ważny
++SPIS TREŚCI
++1. Ilustracja finansowa oszczędności
+ 
+-ILUSTRACJA FINANSOWA
+-OSCZĘDNOŚCII
++1/8
+ 
+-Opracowanie:
+-imię i nazwisko doradcy
+-nr telefonu
+-email
++2. Wizualizacja opłat i wynagrodzeń
+ 
+-imię i nazwisko
+-nazwa firmy + nip
++2/8
+ 
+-Kalkulacja przewidywalnych oszczędności Eliton Prime
+-Nr Kalkulacji: xxxxxxxxxx Data Opracowania : xxxxxxxx
+-Kalkulacje wykonane za zgodą Firmy : x na podstawie danych podanych na spotkaniu.
++3. Scenariusze rocznych oszczędności
+ 
+-Osoba reprezentująca firmę podczas spotkania:
+-Nr telefonu:
+-Adres email:
++3/8
+ 
+-Indywidualna analiza struktury wynagrodzeń zgodna z §2 ust.1 pkt 26 Rozporządzenia MPiPS
++4. Symulacja miesiąc do miesiąca
+ 
+-oferta eliton prime
+-Liczba pracowników objętych KALKULACJĄ: 88 osób
+-PROGNOZOWANA
+-OSZCZĘDNOŚĆ ROCZNA
++4/8
+ 
+-Średnia oszczędność
+-ŚREDNIO NA PRACOWNIKA
+-generowana z jednego PRACOWNIKA
++5. Tabela listy płac (10 pracowników)
+ 
+-PROGNOZOWANA
+-MIESIĘCZNA REDUKCJA
+-OSZCZĘDNOŚĆ MIESIĘCZA
+-KOSZTÓW
++5/8
+ 
+-36 057,60 zł
++6. Gwarancje / korzyści / konstrukcja prawna
+ 
+-3004,80 zł
++6/8
+ 
+-▲Wzrost EBITDA
++7. Harmonogram wdrożenia i warunki
+ 
+-Poprawa Cash-Flow
++7/8
+ 
+-600,96 zł
+-Miesięcznie
++8. Firmy podobne i kontakt
+ 
+-Efekt oszczędności 3 letni
+-ŚREDNIO NA PRACOWNIKA
++8/8
+ 
+-3 600,96 zł
++DATA WYKONANIA
+ 
+-Oferta Eliton Prime i Eliton Prime PLUS
+-- dane do kalkulacji zakładają wysokości wynagrodzeń przeszłych pokazując możliwości przyszłych oszczędności.
+-- umowa główna jest umową otwartą opartą na co miesięcznych nowych kalkulacjach adekwatnych do wysokości prognozowanych wypłat.
+-- opcja PLUS gwarantuje podwyżki w wysokości +5% wynagrodzenia netto dla każdego pracownika korzystającego z modelu Eliton Prime FINANSOWANE PRZEZ STRATTONPRIME
++PRZYGOTOWANO DLA
+ 
+-AKTUALNE OPŁATY ZWIĄZANE Z ZATRUDNIENIEM PRACOWNIKÓW W PAŃSTWA FIRMIE
+-RODZAJ ZATRUDNIENIA
++OPRACOWANIE
+ 
+-ILOŚĆ
+-PRACOWNKÓW
++3.02.2026
+ 
+-NETTO
+-W SUMIE
++Przykładowa Sp. z o.o.
+ 
+-BRUTTO
+-W SUMIE
++Opiekun Stratton
+ 
+-KOSZT
+-W SUMIE
++Ilustracja finansowa oszczędności
++PODSUMOWANIE OFERTY
+ 
+-UMOWA O PRACĘ
++STRATTON PRIME
++Strona 1/8 • Nr kalkulacji: SP/2026/1234567890/001
+ 
+-28
++AKTUALNE OPŁATY ZATRUDNIENIA
+ 
+-88888
++NUMER KALKULACJI
+ 
+-88888
++RODZAJ UMOWY
+ 
+-88888
++LICZBA
+ 
+-UMOWA ZLECENIE
++KOSZT MIESIĘCZNY
+ 
+-8
++UOP
+ 
+-88888
++7
+ 
+-88888
++60 252,22 zł
+ 
+-88888
++UZ
+ 
+-36
++3
+ 
+-88888
++25 214,85 zł
+ 
+-88888
++SP/2026/1234567890/001
++OSOBA REPREZENTUJĄCA FIRMĘ
+ 
+-28 8888
++Jan Kowalski
+ 
+-SUMA
++OFERTA ELITON PRIME
++PROGNOZOWANA OSZCZĘDNOŚĆ ROCZNA
+ 
+-MIESIĘCZNE OPŁATY ZA WSZYTSKICH PRACOWNIKÓW PO ODJĘCIU wynagrodzeń 8 88888
+-ROCZNE OPŁATY ZA WSZYTSKICH PRACOWNIKÓW PO ODJĘCIU wynagrodzeń
+-8 88888
+-INFORMACJE O PAŃSTWA FIRMIE
+-branza
+-AKTUALNE BENEFITY
++75 846,43 zł
++Netto po prowizji
+ 
+-TAK
++Suma
++PROGNOZOWANA OSZCZĘDNOŚĆ
++MIESIĘCZNA
+ 
+-WYMIENIAM
++6320,54 zł
++Netto po prowizji
+ 
+-UDZIAŁ W PROJEKCIE
++ŚREDNIA NA PRACOWNIKA
+ 
+-TAK
++EFEKT 3-LETNI
+ 
+-HORECA
++632,05 zł
+ 
+-PRZESZŁE OSZCZĘDNOŚCI
++227 539,30 zł
+ 
+-NIGDY
++Miesięcznie
+ 
+-0
++Prognoza 36 mies.
+ 
+-AKTUALNE OSZCZĘSNOŚCI
+-PLANOWANE INWESTYCJE
+-ZADEKLAROWANA KWOTA OSZCZĘDNOŚCI
+-CZY SĄ ZADŁUŻENIA
+-Czy są na ryczałt, vat itd.? Tutaj wtedy
+-info o naszych fv kosztowych.
+-1/8
++10 pracowników objętych programem
+ 
+-STRATTON PRIME TO FIRMA DORADZTWA BIZNESOWEGO ODDZIAŁ W POLSCE
+-STRATTON PRIMIE SPO ZOO ODDZIAŁ W POLSCE UL. XXXX 80-999 GDANSK, KRS: 000000000, NIP: 9999999999, INFOLINIA: 9999999, E-MAIL: BIURO@STRATTON-PRIME.PL, WWW.STRATTPN-PRIME.PL
++Model STANDARD
+ 
+-ILUSTRACJA FINANSOWA
+-OSCZĘDNOŚCII
++85 467,07 zł
+ 
+-imię i nazwisko
+-nazwa firmy + nip
++INFORMACJE O PAŃSTWA FIRMIE
++BRANŻA
+ 
+-Opracowanie:
+-imię i nazwisko doradcy
+-nr telefonu
+-email
++BENEFITY
+ 
+-Niniejsza ilustracja przedstawia potencjał finansowy wynikający z wdrożenia modelu wynagradzania Eliton Prime™ w Państwa firmie.
+-KALKULACJA została przygotowana w oparciu o przekazane dane dotyczące struktury wynagrodzeń oraz obowiązujące przepisy prawa pracy i podatkowego.
+-Model Eliton Prime™ pozwala na:
+-redukcję pozapłacowych kosztów zatrudnienia,
+-zachowanie lub zwiększenie wynagrodzeń netto pracowników,
+-pełną zgodność z obowiązującymi przepisami,
+-poprawę płynności finansowej przedsiębiorstwa.
++Usługi
+ 
+-ROCZNE OPŁATY ZA WSZYTSKICH PRACOWNIKÓW PO ODJĘCIU PENSJI
++Pakiet medyczny
+ 
+-8 88888
++UDZIAŁ W PROJEKCIE
+ 
+-MIESIĘCZNE OPŁATY ZA WSZYTSKICH PRACOWNIKÓW PO ODJĘCIU PENSJI
++PRZESZŁE OSZCZĘDNOŚCI
+ 
+-8 88888
++100% pracowników
+ 
+-wizualizacja opłat i wynagrodzeń po wdrożeniu eliton prime
+-TAK AKTUALIE ROZLICZA
+-SIĘ PAŃSTWA FIRMA
++brak danych
+ 
+-REKOMENDUJEMY
+-ELITON PRIME
+-STANDARD
++AKTUALNE OSZCZĘDNOŚCI
+ 
+-ELITON PRIME
+-PLUS
++PLANOWANE INWESTYCJE
+ 
+-319 880,09 zł
++brak danych
+ 
+-SUMA wynagrodzeŃ NETTO
++Automatyzacja procesów
+ 
+-319 824,14 zł
++DEKLAROWANA KWOTA OSZCZĘDNOŚCI
+ 
+-319 824,14 zł
++ZADŁUŻENIA
+ 
+-439 504,52 zł
++200 000 zł
+ 
+-SUMA wynagrodzeŃ BRUTTO
++brak
+ 
+-399 225,05 zł
++RYCZAŁT / VAT
+ 
+-399 225,05 zł
++VAT
+ 
+-53 194,85 zł
++STRATTON PRIME • RAPORT POUFNY
+ 
+-53 194,85 zł
++3.02.2026
+ 
+-55 906,89 zł
++DATA WYKONANIA
+ 
+-55 906,89 zł
++PRZYGOTOWANO DLA
+ 
+-411 789,99 ZŁ
++OPRACOWANIE
+ 
+-411 789,99 ZŁ
++3.02.2026
+ 
+-89 801,26 zł
+-94 388,43 zł
++Przykładowa Sp. z o.o.
+ 
+-składki pracodawcy
+-odprowadzane ZA PRACOWNIKA
++Opiekun Stratton
+ 
+-składki pracownika
+-społeczna+zdrowotna
++Wizualizacja opłat i wynagrodzeń
+ 
+-529 305,78 zł
+-
+-SUMA AKTUALNEGO KOSZU
+-ZATRUDNIENIA
+-wynagrodzenie + składki + podatek
++STRATTON PRIME
++Strona 2/8 • Nr kalkulacji: SP/2026/1234567890/001
+ 
+---------------------
++PORÓWNANIE MODELI
++Aktualny model
+ 
+-WDROŻENIE ELITON PRIME
++Eliton Prime Standard
+ 
+-0 zł
++Eliton Prime Plus (Rekomendujemy)
+ 
+-oszczędność miesięczna
++Koszt całkowity (mies.):
+ 
+-0 zł
++Koszt całkowity (mies.):
+ 
+-0 zł
++Koszt całkowity (mies.):
+ 
+-0 zł
++85 467,07 zł
+ 
+-0 zł
++79 146,53 zł
+ 
+-0 zł
++78 603,59 zł
+ 
+-37 992,87 zł
++Oszczędność: 0 zł
+ 
+-42 159,98 zł
++Oszczędność: 6320,54 zł
+ 
+-455 914,44 zł
++Oszczędność: 6863,48 zł
+ 
+-505 919,76 zł
++WAŻNA INFORMACJA PRAWNA
++Powyższe wyliczenia oparte są na obowiązujących przepisach podatkowych. W kalkulacji uwzględniamy wymagane składki oraz podatki i zapewniamy pełną zgodność rozliczeń z aktualnym
++stanem prawnym.
+ 
+---------------------
++STRATTON PRIME • RAPORT POUFNY
+ 
+-4 945,18 zł
++3.02.2026
+ 
+-1 945,18 zł
++DATA WYKONANIA
+ 
+-1 945,18 zł
++PRZYGOTOWANO DLA
+ 
+-38 893,01 zł
++OPRACOWANIE
+ 
+-27 780,72 zł
++3.02.2026
+ 
+-491 312,91 zł
++Przykładowa Sp. z o.o.
+ 
+-487 145,80 zł
++Opiekun Stratton
+ 
+-W PAŃSTWA FIRMIE
++Scenariusze rocznych oszczędności
+ 
+-PO WDROŻENIU MODELU
++STRATTON PRIME
++Strona 3/8 • Nr kalkulacji: SP/2026/1234567890/001
+ 
++SCENARIUSZE ROCZNE
++WARIANT
++
+ OSZCZĘDNOŚĆ ROCZNA
+-PRZY CO MIESIĘCZNEJ WSPÓŁPRACY
+ 
+-+ 4%
+-PODWYŻKI DLA PRACOWNIKÓW
+-FINANSOWANA PRZEZ STRATTON PRIME
++Aktualne rozliczenie
+ 
+-+2%
+-bonus dla działu księgowo-kadrowego
+-za obsługę modelu eliton prime
++0 zł
+ 
+-opłata success fee za obsługę
+-modelu eliton Prime w państwa firmie
++Eliton Prime Standard
+ 
+-całkowitY koszt pracodawcy
++75 846,43 zł
+ 
+-0 zł
++Eliton Prime Plus
+ 
+-0 zł
++82 361,72 zł
+ 
+-wynagrodzenie + składki + podatek+ eliton prime
++PROGNOZA WIELOLETNIA
++HORYZONT
+ 
+-Oferta Eliton Prime i Eliton Prime PLUS
+-PATRZĄC NA POWYŻSZE ZESTAWIENIE WIDZIMY MOŻLIWOŚĆ WYGENEROWANIA DLA PAŃSTWA FIRMY OSZCZĘDNOŚCI NA POZIOMIE 888888ZŁ /
+-MIESIĘCZNIE. PRZY WYBORZE ELITON PRIME PLUS GWARANTUJEMY PODWYŻKI DLA WSZYTSKICH PRACOWNIKÓW NA POZIOMIE 88888ZŁ ORAZ ZA
+-WSPARCIE DZIAŁU ADMINISTRACJI DODATKOWy bonus W WYSOKOŚCI 8888 ZŁ
+-BIORĄC POD UWAGĘ AKTUALNY MODEL ROZLICZANIA PODEJMUJĄC Z NAMI WSPÓŁPRACĘ OSZCZĘDZAJĄ PAŃSTWO KAPITAŁ NA INWESTYCJĘ,
+-PODNOSZĄ WYNAGRODZENIA PRACOWNIKÓW ORAZ OTRZYMAJĄ PAŃSTWO FAKTURĘ KOSZTOWĄ.
++OSZCZĘDNOŚĆ ŁĄCZNA
+ 
+-tutaj coś o podatkach, że bierzemy je pod
+-uwagę i oplacamy
+-2/8
++1 rok
+ 
+-STRATTON PRIME TO FIRMA DORADZTWA BIZNESOWEGO ODDZIAŁ W POLSCE
+-STRATTON PRIMIE SPO ZOO ODDZIAŁ W POLSCE UL. XXXX 80-999 GDANSK, KRS: 000000000, NIP: 9999999999, INFOLINIA: 9999999, E-MAIL: BIURO@STRATTON-PRIME.PL, WWW.STRATTPN-PRIME.PL
++75 846,43 zł
+ 
+-ILUSTRACJA FINANSOWA
+-OSCZĘDNOŚCII
++3 lata
+ 
+-Opracowanie:
+-imię i nazwisko doradcy
+-nr telefonu
+-email
++227 539,30 zł
+ 
+-imię i nazwisko
+-nazwa firmy + nip
++5 lat
+ 
+-oferta eliton prime
+-Wysokość prezentowanych oszczędności oraz efektów finansowych wynikających z wdrożenia modelu Eliton Prime™ ma
+-charakter orientacyjny i została obliczona na podstawie danych przekazanych przez Klienta, obowiązujących przepisów
+-prawa oraz założeń przyjętych na dzień sporządzenia niniejszej ilustracji.
+-W przypadku zmiany parametrów wejściowych, w szczególności:
+-struktury zatrudnienia,
+-rodzaju umów,
+-wysokości wynagrodzeń,
+-liczby pracowników objętych modelem,
+-przepisów prawa pracy, podatkowego lub ubezpieczeniowego,
+-wartości prezentowanych oszczędności mogą ulec zmianie.
+-Całkowity koszt zatrudnienia po wdrożeniu modelu Eliton Prime™ nie będzie wyższy niż koszt zatrudnienia w aktualnym
+-systemie, przy zachowaniu zgodności z §2 ust. 1 pkt 26 Rozporządzenia MPiPS oraz obowiązkiem wykazania przychodu w PIT11 z zaliczką 12% podatku dochodowego.
+-Analiza została przygotowana przy założeniu:
+-zachowania obecnych wynagrodzeń netto pracowników,
+-pełnej zgodności wdrożenia z dokumentacją opracowaną przez Stratton Prime,
+-standardowego profilu ryzyka podatkowego i ubezpieczeniowego,
+-wdrożenia modelu zgodnie z rekomendacjami doradczymi.
++379 232,16 zł
+ 
+-SCENARIUSZE rocznych OSZCZĘDNOŚCI FINANSOWYCH – ELITON PRIME™
++10 lat
+ 
+-aktualne rozliczenie
++758 464,32 zł
+ 
+-eliton prime
++WAŻNA INFORMACJA PRAWNA
++Oszczędności obliczone są w oparciu o aktualne stawki. Faktury za usługę podlegają standardowym zasadom księgowym i mogą być rozliczane zgodnie z przepisami podatkowymi.
+ 
+-eliton prime plus
++STRATTON PRIME • RAPORT POUFNY
+ 
+-Przewidywane wartości skumulowanych oszczędności rocznych
++3.02.2026
+ 
+-wartość w latach
++DATA WYKONANIA
+ 
+-współpraca na przestrzeni lat
++PRZYGOTOWANO DLA
+ 
+-podwyżki dla pracowników
+-suma opłat w modelu eliton prime plus
++OPRACOWANIE
+ 
+-suma opłat w modelu eliton prime
++3.02.2026
+ 
+-10 lat
+-suma aktualnego kosztu zatrudnienia
++Przykładowa Sp. z o.o.
+ 
+-tutaj info o fv, że można jeszcze odliczyć
+-podatek za naszą usługę
+-3/8
++Opiekun Stratton
+ 
+-STRATTON PRIME TO FIRMA DORADZTWA BIZNESOWEGO ODDZIAŁ W POLSCE
+-STRATTON PRIMIE SPO ZOO ODDZIAŁ W POLSCE UL. XXXX 80-999 GDANSK, KRS: 000000000, NIP: 9999999999, INFOLINIA: 9999999, E-MAIL: BIURO@STRATTON-PRIME.PL, WWW.STRATTPN-PRIME.PL
++Symulacja miesiąc do miesiąca
++
++STRATTON PRIME
++Strona 4/8 • Nr kalkulacji: SP/2026/1234567890/001
++
++MIESIĄC
++
++OSZCZĘDNOŚĆ MIESIĘCZNA
++
++OSZCZĘDNOŚĆ NARASTAJĄCO
+ 
++Styczeń
++
++6320,54 zł
++
++6320,54 zł
++
++Luty
++
++6320,54 zł
++
++12 641,07 zł
++
++Marzec
++
++6320,54 zł
++
++18 961,61 zł
++
++Kwiecień
++
++6320,54 zł
++
++25 282,14 zł
++
++Maj
++
++6320,54 zł
++
++31 602,68 zł
++
++Czerwiec
++
++6320,54 zł
++
++37 923,22 zł
++
++Lipiec
++
++6320,54 zł
++
++44 243,75 zł
++
++Sierpień
++
++6320,54 zł
++
++50 564,29 zł
++
++Wrzesień
++
++6320,54 zł
++
++56 884,82 zł
++
++Październik
++
++6320,54 zł
++
++63 205,36 zł
++
++Listopad
++
++6320,54 zł
++
++69 525,90 zł
++
++Grudzień
++
++6320,54 zł
++
++75 846,43 zł
++
++STRATTON PRIME • RAPORT POUFNY
++
++3.02.2026
++
++DATA WYKONANIA
++
++PRZYGOTOWANO DLA
++
++OPRACOWANIE
++
++3.02.2026
++
++Przykładowa Sp. z o.o.
++
++Opiekun Stratton
++
++Tabela listy płac (10 pracowników)
++
++STRATTON PRIME
++Strona 5/8 • Nr kalkulacji: SP/2026/1234567890/001
++
++Prezentacja pierwszych 10 pracowników (lub top 10 według kosztu). Jeśli lista zawiera więcej osób, pełne dane są dostępne w załącznikach.
++#
++
++PRACOWNIK
++
++UOP/UZ
++
++BRUTTO STANDARD
++
++NETTO STANDARD
++
++NETTO ELITON
++
++OSZCZĘDNOŚĆ (MIES.)
++
++1
++
++Pracownik 1
++
++UOP
++
++7144,31 zł
++
++5200,00 zł
++
++5199,00 zł
++
++1006,05 zł
++
++2
++
++Pracownik 2
++
++UOP
++
++7144,31 zł
++
++5200,00 zł
++
++5199,00 zł
++
++1006,05 zł
++
++3
++
++Pracownik 3
++
++UOP
++
++7144,31 zł
++
++5200,00 zł
++
++5199,00 zł
++
++1006,05 zł
++
++4
++
++Pracownik 4
++
++UOP
++
++7144,31 zł
++
++5200,00 zł
++
++5199,00 zł
++
++1006,05 zł
++
++5
++
++Pracownik 5
++
++UOP
++
++7144,31 zł
++
++5200,00 zł
++
++5199,00 zł
++
++1006,05 zł
++
++6
++
++Pracownik 6
++
++UOP
++
++7144,31 zł
++
++5200,00 zł
++
++5199,00 zł
++
++1006,05 zł
++
++7
++
++Pracownik 7
++
++UOP
++
++7144,31 zł
++
++5200,00 zł
++
++5199,00 zł
++
++1006,05 zł
++
++8
++
++Pracownik 8
++
++UZ
++
++6976,22 zł
++
++5200,00 zł
++
++5199,00 zł
++
++2293,12 zł
++
++9
++
++Pracownik 9
++
++UZ
++
++6976,22 zł
++
++5200,00 zł
++
++5199,00 zł
++
++2293,12 zł
++
++10
++
++Pracownik 10
++
++UZ
++
++6976,22 zł
++
++5200,00 zł
++
++5199,00 zł
++
++2293,12 zł
++
++STRATTON PRIME • RAPORT POUFNY
++
++3.02.2026
++
++DATA WYKONANIA
++
++PRZYGOTOWANO DLA
++
++OPRACOWANIE
++
++3.02.2026
++
++Przykładowa Sp. z o.o.
++
++Opiekun Stratton
++
++Gwarancje / korzyści / konstrukcja prawna
++PODZIAŁ PROWIZJI
++
++STRATTON PRIME
++Strona 6/8 • Nr kalkulacji: SP/2026/1234567890/001
++
++KORZYŚCI
++
++STRUKTURA PROWIZYJNA
++
++BEZPIECZEŃSTWO
++
++Opłata za usługę: 7601,17 zł.
++
++Pełna dokumentacja i wsparcie w czasie wdrożenia.
++
++PODSTAWY PRAWNE
++
++TRANSPARENTNOŚĆ
++
++Model oparty o interpretacje podatkowe i przepisy prawa pracy.
++
++Czytelne zestawienia dla działu kadr i pracowników.
++
++KONTROLA
++
++Miesięczne raporty oszczędności i kosztów.
++
++STRATTON PRIME • RAPORT POUFNY
++
++3.02.2026
++
++DATA WYKONANIA
++
++PRZYGOTOWANO DLA
++
++OPRACOWANIE
++
++3.02.2026
++
++Przykładowa Sp. z o.o.
++
++Opiekun Stratton
++
++Harmonogram wdrożenia i warunki
++
++STRATTON PRIME
++Strona 7/8 • Nr kalkulacji: SP/2026/1234567890/001
++
++ETAPY WDROŻENIA
++
++TYDZIEŃ 1
++
++TYDZIEŃ 2
++
++TYDZIEŃ 3
++
++TYDZIEŃ 4
++
++Analiza
++
++Komunikacja
++
++Wdrożenie
++
++Monitoring
++
++Weryfikacja danych kadrowych i
++przygotowanie procesu.
++
++Przedstawienie modelu pracownikom i
++zebranie zgód.
++
++Uruchomienie świadczeń i pierwsze
++rozliczenie.
++
++Raportowanie efektów i optymalizacje.
++
++CENA ELITON STANDARD
++
++CENA ELITON PLUS
++
++7601,17 zł / mies. (prowizja)
++
++7058,23 zł / mies. (prowizja)
++
++WAŻNOŚĆ OFERTY
++
++UMOWA
++
++17.02.2026
++
++Podpisanie umowy następuje po akceptacji oferty.
++
++STRATTON PRIME • RAPORT POUFNY
++
++3.02.2026
++
++DATA WYKONANIA
++
++PRZYGOTOWANO DLA
++
++OPRACOWANIE
++
++3.02.2026
++
++Przykładowa Sp. z o.o.
++
++Opiekun Stratton
++
++Firmy podobne i kontakt
++
++STRATTON PRIME
++Strona 8/8 • Nr kalkulacji: SP/2026/1234567890/001
++
++FIRMY PODOBNE I OSIĄGNIĘCIA
++Referencje z branż produkcyjnych, usługowych i logistycznych dostępne są na życzenie. Wyniki wdrożeń obejmują średnie oszczędności rzędu 12–18% w skali roku.
++
++KONTAKT
++OPIEKUN OFERTY
++
++NUMER OFERTY
++
++Opiekun Stratton
++
++SP/2026/1234567890/001
++
++opiekun@stratton.pl
++
++DATA SPORZĄDZENIA
++
+++48 500 111 222
++
++3.02.2026
++
++STRATTON PRIME • RAPORT POUFNY
++
++3.02.2026
++
+ 
+\ No newline at end of file

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/api/client'
+import { apiBaseUrl } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useDataStore } from '@/stores/data'
 import type { KnowledgeFile } from '@/types/models'
@@ -23,13 +24,21 @@ export const useKnowledgeBaseStore = defineStore('knowledge-base', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  const resolveFileUrl = (url: string) => {
+    if (!url) return ''
+    if (url.startsWith('http://') || url.startsWith('https://')) return url
+    if (url.startsWith('//')) return `${window.location.protocol}${url}`
+    const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, '')
+    return `${apiOrigin}${url.startsWith('/') ? '' : '/'}${url}`
+  }
+
   const mapApiFile = (file: ApiKnowledgeFile): KnowledgeFile => ({
     id: String(file.id),
     name: file.name,
     description: file.description || '',
     category: file.category as any,
     fileType: file.file_type as any,
-    fileUrl: file.file_url,
+    fileUrl: resolveFileUrl(file.file_url),
     addedDate: file.added_at || new Date().toISOString(),
     size: file.size || '',
   })
@@ -87,5 +96,17 @@ export const useKnowledgeBaseStore = defineStore('knowledge-base', () => {
     files.value = [mapped, ...files.value]
   }
 
-  return { files, loading, error, fetchFiles, uploadFile }
+  const deleteFile = async (id: string) => {
+    if (!auth.enabled) {
+      files.value = files.value.filter((item) => item.id !== id)
+      if (Array.isArray(dataStore.knowledgeFiles)) {
+        dataStore.knowledgeFiles = dataStore.knowledgeFiles.filter((item) => String(item.id) !== id)
+      }
+      return
+    }
+    await api.delete(`/v1/crm-knowledge-files/${id}`)
+    files.value = files.value.filter((item) => item.id !== id)
+  }
+
+  return { files, loading, error, fetchFiles, uploadFile, deleteFile }
 })

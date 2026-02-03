@@ -52,7 +52,7 @@ const sortDir = ref<'asc' | 'desc'>('desc')
 const draggedClientId = ref<string | null>(null)
 const selectedActivityType = ref('CALL')
 const activityDescription = ref('')
-const consentCatalog = ref<Array<{ id: string; code: string; title: string; description: string; required: boolean; updated_at?: string | null }>>([])
+const consentCatalog = ref<Array<{ id: string; code: string; title: string; description: string; required: boolean; updated_at?: string | null; file_url?: string | null; file_name?: string | null }>>([])
 const clientConsentEntries = ref<Array<{ id: string; consent_id: string; accepted_at?: string | null; denied_at?: string | null; consent?: { id: string; updated_at?: string | null } }>>([])
 const consentsLoading = ref(false)
 const clientContacts = ref<ClientContact[]>([])
@@ -273,6 +273,11 @@ const formatDateTime = (value?: string | null) => (value ? new Date(value).toLoc
 
 const fetchCalculationStatuses = async () => {
   if (!auth.enabled) return
+  const fallback = [
+    { key: 'PREPARING', label: 'W trakcie przygotowania' },
+    { key: 'READY', label: 'Gotowa' },
+    { key: 'SENT', label: 'Wysłana' },
+  ]
   try {
     const { data } = await api.get('/v1/calculator-configs', {
       params: {
@@ -284,12 +289,19 @@ const fetchCalculationStatuses = async () => {
     const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
     const latest = list[0]
     const statuses = Array.isArray(latest?.value_json) ? latest.value_json : []
-    calculationStatuses.value = statuses.map((item: any) => ({
-      key: String(item.key || ''),
-      label: String(item.label || item.key || ''),
-    }))
+    const normalized = statuses
+      .map((item: any) => ({
+        key: String(item.key || '').toUpperCase(),
+        label: String(item.label || item.key || ''),
+      }))
+      .filter((item: any) => item.key)
+    const merged = [...normalized]
+    fallback.forEach((item) => {
+      if (!merged.some((entry) => entry.key === item.key)) merged.push(item)
+    })
+    calculationStatuses.value = merged
   } catch (error: any) {
-    calculationStatuses.value = []
+    calculationStatuses.value = fallback
   }
 }
 
@@ -298,13 +310,22 @@ const fetchClientCalculations = async (clientId: string) => {
   calculationsLoading.value = true
   calculationsError.value = null
   try {
-    const { data } = await api.get('/v1/calculations', { params: { per_page: 200 } })
-    const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
-    const filtered = list.filter((item: any) => String(item.meeting?.client_id) === clientId)
-    clientCalculations.value = filtered.map((item: any) => ({
+    const pageSize = 200
+    let page = 1
+    let all: any[] = []
+    for (;;) {
+      const { data } = await api.get('/v1/calculations', {
+        params: { per_page: pageSize, page, client_id: clientId },
+      })
+      const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+      all = all.concat(list)
+      if (list.length < pageSize) break
+      page += 1
+    }
+    clientCalculations.value = all.map((item: any) => ({
       id: String(item.id),
       meetingId: String(item.meeting_id || item.meeting?.id || ''),
-      status: String(item.status || 'PREPARING'),
+      status: String(item.status || 'PREPARING').toUpperCase(),
       employeeCount: Number(item.employee_count || 0),
       savingsAmount: Number(item.savings_amount || 0),
       validUntil: item.valid_until,
@@ -328,6 +349,37 @@ const updateCalculationStatus = async (calcId: string, status: string) => {
   }
 }
 
+const getDecisionMakerContact = () => {
+  if (!clientContacts.value.length) return null
+  const decision = clientContacts.value.find((contact) => contact.is_decision_maker && contact.email)
+  if (decision) return decision
+  const fallback = clientContacts.value.find((contact) => contact.email)
+  return fallback || null
+}
+
+const openOfferEmail = (calc: { meetingId: string }) => {
+  if (!selectedClient.value) return
+  const decision = getDecisionMakerContact()
+  const fallbackEmail = selectedClient.value.contactEmail || ''
+  const targetEmail = decision?.email || fallbackEmail
+
+  if (!targetEmail) {
+    toast.warning('Brak adresu e-mail osoby decyzyjnej.')
+  }
+
+  router.push({
+    path: '/app/sales/email-compose',
+    query: {
+      clientId: selectedClient.value.id,
+      meetingId: calc.meetingId || selectedClient.value.meetingId || '',
+      template: 'offer-calculator',
+      decisionEmail: targetEmail,
+      decisionName: decision?.name || selectedClient.value.contactName || '',
+      companyName: selectedClient.value.name || '',
+    },
+  })
+}
+
 const fetchConsentCatalog = async () => {
   if (!auth.enabled) return
   try {
@@ -339,6 +391,8 @@ const fetchConsentCatalog = async () => {
       title: String(item.title || item.code || ''),
       description: String(item.description || ''),
       required: Boolean(item.required),
+      file_url: item.file_url || null,
+      file_name: item.file_name || null,
       updated_at: item.updated_at || item.updatedAt || null,
     }))
   } catch (error: any) {
@@ -480,6 +534,28 @@ const needsConsentUpdate = (consentId: string) => {
   const catalog = consentCatalog.value.find((c) => c.id === consentId)
   if (!catalog?.updated_at) return false
   return new Date(catalog.updated_at) > new Date(entry.accepted_at)
+}
+
+const openConsentFile = async (consent: { id: string; file_name?: string | null }, download = false) => {
+  try {
+    const { data } = await api.get(`/v1/consents/${consent.id}/file`, {
+      params: download ? { download: 1 } : undefined,
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(data)
+    if (download) {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = consent.file_name || 'consent.pdf'
+      a.click()
+      window.URL.revokeObjectURL(url)
+      return
+    }
+    window.open(url, '_blank')
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać pliku.'
+    toast.error(message)
+  }
 }
 
 const toggleClientConsent = async (consentId: string, checked: boolean) => {
@@ -945,6 +1021,10 @@ if (route.query.expand) {
                       <span v-if="needsConsentUpdate(consent.id)" class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Wymaga aktualizacji</span>
                     </div>
                     <p v-if="consent.description" class="text-xs text-gray-500">{{ consent.description }}</p>
+                    <div v-if="consent.file_url" class="mt-2 flex items-center gap-3 text-xs">
+                      <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, false)">Podgląd</button>
+                      <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, true)">Pobierz</button>
+                    </div>
                     <div class="mt-2 text-[11px] text-gray-400 flex flex-wrap gap-x-4 gap-y-1">
                       <span>Akceptacja: {{ formatDateTime(getConsentEntry(consent.id)?.accepted_at) }}</span>
                       <span>Odmowa: {{ formatDateTime(getConsentEntry(consent.id)?.denied_at) }}</span>
@@ -1137,6 +1217,11 @@ if (route.query.expand) {
                       <option v-if="calculationStatuses.length === 0" value="READY">Gotowa</option>
                       <option v-if="calculationStatuses.length === 0" value="SENT">Wysłana</option>
                     </select>
+                  </div>
+                  <div class="mt-3 flex items-center justify-end">
+                    <button type="button" class="text-xs font-semibold px-3 py-1.5 rounded border border-indigo-200 text-indigo-700 hover:bg-indigo-50" @click="openOfferEmail(calc)">
+                      Wyślij ofertę
+                    </button>
                   </div>
                 </div>
               </div>

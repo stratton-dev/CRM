@@ -1,0 +1,980 @@
+
+    <!DOCTYPE html>
+    <html lang="pl">
+    <head>
+      <meta charset="UTF-8">
+      <title>Oferta Optymalizacji - Przykładowa Sp. z o.o.</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+      <style>
+        :root {
+          --navy: #0B1020;
+          --navy-light: #162035;
+          --gold: #C6A15B;
+          --gold-light: #E5C585;
+          --white: #FFFFFF;
+          --gray-bg: #F9FAFB;
+          --gray-border: #E5E7EB;
+          --text-main: #1F2937;
+          --text-muted: #64748B;
+          --success: #059669;
+          --danger: #b91c1c;
+        }
+
+        @page { size: A4 landscape; margin: 0; }
+
+        body {
+          font-family: 'Inter', sans-serif;
+          margin: 0;
+          padding: 0;
+          background: #333;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .page {
+          width: 297mm;
+          height: 210mm;
+          background: var(--white);
+          margin: 20px auto;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+          display: flex;
+          flex-direction: column;
+          page-break-after: always;
+        }
+
+        @media print {
+          body { background: white; }
+          .page { margin: 0; box-shadow: none; page-break-after: always; height: 210mm; width: 297mm; }
+        }
+
+        h1, h2, h3 { font-family: 'Cinzel', serif; color: var(--navy); margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        .text-gold { color: var(--gold); }
+        .text-navy { color: var(--navy); }
+        .muted { color: #64748b; font-size: 10pt; line-height: 1.6; }
+
+        .page-header {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          padding: 18px 40px 12px;
+          border-bottom: 1px solid #e2e8f0;
+          background: white;
+          z-index: 10;
+        }
+
+        .header-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+
+        .header-label {
+          font-size: 8pt;
+          text-transform: uppercase;
+          color: #94a3b8;
+          letter-spacing: 1px;
+        }
+
+        .header-value {
+          font-size: 10pt;
+          font-weight: 600;
+          color: var(--navy);
+        }
+
+        .header-logo {
+          font-family: 'Cinzel', serif;
+          font-weight: 700;
+          text-align: right;
+          font-size: 12pt;
+          color: var(--gold);
+        }
+
+        .header-title {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+        }
+
+        .ph-title {
+          font-size: 16pt;
+          font-weight: 700;
+          color: var(--navy);
+        }
+
+        .ph-meta {
+          font-size: 9pt;
+          color: #94a3b8;
+          text-align: right;
+          font-family: monospace;
+        }
+
+        .page-body { margin-top: 86px; height: calc(100% - 86px); }
+        .page-pad { padding: 28px 40px; }
+
+        .grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .grid-three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+        .info-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; background: #f8fafc; }
+        .info-label { font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px; }
+        .info-value { font-size: 12px; font-weight: 600; color: var(--navy); margin-top: 6px; }
+
+        .kpi-card { background: #f8fafc; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; }
+        .kpi-label { font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px; }
+        .kpi-val { font-size: 18px; font-weight: 800; color: var(--navy); margin-top: 6px; }
+        .kpi-sub { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+
+        .kpi-card.highlight { background: var(--navy); color: white; border: none; }
+        .kpi-card.highlight .kpi-label { color: rgba(255,255,255,0.6); }
+        .kpi-card.highlight .kpi-val { color: var(--gold); }
+        .kpi-card.highlight .kpi-sub { color: rgba(255,255,255,0.4); }
+
+        .fin-table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+        .fin-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--navy); color: var(--navy); font-weight: 700; text-transform: uppercase; font-size: 8pt; background: #f1f5f9; }
+        .fin-table td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+        .col-highlight { background: rgba(198, 161, 91, 0.08); font-weight: 600; color: var(--navy); }
+        .row-total td { font-weight: 800; border-top: 2px solid var(--navy); background: #f8fafc; font-size: 10pt; color: var(--navy); }
+
+        .small-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+        .small-table th { text-align: left; padding: 8px 10px; border-bottom: 1px solid #cbd5f5; background: #f8fafc; font-size: 7.5pt; text-transform: uppercase; color: #64748b; }
+        .small-table td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
+
+        .badge-success { background: #ecfdf5; color: #047857; padding: 3px 8px; border-radius: 4px; font-size: 8pt; font-weight: 700; display: inline-block; }
+        .badge-blue { background: #eff6fc; color: #1e3a8a; padding: 3px 8px; border-radius: 4px; font-size: 8pt; font-weight: 700; display: inline-block; }
+
+        .section-title { font-size: 12pt; font-weight: 700; color: var(--navy); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; font-family: 'Cinzel', serif; }
+
+        .timeline-container { margin-top: 24px; position: relative; padding: 20px 0; }
+        .timeline-line { position: absolute; top: 32px; left: 60px; right: 60px; height: 3px; background: #e2e8f0; z-index: 0; }
+        .timeline-steps { display: flex; justify-content: space-between; position: relative; z-index: 1; }
+        .tl-step { text-align: center; flex: 1; padding: 0 10px; }
+        .tl-dot-wrapper { display: flex; justify-content: center; margin-bottom: 14px; }
+        .tl-dot { width: 16px; height: 16px; background: var(--navy); border: 4px solid white; border-radius: 50%; box-shadow: 0 0 0 3px var(--navy); }
+        .tl-week { font-size: 8pt; color: var(--gold); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 1px; }
+        .tl-title { font-size: 10pt; font-weight: 700; color: var(--navy); margin-bottom: 6px; font-family: 'Cinzel', serif; }
+        .tl-desc { font-size: 8pt; color: #64748b; line-height: 1.4; max-width: 200px; margin: 0 auto; }
+
+        .footer { position: absolute; bottom: 16px; left: 40px; right: 40px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 8pt; color: #94a3b8; text-transform: uppercase; }
+        .toc-list { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px; }
+        .toc-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding-bottom: 6px; font-size: 10pt; }
+        .cover {
+          background: radial-gradient(circle at 0% 0%, #1e293b 0%, var(--navy) 60%);
+          color: white;
+          padding: 60px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .cover-title { font-size: 34px; font-weight: 700; color: var(--gold); letter-spacing: 2px; }
+        .cover-sub { font-size: 18px; opacity: 0.8; }
+
+        .compare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .compare-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; background: #f8fafc; }
+        .compare-card.highlight { background: #fff7ed; border-color: #fdba74; }
+        .compare-title { font-size: 10pt; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+        .legal-box { border: 1px solid #fee2e2; background: #fff5f5; padding: 12px; border-radius: 8px; font-size: 9pt; color: #7f1d1d; }
+      </style>
+    </head>
+    <body>
+
+      
+      <div class="page">
+        <div class="cover">
+          <div>
+            <div class="cover-title">STRATTON PRIME</div>
+            <div class="cover-sub">Oferta Eliton Prime™</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; text-transform: uppercase; opacity: 0.7;">Przygotowano dla:</div>
+            <div style="font-size: 24px; font-weight: 600;">Przykładowa Sp. z o.o.</div>
+            <div style="font-size: 14px; opacity: 0.8;">NIP: 1234567890</div>
+          </div>
+          <div style="font-size: 10px; opacity: 0.6;">3.02.2026</div>
+        </div>
+      </div>
+      
+
+      
+      <div class="page">
+        <div class="page-pad" style="padding-top: 40px;">
+          <div class="section-title">Spis treści</div>
+          <div class="toc-list">
+            
+              <div class="toc-item"><span>1. Ilustracja finansowa oszczędności</span><span>1/8</span></div>
+            
+              <div class="toc-item"><span>2. Wizualizacja opłat i wynagrodzeń</span><span>2/8</span></div>
+            
+              <div class="toc-item"><span>3. Scenariusze rocznych oszczędności</span><span>3/8</span></div>
+            
+              <div class="toc-item"><span>4. Symulacja miesiąc do miesiąca</span><span>4/8</span></div>
+            
+              <div class="toc-item"><span>5. Tabela listy płac (10 pracowników)</span><span>5/8</span></div>
+            
+              <div class="toc-item"><span>6. Gwarancje / korzyści / konstrukcja prawna</span><span>6/8</span></div>
+            
+              <div class="toc-item"><span>7. Harmonogram wdrożenia i warunki</span><span>7/8</span></div>
+            
+              <div class="toc-item"><span>8. Firmy podobne i kontakt</span><span>8/8</span></div>
+            
+          </div>
+        </div>
+      </div>
+      
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Ilustracja finansowa oszczędności</div>
+        <div class="ph-meta">Strona 1/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <div class="grid-two">
+            <div>
+              <div class="section-title">Podsumowanie oferty</div>
+              <div class="info-card" style="margin-bottom: 12px;">
+                <div class="info-label">Numer kalkulacji</div>
+                <div class="info-value">SP/2026/1234567890/001</div>
+                <div class="info-label" style="margin-top: 8px;">Osoba reprezentująca firmę</div>
+                <div class="info-value">Jan Kowalski</div>
+              </div>
+              <div class="section-title">Oferta Eliton Prime</div>
+              <div class="grid-two">
+                <div class="kpi-card highlight">
+                  <div class="kpi-label">Prognozowana oszczędność roczna</div>
+                  <div class="kpi-val">75 846,43 zł</div>
+                  <div class="kpi-sub">Netto po prowizji</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">Prognozowana oszczędność miesięczna</div>
+                  <div class="kpi-val">6320,54 zł</div>
+                  <div class="kpi-sub">Netto po prowizji</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">Średnia na pracownika</div>
+                  <div class="kpi-val">632,05 zł</div>
+                  <div class="kpi-sub">Miesięcznie</div>
+                </div>
+                <div class="kpi-card">
+                  <div class="kpi-label">Efekt 3-letni</div>
+                  <div class="kpi-val">227 539,30 zł</div>
+                  <div class="kpi-sub">Prognoza 36 mies.</div>
+                </div>
+              </div>
+              <div style="margin-top: 10px; display: flex; gap: 10px;">
+                <span class="badge-success">10 pracowników objętych programem</span>
+                <span class="badge-blue">Model STANDARD</span>
+              </div>
+            </div>
+            <div>
+              <div class="section-title">Aktualne opłaty zatrudnienia</div>
+              <table class="fin-table">
+                <thead>
+                  <tr>
+                    <th>Rodzaj umowy</th>
+                    <th>Liczba</th>
+                    <th>Koszt miesięczny</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>UOP</td>
+                    <td>7</td>
+                    <td>60 252,22 zł</td>
+                  </tr>
+                  <tr>
+                    <td>UZ</td>
+                    <td>3</td>
+                    <td>25 214,85 zł</td>
+                  </tr>
+                  <tr class="row-total">
+                    <td colspan="2">Suma</td>
+                    <td>85 467,07 zł</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="section-title" style="margin-top: 16px;">Informacje o Państwa firmie</div>
+              <div class="grid-two">
+                <div class="info-card">
+                  <div class="info-label">Branża</div>
+                  <div class="info-value">Usługi</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Benefity</div>
+                  <div class="info-value">Pakiet medyczny</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Udział w projekcie</div>
+                  <div class="info-value">100% pracowników</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Przeszłe oszczędności</div>
+                  <div class="info-value">brak danych</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Aktualne oszczędności</div>
+                  <div class="info-value">brak danych</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Planowane inwestycje</div>
+                  <div class="info-value">Automatyzacja procesów</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Deklarowana kwota oszczędności</div>
+                  <div class="info-value">200 000 zł</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Zadłużenia</div>
+                  <div class="info-value">brak</div>
+                </div>
+                <div class="info-card">
+                  <div class="info-label">Ryczałt / VAT</div>
+                  <div class="info-value">VAT</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Wizualizacja opłat i wynagrodzeń</div>
+        <div class="ph-meta">Strona 2/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <div class="section-title">Porównanie modeli</div>
+          <div class="compare-grid">
+            <div class="compare-card">
+              <div class="compare-title">Aktualny model</div>
+              <div class="muted">Koszt całkowity (mies.):</div>
+              <div class="kpi-val">85 467,07 zł</div>
+              <div class="muted">Oszczędność: 0 zł</div>
+            </div>
+            <div class="compare-card">
+              <div class="compare-title">Eliton Prime Standard</div>
+              <div class="muted">Koszt całkowity (mies.):</div>
+              <div class="kpi-val">79 146,53 zł</div>
+              <div class="muted">Oszczędność: 6320,54 zł</div>
+            </div>
+            <div class="compare-card highlight">
+              <div class="compare-title">Eliton Prime Plus (Rekomendujemy)</div>
+              <div class="muted">Koszt całkowity (mies.):</div>
+              <div class="kpi-val">78 603,59 zł</div>
+              <div class="muted">Oszczędność: 6863,48 zł</div>
+            </div>
+          </div>
+          <div class="section-title" style="margin-top: 16px;">Ważna informacja prawna</div>
+          <div class="legal-box">
+            Powyższe wyliczenia oparte są na obowiązujących przepisach podatkowych. W kalkulacji uwzględniamy wymagane
+            składki oraz podatki i zapewniamy pełną zgodność rozliczeń z aktualnym stanem prawnym.
+          </div>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Scenariusze rocznych oszczędności</div>
+        <div class="ph-meta">Strona 3/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <div class="section-title">Scenariusze roczne</div>
+          <table class="fin-table">
+            <thead>
+              <tr>
+                <th>Wariant</th>
+                <th>Oszczędność roczna</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Aktualne rozliczenie</td>
+                <td>0 zł</td>
+              </tr>
+              <tr>
+                <td>Eliton Prime Standard</td>
+                <td>75 846,43 zł</td>
+              </tr>
+              <tr>
+                <td>Eliton Prime Plus</td>
+                <td>82 361,72 zł</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="section-title" style="margin-top: 16px;">Prognoza wieloletnia</div>
+          <table class="fin-table">
+            <thead>
+              <tr>
+                <th>Horyzont</th>
+                <th>Oszczędność łączna</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>1 rok</td>
+                  <td>75 846,43 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>3 lata</td>
+                  <td>227 539,30 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>5 lat</td>
+                  <td>379 232,16 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>10 lat</td>
+                  <td>758 464,32 zł</td>
+                </tr>
+              
+            </tbody>
+          </table>
+          <div class="section-title" style="margin-top: 16px;">Ważna informacja prawna</div>
+          <div class="legal-box">
+            Oszczędności obliczone są w oparciu o aktualne stawki. Faktury za usługę podlegają standardowym zasadom
+            księgowym i mogą być rozliczane zgodnie z przepisami podatkowymi.
+          </div>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Symulacja miesiąc do miesiąca</div>
+        <div class="ph-meta">Strona 4/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <table class="fin-table">
+            <thead>
+              <tr>
+                <th>Miesiąc</th>
+                <th>Oszczędność miesięczna</th>
+                <th>Oszczędność narastająco</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>Styczeń</td>
+                  <td>6320,54 zł</td>
+                  <td>6320,54 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Luty</td>
+                  <td>6320,54 zł</td>
+                  <td>12 641,07 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Marzec</td>
+                  <td>6320,54 zł</td>
+                  <td>18 961,61 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Kwiecień</td>
+                  <td>6320,54 zł</td>
+                  <td>25 282,14 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Maj</td>
+                  <td>6320,54 zł</td>
+                  <td>31 602,68 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Czerwiec</td>
+                  <td>6320,54 zł</td>
+                  <td>37 923,22 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Lipiec</td>
+                  <td>6320,54 zł</td>
+                  <td>44 243,75 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Sierpień</td>
+                  <td>6320,54 zł</td>
+                  <td>50 564,29 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Wrzesień</td>
+                  <td>6320,54 zł</td>
+                  <td>56 884,82 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Październik</td>
+                  <td>6320,54 zł</td>
+                  <td>63 205,36 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Listopad</td>
+                  <td>6320,54 zł</td>
+                  <td>69 525,90 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>Grudzień</td>
+                  <td>6320,54 zł</td>
+                  <td>75 846,43 zł</td>
+                </tr>
+              
+            </tbody>
+          </table>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Tabela listy płac (10 pracowników)</div>
+        <div class="ph-meta">Strona 5/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <div class="muted" style="margin-bottom: 10px;">
+            Prezentacja pierwszych 10 pracowników (lub top 10 według kosztu). Jeśli lista zawiera więcej osób, pełne dane
+            są dostępne w załącznikach.
+          </div>
+          <table class="small-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Pracownik</th>
+                <th>UOP/UZ</th>
+                <th>Brutto standard</th>
+                <th>Netto standard</th>
+                <th>Netto Eliton</th>
+                <th>Oszczędność (mies.)</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+                <tr>
+                  <td>1</td>
+                  <td>Pracownik 1</td>
+                  <td>UOP</td>
+                  <td>7144,31 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>1006,05 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>2</td>
+                  <td>Pracownik 2</td>
+                  <td>UOP</td>
+                  <td>7144,31 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>1006,05 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>3</td>
+                  <td>Pracownik 3</td>
+                  <td>UOP</td>
+                  <td>7144,31 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>1006,05 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>4</td>
+                  <td>Pracownik 4</td>
+                  <td>UOP</td>
+                  <td>7144,31 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>1006,05 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>5</td>
+                  <td>Pracownik 5</td>
+                  <td>UOP</td>
+                  <td>7144,31 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>1006,05 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>6</td>
+                  <td>Pracownik 6</td>
+                  <td>UOP</td>
+                  <td>7144,31 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>1006,05 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>7</td>
+                  <td>Pracownik 7</td>
+                  <td>UOP</td>
+                  <td>7144,31 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>1006,05 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>8</td>
+                  <td>Pracownik 8</td>
+                  <td>UZ</td>
+                  <td>6976,22 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>2293,12 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>9</td>
+                  <td>Pracownik 9</td>
+                  <td>UZ</td>
+                  <td>6976,22 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>2293,12 zł</td>
+                </tr>
+              
+                <tr>
+                  <td>10</td>
+                  <td>Pracownik 10</td>
+                  <td>UZ</td>
+                  <td>6976,22 zł</td>
+                  <td>5200,00 zł</td>
+                  <td>5199,00 zł</td>
+                  <td>2293,12 zł</td>
+                </tr>
+              
+            </tbody>
+          </table>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Gwarancje / korzyści / konstrukcja prawna</div>
+        <div class="ph-meta">Strona 6/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <div class="grid-two">
+            <div>
+              <div class="section-title">Podział prowizji</div>
+              <div class="info-card" style="margin-bottom: 12px;">
+                <div class="info-label">Struktura prowizyjna</div>
+                <div class="info-value">
+                  Opłata za usługę: 7601,17 zł.
+                </div>
+              </div>
+              <div class="info-card">
+                <div class="info-label">Podstawy prawne</div>
+                <div class="info-value">Model oparty o interpretacje podatkowe i przepisy prawa pracy.</div>
+              </div>
+            </div>
+            <div>
+              <div class="section-title">Korzyści</div>
+              <div class="info-card" style="margin-bottom: 12px;">
+                <div class="info-label">Bezpieczeństwo</div>
+                <div class="info-value">Pełna dokumentacja i wsparcie w czasie wdrożenia.</div>
+              </div>
+              <div class="info-card" style="margin-bottom: 12px;">
+                <div class="info-label">Transparentność</div>
+                <div class="info-value">Czytelne zestawienia dla działu kadr i pracowników.</div>
+              </div>
+              <div class="info-card">
+                <div class="info-label">Kontrola</div>
+                <div class="info-value">Miesięczne raporty oszczędności i kosztów.</div>
+              </div>
+            </div>
+          </div>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Harmonogram wdrożenia i warunki</div>
+        <div class="ph-meta">Strona 7/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <div class="section-title">Etapy wdrożenia</div>
+          <div class="timeline-container">
+            <div class="timeline-line"></div>
+            <div class="timeline-steps">
+              <div class="tl-step">
+                <div class="tl-dot-wrapper"><div class="tl-dot"></div></div>
+                <span class="tl-week">Tydzień 1</span>
+                <div class="tl-title">Analiza</div>
+                <div class="tl-desc">Weryfikacja danych kadrowych i przygotowanie procesu.</div>
+              </div>
+              <div class="tl-step">
+                <div class="tl-dot-wrapper"><div class="tl-dot"></div></div>
+                <span class="tl-week">Tydzień 2</span>
+                <div class="tl-title">Komunikacja</div>
+                <div class="tl-desc">Przedstawienie modelu pracownikom i zebranie zgód.</div>
+              </div>
+              <div class="tl-step">
+                <div class="tl-dot-wrapper"><div class="tl-dot"></div></div>
+                <span class="tl-week">Tydzień 3</span>
+                <div class="tl-title">Wdrożenie</div>
+                <div class="tl-desc">Uruchomienie świadczeń i pierwsze rozliczenie.</div>
+              </div>
+              <div class="tl-step">
+                <div class="tl-dot-wrapper"><div class="tl-dot"></div></div>
+                <span class="tl-week">Tydzień 4</span>
+                <div class="tl-title">Monitoring</div>
+                <div class="tl-desc">Raportowanie efektów i optymalizacje.</div>
+              </div>
+            </div>
+          </div>
+          <div class="grid-two" style="margin-top: 18px;">
+            <div class="info-card">
+              <div class="info-label">Cena Eliton Standard</div>
+              <div class="info-value">7601,17 zł / mies. (prowizja)</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Cena Eliton Plus</div>
+              <div class="info-value">7058,23 zł / mies. (prowizja)</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Ważność oferty</div>
+              <div class="info-value">17.02.2026</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Umowa</div>
+              <div class="info-value">Podpisanie umowy następuje po akceptacji oferty.</div>
+            </div>
+          </div>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page">
+        
+    <div class="page-header">
+      <div class="header-grid">
+        <div>
+          <div class="header-label">Data wykonania</div>
+          <div class="header-value">3.02.2026</div>
+        </div>
+        <div>
+          <div class="header-label">Przygotowano dla</div>
+          <div class="header-value">Przykładowa Sp. z o.o.</div>
+        </div>
+        <div>
+          <div class="header-label">Opracowanie</div>
+          <div class="header-value">Opiekun Stratton</div>
+        </div>
+        <div class="header-logo">STRATTON PRIME</div>
+      </div>
+      <div class="header-title">
+        <div class="ph-title">Firmy podobne i kontakt</div>
+        <div class="ph-meta">Strona 8/8 • Nr kalkulacji: SP/2026/1234567890/001</div>
+      </div>
+    </div>
+  
+        <div class="page-body page-pad">
+          <div class="section-title">Firmy podobne i osiągnięcia</div>
+          <div class="muted" style="margin-bottom: 18px;">
+            Referencje z branż produkcyjnych, usługowych i logistycznych dostępne są na życzenie. Wyniki wdrożeń
+            obejmują średnie oszczędności rzędu 12–18% w skali roku.
+          </div>
+          <div class="section-title">Kontakt</div>
+          <div class="grid-two">
+            <div class="info-card">
+              <div class="info-label">Opiekun oferty</div>
+              <div class="info-value">Opiekun Stratton</div>
+              <div class="info-value">opiekun@stratton.pl</div>
+              <div class="info-value">+48 500 111 222</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">Numer oferty</div>
+              <div class="info-value">SP/2026/1234567890/001</div>
+              <div class="info-label" style="margin-top: 8px;">Data sporządzenia</div>
+              <div class="info-value">3.02.2026</div>
+            </div>
+          </div>
+          <div class="footer">
+            <div>Stratton Prime • Raport poufny</div>
+            <div>3.02.2026</div>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  

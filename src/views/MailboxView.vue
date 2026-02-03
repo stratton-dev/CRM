@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMailboxStore } from '@/stores/mailbox'
 import { useSessionStore } from '@/stores/session'
@@ -18,7 +18,7 @@ const structure = useStructureStore()
 const auth = useAuthStore()
 const toast = useToastStore()
 
-const { composeState, emails } = storeToRefs(mailboxStore)
+const { composeState, emails, mailMode, mailSettingsLoaded } = storeToRefs(mailboxStore)
 const { clients } = storeToRefs(clientStore)
 const editor = ref<HTMLDivElement | null>(null)
 const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH'>('INBOX')
@@ -49,6 +49,11 @@ const emailsInCurrentFolder = computed(() => {
   const userEmail = currentUser.value?.email
   const folder = currentFolder.value
   const list = Array.isArray(emails.value) ? emails.value : []
+  if (mailMode.value === 'imap') {
+    return list
+      .filter((email) => email.folder === folder)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }
   return list
     .filter((email) => {
       if (folder === 'INBOX' || folder === 'TRASH') return email.toEmail === userEmail && email.folder === folder
@@ -61,6 +66,9 @@ const emailsInCurrentFolder = computed(() => {
 const unreadCount = computed(() => {
   const userEmail = currentUser.value?.email
   const list = Array.isArray(emails.value) ? emails.value : []
+  if (mailMode.value === 'imap') {
+    return list.filter((email) => email.folder === 'INBOX' && !email.read).length
+  }
   return list.filter((email) => email.toEmail === userEmail && email.folder === 'INBOX' && !email.read).length
 })
 
@@ -101,6 +109,7 @@ const selectContact = (email: string) => {
 const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH') => {
   currentFolder.value = folder
   selectedEmail.value = null
+  mailboxStore.fetchEmailsForFolder(folder)
 }
 
 const selectEmail = (email: Email) => {
@@ -118,7 +127,7 @@ const closeCompose = () => {
   composeState.value = { open: false }
 }
 
-const sendEmail = () => {
+const sendEmail = async () => {
   const user = currentUser.value
   if (!user) return
   const { to, subject } = composeData.value
@@ -129,21 +138,51 @@ const sendEmail = () => {
     return
   }
 
-  mailboxStore.sendEmail(user, to, subject, body)
-  toast.success(`Wiadomość do ${to} została wysłana.`)
-  closeCompose()
+  try {
+    await mailboxStore.sendEmail(user, to, subject, body)
+    toast.success(`Wiadomość do ${to} została wysłana.`)
+    closeCompose()
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
+    toast.error(message)
+  }
 }
 
 const formatDoc = (command: string, value?: string) => {
   document.execCommand(command, false, value)
   editor.value?.focus()
 }
+
+onMounted(() => {
+  mailboxStore.fetchEmailsForFolder(currentFolder.value)
+  mailboxStore.startPolling?.()
+})
+
+onBeforeUnmount(() => {
+  mailboxStore.stopPolling?.()
+})
+
+watch(
+  () => currentUser.value?.id,
+  () => {
+    mailboxStore.fetchEmailsForFolder(currentFolder.value)
+  }
+)
 </script>
 
 <template>
   <div class="h-full bg-white rounded-lg shadow border border-gray-200 flex overflow-hidden">
     <div class="w-64 bg-gray-50 border-r border-gray-200 p-4 flex flex-col">
       <h2 class="text-lg font-bold text-gray-800 mb-6">Skrzynka Pocztowa</h2>
+
+      <div
+        v-if="auth.enabled && mailSettingsLoaded && mailMode !== 'imap'"
+        class="mb-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+      >
+        Skrzynka działa w trybie wewnętrznym. Skonfiguruj IMAP/SMTP w
+        <RouterLink to="/app/settings" class="font-semibold underline">Ustawieniach</RouterLink>,
+        aby pobierać prawdziwą pocztę.
+      </div>
 
       <button type="button" class="w-full bg-sky-600 text-white font-bold py-2 px-4 rounded hover:bg-sky-700 mb-6 shadow" @click="openCompose">
         Nowa Wiadomość
@@ -250,7 +289,7 @@ const formatDoc = (command: string, value?: string) => {
         </div>
         <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
           <button type="button" class="bg-sky-600 text-white font-bold py-2 px-6 rounded hover:bg-sky-700 shadow-sm" @click="sendEmail">
-            Wyślij
+            Wyślij teraz
           </button>
         </div>
       </div>

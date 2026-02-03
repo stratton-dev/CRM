@@ -91,6 +91,22 @@ export const useStructureStore = defineStore('structure', () => {
     return data as { id: string; path: string }
   }
 
+  const restoreTeamUsers = async (teamGroupPath: string) => {
+    if (!auth.enabled) return
+    const { data } = await api.post('/v1/structure/teams/restore', {
+      team_group_path: teamGroupPath,
+    })
+    return data as { total: number; restored: number; errors: { keycloak_id: string; email?: string | null; message: string }[] }
+  }
+
+  const deleteRemovedTeamUsersFromDb = async (teamGroupPath: string) => {
+    if (!auth.enabled) return
+    const { data } = await api.post('/v1/structure/teams/delete', {
+      team_group_path: teamGroupPath,
+    })
+    return data as { deleted: number }
+  }
+
   const upsertApiUser = (user: User) => {
     const normalized = normalizeApiUser(user)
     const idx = apiUsers.value.findIndex((u) => u.id === normalized.id)
@@ -440,6 +456,8 @@ export const useStructureStore = defineStore('structure', () => {
     fetchTeams,
     createTeam,
     deleteTeam,
+    restoreTeamUsers,
+    deleteRemovedTeamUsersFromDb,
     regenerateCodes,
     getSubtreeUserIds,
     getRoleLevel,

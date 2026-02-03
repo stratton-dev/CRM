@@ -186,6 +186,13 @@ export interface Email {
   toEmail: string
   subject: string
   body: string
+  attachments?: Array<{
+    filename: string
+    contentType: string
+    size: number
+    cid?: string
+    isInline?: boolean
+  }>
   date: string
   read: boolean
   folder: 'INBOX' | 'SENT' | 'TRASH'

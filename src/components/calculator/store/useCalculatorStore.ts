@@ -2,6 +2,7 @@ import { computed, ref, watch } from 'vue';
 import { defineStore } from 'pinia';
 import { useToastStore } from '@/stores/toast';
 import { useAuthStore } from '@/stores/auth';
+import { useSessionStore } from '@/stores/session';
 import { api } from '@/api/client';
 import { Config, Firma } from '../models/company';
 import { GlobalneWyniki } from '../models/calculation';
@@ -10,6 +11,7 @@ import { ZapisanaKalkulacja } from '../models/history';
 import { DEFAULT_CONFIG } from '../tax-engine/constants';
 import { obliczWariantPodzial, obliczWariantStandard } from '../tax-engine';
 import { excelGenerator } from '../utils/excelGenerator';
+import { buildOfferPdfHtml } from '../utils/offerPdfGenerator';
 import { offerPdfGenerator } from '../utils/offerPdfGenerator';
 
 interface ComparisonState {
@@ -94,6 +96,7 @@ const mergeConfig = (saved?: Config | null): Config => {
 export const useCalculatorStore = defineStore('calculator', () => {
   const toast = useToastStore();
   const auth = useAuthStore();
+  const session = useSessionStore();
   const configLoading = ref(false);
   const configError = ref<string | null>(null);
 
@@ -309,9 +312,188 @@ export const useCalculatorStore = defineStore('calculator', () => {
     toast.info('Pobrano plik archiwum JSON.');
   };
 
-  const generateOfferPdf = (item: ZapisanaKalkulacja) => {
-    offerPdfGenerator.generateOfferPDF(item);
+  const generateOfferPdf = async (
+    item: ZapisanaKalkulacja,
+    options?: { documentLayout?: 'horizontal' | 'vertical' },
+  ) => {
+    let offer: any = null;
+    try {
+      offer = await ensureOffer(item);
+    } catch (error) {
+      console.error('ensureOffer failed', error);
+    }
+    const advisor = session.currentUser;
+    const offerNumber = offer?.number || buildFallbackOfferNumber(item);
+    const fallbackValidUntil = (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + getOfferValidDays());
+      return date.toISOString().slice(0, 10);
+    })();
+    const validUntil = offer?.valid_to || offer?.expires_at || fallbackValidUntil;
+    persistOfferSnapshot(item, {
+      offerNumber,
+      validUntil,
+      advisorName: advisor?.name || advisor?.email || 'Doradca',
+      advisorEmail: advisor?.email || '',
+      advisorPhone: advisor?.phone || '',
+    });
+    offerPdfGenerator.generateOfferPDF(item, {
+      offerNumber,
+      validUntil,
+      advisorName: advisor?.name || advisor?.email || 'Doradca',
+      advisorEmail: advisor?.email || '',
+      advisorPhone: advisor?.phone || '',
+      includeCover: true,
+      includeTOC: true,
+      standardRate: comparisonState.value.customStandardRate,
+      plusRate: comparisonState.value.customPrimeRate,
+      footerLine1: config.value.branding?.footerLine1,
+      footerLine2: config.value.branding?.footerLine2,
+      footerLogoUrl: config.value.branding?.footerLogoUrl,
+      documentLayout: options?.documentLayout || 'vertical',
+    });
+
     toast.info('Generowanie PDF...');
+  };
+
+  const buildOfferStorageKey = () => {
+    if (context.value.meetingId) return `offer_snapshot_meeting_${context.value.meetingId}`;
+    if (context.value.clientId) return `offer_snapshot_client_${context.value.clientId}`;
+    return null;
+  };
+
+  const persistOfferSnapshot = (item: ZapisanaKalkulacja, meta: Record<string, any>) => {
+    const key = buildOfferStorageKey();
+    if (!key) return;
+    localStorage.setItem(key, JSON.stringify({ snapshot: item, meta }));
+  };
+
+  const readOfferSnapshot = () => {
+    const key = buildOfferStorageKey();
+    if (!key) return null;
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const buildOfferEmailAttachments = async () => {
+    const stored = readOfferSnapshot();
+    if (!stored?.snapshot) return null;
+    const item: ZapisanaKalkulacja = stored.snapshot;
+    const meta = stored.meta || {};
+
+    const details = item.dane.pracownicy.map((p) => {
+      const standard = obliczWariantStandard(p, item.dane.firma.stawkaWypadkowa, item.dane.config);
+      const podzial = obliczWariantPodzial(p, item.dane.firma.stawkaWypadkowa, p.nettoZasadnicza, item.dane.config);
+      return { pracownik: p, standard, podzial, oszczednosc: standard.kosztPracodawcy - podzial.kosztPracodawcy };
+    });
+
+    const sumaKosztStandard = details.reduce((acc, w) => acc + w.standard.kosztPracodawcy, 0);
+    const sumaKosztPodzial = details.reduce((acc, w) => acc + w.podzial.kosztPracodawcy, 0);
+    const sumaBruttoSwiadczen = details.reduce((acc, w) => acc + w.podzial.swiadczenie.brutto, 0);
+    const oszczednoscBrutto = sumaKosztStandard - sumaKosztPodzial;
+    const prowizja = sumaBruttoSwiadczen * (item.dane.prowizjaProc / 100);
+    const oszczednoscNetto = oszczednoscBrutto - prowizja;
+
+    const wynikiSnapshot = {
+      szczegoly: details,
+      podsumowanie: {
+        sumaKosztStandard,
+        sumaKosztPodzial,
+        sumaBruttoSwiadczen,
+        oszczednoscBrutto,
+        prowizja,
+        oszczednoscNetto,
+        oszczednoscRoczna: oszczednoscNetto * 12,
+        sredniaOszczednoscNaEtat: details.length > 0 ? oszczednoscNetto / details.length : 0,
+      },
+    };
+
+    const excelResult: any = await excelGenerator.generateManagementReport(
+      { firma: item.dane.firma, wyniki: wynikiSnapshot, prowizjaProc: item.dane.prowizjaProc },
+      { returnBuffer: true }
+    );
+
+    const excelBuffer = excelResult?.buffer;
+    const excelFileName = excelResult?.fileName || `Raport_${item.nazwaFirmy || 'Firma'}`;
+    const toBase64 = (buffer: ArrayBuffer) => {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      bytes.forEach((b) => { binary += String.fromCharCode(b); });
+      return btoa(binary);
+    };
+    const excelBase64 = excelBuffer ? toBase64(excelBuffer) : null;
+
+    const offerHtml = buildOfferPdfHtml(item, {
+      offerNumber: meta.offerNumber,
+      validUntil: meta.validUntil,
+      advisorName: meta.advisorName,
+      advisorEmail: meta.advisorEmail,
+      advisorPhone: meta.advisorPhone,
+    });
+
+    return {
+      offerHtml,
+      offerFileName: `Oferta_${item.nazwaFirmy || 'Firma'}.pdf`,
+      excelBase64,
+      excelFileName: excelFileName.endsWith('.xlsx') ? excelFileName : `${excelFileName}.xlsx`,
+    };
+  };
+
+  const buildFallbackOfferNumber = (item: ZapisanaKalkulacja) => {
+    const year = new Date().getFullYear();
+    const nip = (item.dane.firma.nip || '').replace(/\D+/g, '') || '0000000000';
+    return `SP/${year}/${nip}/TMP`;
+  };
+
+  const getOfferValidDays = () => {
+    const days = Math.round(config.value.offerValidDays ?? 14);
+    return Math.min(Math.max(days, 1), 365);
+  };
+
+  const ensureOffer = async (item: ZapisanaKalkulacja) => {
+    const meetingId = context.value.meetingId;
+    const clientId = context.value.clientId;
+    const meetingIdNum = meetingId ? Number(meetingId) : null;
+    const clientIdNum = clientId ? Number(clientId) : null;
+
+    if (!meetingIdNum && !clientIdNum) return null;
+
+    try {
+      if (meetingIdNum) {
+        const { data } = await api.get('/v1/offers', {
+          params: { meeting_id: meetingIdNum, per_page: 1 },
+        });
+        const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        if (list.length > 0) return list[0];
+      }
+
+      const today = new Date();
+      const validFrom = today.toISOString().slice(0, 10);
+      const validToDate = new Date(today.getTime() + getOfferValidDays() * 24 * 60 * 60 * 1000);
+      const validTo = validToDate.toISOString().slice(0, 10);
+
+      const payload: Record<string, any> = {
+        meeting_id: meetingIdNum || undefined,
+        company_id: clientIdNum || undefined,
+        valid_from: validFrom,
+        valid_to: validTo,
+        expires_at: validTo,
+        commission_percent: prowizjaProc.value / 100,
+        stratton_raise_percent: prowizjaProc.value === 26 ? 0.04 : 0,
+        currency: 'PLN',
+      };
+
+      const { data } = await api.post('/v1/offers', payload);
+      return data;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
   };
 
   const generateExcelReport = async (item: ZapisanaKalkulacja) => {
@@ -405,17 +587,21 @@ export const useCalculatorStore = defineStore('calculator', () => {
   };
 
   const saveCalculationToApi = async () => {
-    if (!auth.enabled || !context.value.meetingId) {
-      toast.warning('Brak aktywnego spotkania do zapisu.');
+    if (!auth.enabled) return null;
+    const meetingId = context.value.meetingId;
+    const clientId = context.value.clientId;
+    if (!meetingId && !clientId) {
+      toast.warning('Brak aktywnego klienta lub spotkania do zapisu.');
       return null;
     }
     if (!wyniki.value) return null;
 
     const validUntil = new Date();
-    validUntil.setDate(validUntil.getDate() + 14);
+    validUntil.setDate(validUntil.getDate() + getOfferValidDays());
 
     const payload = {
-      meeting_id: Number(context.value.meetingId),
+      meeting_id: meetingId ? Number(meetingId) : undefined,
+      client_id: clientId ? Number(clientId) : undefined,
       employee_count: pracownicy.value.length,
       savings_amount: Math.max(0, Math.round(wyniki.value.podsumowanie.oszczednoscNetto)),
       valid_until: validUntil.toISOString().slice(0, 10),
@@ -431,6 +617,112 @@ export const useCalculatorStore = defineStore('calculator', () => {
       toast.error('Nie udało się zapisać kalkulacji w CRM.');
       throw error;
     }
+  };
+
+  const updateCalculationStatus = async (calcId: string, status: string) => {
+    if (!auth.enabled) return;
+    try {
+      await api.patch(`/v1/calculations/${calcId}`, { status });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const syncHistoryToApiByNip = async () => {
+    if (!auth.enabled) {
+      toast.warning('Synchronizacja dostępna tylko po zalogowaniu.');
+      return;
+    }
+
+    const entries = historia.value.filter((item) => (item.dane?.firma?.nip || '').trim().length > 0);
+    if (entries.length === 0) {
+      toast.info('Brak zapisów z NIP do synchronizacji.');
+      return;
+    }
+
+    const normalizeNip = (value: string) => value.replace(/\D+/g, '');
+
+    let page = 1;
+    const perPage = 200;
+    const clients: any[] = [];
+    for (;;) {
+      const { data } = await api.get('/v1/clients', { params: { per_page: perPage, page } });
+      const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+      clients.push(...list);
+      if (list.length < perPage) break;
+      page += 1;
+    }
+
+    const clientByNip = new Map<string, any>();
+    clients.forEach((client) => {
+      const nip = normalizeNip(String(client?.nip || ''));
+      if (nip) clientByNip.set(nip, client);
+    });
+
+    const calculationsCache = new Map<string, any[]>();
+    const loadCalculations = async (clientId: string) => {
+      if (calculationsCache.has(clientId)) return calculationsCache.get(clientId) as any[];
+      const collected: any[] = [];
+      let calcPage = 1;
+      for (;;) {
+        const { data } = await api.get('/v1/calculations', {
+          params: { per_page: perPage, page: calcPage, client_id: clientId },
+        });
+        const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        collected.push(...list);
+        if (list.length < perPage) break;
+        calcPage += 1;
+      }
+      calculationsCache.set(clientId, collected);
+      return collected;
+    };
+
+    let created = 0;
+    let skipped = 0;
+    let missingClient = 0;
+
+    for (const entry of entries) {
+      const nip = normalizeNip(entry.dane.firma.nip || '');
+      const client = nip ? clientByNip.get(nip) : null;
+      if (!client) {
+        missingClient += 1;
+        continue;
+      }
+
+      const clientId = String(client.id);
+      const existing = await loadCalculations(clientId);
+      const expectedSavings = Math.max(0, Math.round(Number(entry.oszczednoscRoczna || 0) / 12));
+      const duplicate = existing.some((calc) =>
+        Number(calc.employee_count || 0) === Number(entry.liczbaPracownikow || 0)
+        && Number(calc.savings_amount || 0) === expectedSavings
+      );
+
+      if (duplicate) {
+        skipped += 1;
+        continue;
+      }
+
+      const baseDate = new Date(entry.dataUtworzenia || new Date().toISOString());
+      const validUntil = new Date(baseDate.getTime());
+      validUntil.setDate(validUntil.getDate() + getOfferValidDays());
+
+      const payload = {
+        client_id: Number(clientId),
+        employee_count: Number(entry.liczbaPracownikow || 0),
+        savings_amount: expectedSavings,
+        valid_until: validUntil.toISOString().slice(0, 10),
+        status: 'PREPARING',
+      };
+
+      try {
+        await api.post('/v1/calculations', payload);
+        created += 1;
+      } catch (error) {
+        console.error('syncHistoryToApiByNip failed', error);
+      }
+    }
+
+    toast.success(`Synchronizacja zakończona: dodano ${created}, pominięto ${skipped}, brak klienta ${missingClient}.`);
   };
 
   const fetchConfigFromApi = async () => {
@@ -532,6 +824,9 @@ export const useCalculatorStore = defineStore('calculator', () => {
     generateImportTemplate,
     updateMeetingOfferStatus,
     saveCalculationToApi,
+    updateCalculationStatus,
+    buildOfferEmailAttachments,
+    syncHistoryToApiByNip,
     fetchConfigFromApi,
     saveConfigToApi,
   };

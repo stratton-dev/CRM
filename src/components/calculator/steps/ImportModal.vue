@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import AppIcon from '@/components/AppIcon.vue';
 import { parseExcelData, ImportRow } from '../utils/excelParser';
 import { useCalculatorStore } from '../store/useCalculatorStore';
+import { obliczWiek, czyZwolnionyZFpFgsp } from '../utils/dates';
 
 
 const emit = defineEmits<{ (event: 'close'): void }>();
@@ -19,8 +20,10 @@ const stats = computed(() => {
 });
 
 const filteredRows = computed(() => {
-  if (!showErrorsOnly.value) return importRows.value;
-  return importRows.value.filter((row) => !row.isValid);
+  if (!showErrorsOnly.value) {
+    return importRows.value.map((row, idx) => ({ row, originalIdx: idx }));
+  }
+  return importRows.value.map((row, idx) => ({ row, originalIdx: idx })).filter((item) => !item.row.isValid);
 });
 
 const handleFile = (file: File) => {
@@ -50,6 +53,70 @@ const confirmImport = () => {
   if (validRows.length === 0) return;
   store.pracownicy = [...store.pracownicy, ...validRows];
   emit('close');
+};
+
+const zusOptions = [
+  { label: 'Pełne składki', value: 'PELNE' },
+  { label: 'Bez chorobowej', value: 'BEZ_CHOROBOWEJ' },
+  { label: 'Student < 26', value: 'STUDENT_UZ' },
+  { label: 'Inny tytuł (zdrowotna)', value: 'INNY_TYTUL' },
+  { label: 'Emeryt/Rencista', value: 'EMERYT_RENCISTA' },
+];
+
+const kupOptions = [
+  { label: 'Standardowe', value: 'STANDARD' },
+  { label: 'Podwyższone', value: 'PODWYZSZONE' },
+  { label: 'Ryczałtowe 20%', value: 'PROC_20' },
+  { label: 'Autorskie 50%', value: 'PROC_50' },
+];
+
+const pitModes = [
+  { label: 'AUTO', value: 'AUTO' },
+  { label: '12%', value: 'FLAT_12' },
+  { label: '32%', value: 'FLAT_32' },
+  { label: '0%', value: 'FLAT_0' },
+];
+
+const updateRow = (rowIndex: number, patch: Record<string, any>) => {
+  importRows.value = importRows.value.map((row, idx) => {
+    if (idx !== rowIndex) return row;
+    const data = { ...row.data, ...patch };
+    const raw = { ...(row.raw || {}) };
+
+    if (patch.dataUrodzenia) {
+      raw.wiek = obliczWiek(patch.dataUrodzenia);
+    }
+
+    if (data.ulgaMlodych) {
+      data.pitMode = 'FLAT_0';
+      data.pit2 = '0';
+    }
+
+    const isExemptByAge = czyZwolnionyZFpFgsp(data.dataUrodzenia, data.plec, store.config);
+    let skladkaFP = !isExemptByAge;
+    let skladkaFGSP = !isExemptByAge;
+
+    if (data.trybSkladek === 'STUDENT_UZ' || data.trybSkladek === 'INNY_TYTUL' || data.trybSkladek === 'EMERYT_RENCISTA') {
+      skladkaFP = false;
+      skladkaFGSP = false;
+    }
+
+    data.skladkaFP = skladkaFP;
+    data.skladkaFGSP = skladkaFGSP;
+
+    const errors: string[] = [];
+    if (!data.imie) errors.push('Brak imienia');
+    if (!data.nazwisko) errors.push('Brak nazwiska');
+    if (!data.nettoDocelowe || data.nettoDocelowe <= 0) errors.push('Netto <= 0');
+
+    return {
+      ...row,
+      data,
+      raw,
+      errors,
+      isValid: errors.length === 0,
+    };
+  });
 };
 </script>
 
@@ -86,23 +153,111 @@ const confirmImport = () => {
 
         <div v-else class="border border-slate-200 rounded-xl overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="w-full text-xs min-w-[520px]">
+            <table class="w-full text-xs min-w-[1180px]">
               <thead class="bg-slate-50 text-slate-400 uppercase font-bold">
                 <tr>
                   <th class="px-3 py-2 text-left">Pracownik</th>
+                  <th class="px-3 py-2 text-left">Data ur.</th>
+                  <th class="px-3 py-2 text-left">Płeć</th>
                   <th class="px-3 py-2 text-left">Umowa</th>
+                  <th class="px-3 py-2 text-left">ZUS</th>
+                  <th class="px-3 py-2 text-left">KUP</th>
+                  <th class="px-3 py-2 text-left">PIT-2</th>
+                  <th class="px-3 py-2 text-left">PIT</th>
+                  <th class="px-3 py-2 text-left">Ulga &lt;26</th>
                   <th class="px-3 py-2 text-right">Netto</th>
                   <th class="px-3 py-2 text-left">Status</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
-                <tr v-for="row in filteredRows" :key="row.id" :class="row.isValid ? '' : 'bg-rose-50'">
-                  <td class="px-3 py-2">{{ row.raw.imie }} {{ row.raw.nazwisko }}</td>
-                  <td class="px-3 py-2">{{ row.raw.typUmowy }}</td>
-                  <td class="px-3 py-2 text-right">{{ row.raw.netto }}</td>
+                <tr v-for="item in filteredRows" :key="item.row.id" :class="item.row.isValid ? '' : 'bg-rose-50'">
+                  <td class="px-3 py-2">{{ item.row.raw.imie }} {{ item.row.raw.nazwisko }}</td>
                   <td class="px-3 py-2">
-                    <span v-if="row.isValid" class="text-emerald-600">OK</span>
-                    <span v-else class="text-rose-600">{{ row.errors.join(', ') }}</span>
+                    <input
+                      type="date"
+                      class="border border-slate-200 rounded px-2 py-1 text-xs"
+                      :value="item.row.data.dataUrodzenia"
+                      @input="updateRow(item.originalIdx, { dataUrodzenia: ($event.target as HTMLInputElement).value })"
+                    />
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      class="border border-slate-200 rounded px-2 py-1 text-xs"
+                      :value="item.row.data.plec"
+                      @change="updateRow(item.originalIdx, { plec: ($event.target as HTMLSelectElement).value })"
+                    >
+                      <option value="M">M</option>
+                      <option value="K">K</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      class="border border-slate-200 rounded px-2 py-1 text-xs"
+                      :value="item.row.data.typUmowy"
+                      @change="updateRow(item.originalIdx, { typUmowy: ($event.target as HTMLSelectElement).value })"
+                    >
+                      <option value="UOP">UOP</option>
+                      <option value="UZ">UZ</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      class="border border-slate-200 rounded px-2 py-1 text-xs"
+                      :value="item.row.data.trybSkladek"
+                      @change="updateRow(item.originalIdx, { trybSkladek: ($event.target as HTMLSelectElement).value })"
+                    >
+                      <option v-for="opt in zusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      class="border border-slate-200 rounded px-2 py-1 text-xs"
+                      :value="item.row.data.kupTyp"
+                      @change="updateRow(item.originalIdx, { kupTyp: ($event.target as HTMLSelectElement).value })"
+                    >
+                      <option v-for="opt in kupOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      class="border border-slate-200 rounded px-2 py-1 text-xs"
+                      :value="item.row.data.pit2"
+                      @change="updateRow(item.originalIdx, { pit2: ($event.target as HTMLSelectElement).value })"
+                    >
+                      <option value="300">300</option>
+                      <option value="150">150</option>
+                      <option value="100">100</option>
+                      <option value="0">0</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      class="border border-slate-200 rounded px-2 py-1 text-xs"
+                      :value="item.row.data.pitMode"
+                      @change="updateRow(item.originalIdx, { pitMode: ($event.target as HTMLSelectElement).value })"
+                    >
+                      <option v-for="opt in pitModes" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      class="rounded border-slate-300"
+                      :checked="item.row.data.ulgaMlodych"
+                      @change="updateRow(item.originalIdx, { ulgaMlodych: ($event.target as HTMLInputElement).checked })"
+                    />
+                  </td>
+                  <td class="px-3 py-2 text-right">
+                    <input
+                      type="number"
+                      class="border border-slate-200 rounded px-2 py-1 w-24 text-right text-xs"
+                      :value="item.row.data.nettoDocelowe"
+                      @input="updateRow(item.originalIdx, { nettoDocelowe: Number(($event.target as HTMLInputElement).value) })"
+                    />
+                  </td>
+                  <td class="px-3 py-2">
+                    <span v-if="item.row.isValid" class="text-emerald-600">OK</span>
+                    <span v-else class="text-rose-600">{{ item.row.errors.join(', ') }}</span>
                   </td>
                 </tr>
               </tbody>

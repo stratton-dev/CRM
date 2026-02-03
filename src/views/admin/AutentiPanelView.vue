@@ -44,8 +44,24 @@ const editEditorMode = ref<'code' | 'preview'>('code')
 const editHtmlTextarea = ref<HTMLTextAreaElement | null>(null)
 const editTagGroup = ref<'user' | 'client'>('user')
 const fieldSearch = ref('')
+const connectionState = ref<'idle' | 'loading' | 'ok' | 'error' | 'disabled'>('idle')
+const connectionDetail = ref<string | null>(null)
 
 const editTemplateType = computed(() => editingTemplate.value?.type || 'pdf')
+const connectionTone = computed(() => {
+  switch (connectionState.value) {
+    case 'ok':
+      return { label: 'Połączono', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+    case 'error':
+      return { label: 'Błąd', className: 'bg-rose-100 text-rose-800 border-rose-200' }
+    case 'disabled':
+      return { label: 'Wyłączone', className: 'bg-gray-100 text-gray-700 border-gray-200' }
+    case 'loading':
+      return { label: 'Sprawdzanie...', className: 'bg-sky-100 text-sky-800 border-sky-200' }
+    default:
+      return { label: 'Nieznany', className: 'bg-gray-100 text-gray-700 border-gray-200' }
+  }
+})
 
 const templateFields = [
   { key: 'user.id', label: 'ID uzytkownika', description: 'ID rekordu uzytkownika', group: 'user' },
@@ -183,6 +199,34 @@ const fetchTemplateSuggestions = async () => {
     templateSuggestions.value = Array.isArray(data) ? data : []
   } catch {
     templateSuggestions.value = []
+  }
+}
+
+const fetchAutentiStatus = async () => {
+  if (!auth.enabled) {
+    connectionState.value = 'disabled'
+    connectionDetail.value = 'Autoryzacja wyłączona'
+    return
+  }
+  connectionState.value = 'loading'
+  connectionDetail.value = null
+  try {
+    const { data } = await api.get('/v1/autenti/status')
+    if (!data?.enabled) {
+      connectionState.value = 'disabled'
+      connectionDetail.value = data?.message || 'Autenti wyłączone po stronie API'
+      return
+    }
+    if (data?.ok) {
+      connectionState.value = 'ok'
+      connectionDetail.value = null
+      return
+    }
+    connectionState.value = 'error'
+    connectionDetail.value = data?.message || data?.error || 'Brak połączenia z Autenti'
+  } catch {
+    connectionState.value = 'error'
+    connectionDetail.value = 'Nie udało się sprawdzić połączenia'
   }
 }
 
@@ -394,16 +438,28 @@ const replaceApiDoc = (doc: any) => {
 
 onMounted(async () => {
   if (auth.enabled) {
-    await Promise.all([fetchAutentiDocs(), fetchTemplates(), fetchTemplateSuggestions()])
+    await Promise.all([fetchAutentiDocs(), fetchTemplates(), fetchTemplateSuggestions(), fetchAutentiStatus()])
+    return
   }
+  connectionState.value = 'disabled'
 })
 </script>
 
 <template>
   <div class="space-y-6">
     <header>
-      <h1 class="text-2xl font-bold text-gray-900">Panel Integracji Autenti</h1>
-      <p class="text-sm text-gray-500">{{ auth.enabled ? 'Zarządzaj realnymi procesami podpisu z Autenti.' : 'Symuluj i zarządzaj procesem podpisywania dokumentów dla nowych członków zespołu.' }}</p>
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Panel Integracji Autenti</h1>
+          <p class="text-sm text-gray-500">{{ auth.enabled ? 'Zarządzaj realnymi procesami podpisu z Autenti.' : 'Symuluj i zarządzaj procesem podpisywania dokumentów dla nowych członków zespołu.' }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500">Status:</span>
+          <span class="px-2 py-1 inline-flex items-center text-xs font-semibold rounded-full border" :class="connectionTone.className" :title="connectionDetail || ''">
+            {{ connectionTone.label }}
+          </span>
+        </div>
+      </div>
     </header>
 
     <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200">

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSessionStore } from '@/stores/session'
+import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useClientStore } from '@/stores/client'
 import { useMailboxStore } from '@/stores/mailbox'
@@ -11,6 +12,7 @@ import AppIcon from '@/components/AppIcon.vue'
 type UserRole = 'SALES' | 'MANAGER' | 'DIRECTOR' | 'ADMIN' | 'CLIENT_HR'
 
 const session = useSessionStore()
+const router = useRouter()
 const dashboard = useDashboardStore()
 const clientStore = useClientStore()
 const mailboxStore = useMailboxStore()
@@ -25,7 +27,8 @@ const viewMode = ref<'hub' | 'stats'>('hub')
 const isAdmin = computed(() => userRole.value === 'ADMIN')
 const firstName = computed(() => session.currentUser?.name?.split(' ')[0] || 'Użytkowniku')
 
-const selectedPeriod = ref('current')
+const dateFrom = ref('')
+const dateTo = ref('')
 const viewScope = ref('structure')
 const showTargets = ref(true)
 const isRefreshing = ref(false)
@@ -93,6 +96,7 @@ const activeCalculations = computed(() => dashboard.calculations.map((calc) => {
     company: calc.company,
     nip: calc.nip || '',
     meetingId: calc.meeting_id || '',
+    clientId: calc.client_id || '',
     date: calc.calculation_date || '',
     validUntil: calc.valid_until || '',
     daysLeft,
@@ -100,9 +104,41 @@ const activeCalculations = computed(() => dashboard.calculations.map((calc) => {
   }
 }))
 
+const openCalculation = (calc: { meetingId?: string; clientId?: string }) => {
+  router.push({
+    path: '/app/calculator',
+    query: {
+      meetingId: calc.meetingId || undefined,
+      clientId: calc.clientId || undefined,
+    },
+  })
+}
+
+const overdueInvoices = computed(() => dashboard.overdueInvoices.map((invoice) => {
+  const dueDate = invoice.due_date ? new Date(invoice.due_date) : null
+  const daysOverdue = typeof invoice.days_overdue === 'number'
+    ? invoice.days_overdue
+    : dueDate
+      ? Math.max(0, Math.ceil((Date.now() - dueDate.getTime()) / (1000 * 60 * 60 * 24)))
+      : null
+  return {
+    id: invoice.id,
+    company: invoice.company,
+    number: invoice.number,
+    amountGross: invoice.amount_gross,
+    issueDate: invoice.issue_date || '',
+    dueDate: invoice.due_date || '',
+    daysOverdue,
+    status: invoice.status || 'UNPAID',
+  }
+}))
+
 const refreshData = () => {
   isRefreshing.value = true
-  dashboard.fetchDashboard(session.currentUser?.id).finally(() => {
+  dashboard.fetchDashboard(session.currentUser?.id, {
+    from_date: dateFrom.value || undefined,
+    to_date: dateTo.value || undefined,
+  }).finally(() => {
     isRefreshing.value = false
   })
 }
@@ -121,7 +157,15 @@ const getScoreColor = (score: number) => {
 }
 
 onMounted(() => {
-  dashboard.fetchDashboard(session.currentUser?.id)
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), 1)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  dateFrom.value = start.toISOString().slice(0, 10)
+  dateTo.value = end.toISOString().slice(0, 10)
+  dashboard.fetchDashboard(session.currentUser?.id, {
+    from_date: dateFrom.value,
+    to_date: dateTo.value,
+  })
 })
 
 watch(
@@ -130,6 +174,14 @@ watch(
     if (role) userRole.value = role as UserRole
   },
   { immediate: true }
+)
+
+watch(
+  () => [dateFrom.value, dateTo.value],
+  ([from, to]) => {
+    if (!from || !to) return
+    refreshData()
+  }
 )
 </script>
 
@@ -296,12 +348,13 @@ watch(
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col lg:flex-row items-center justify-between gap-6">
         <div class="flex items-center gap-4 w-full lg:w-auto">
           <div class="relative w-full lg:w-64">
-            <select v-model="selectedPeriod" class="w-full bg-slate-50 border border-slate-200 text-slate-900 py-3 pl-5 pr-10 rounded-xl text-sm font-bold focus:outline-none focus:border-stratton-gold cursor-pointer appearance-none transition hover:bg-slate-100">
-              <option value="current">Bieżący miesiąc</option>
-              <option value="prev">Poprzedni miesiąc</option>
-              <option value="q1">Q1 2024</option>
-            </select>
-            <AppIcon name="chevron-down" class="w-3 h-3 absolute right-4 top-4 text-slate-400 pointer-events-none" />
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Od</label>
+            <input v-model="dateFrom" type="date" class="w-full bg-slate-50 border border-slate-200 text-slate-900 py-3 px-4 rounded-xl text-sm font-bold focus:outline-none focus:border-stratton-gold cursor-pointer transition hover:bg-slate-100" />
+          </div>
+
+          <div class="relative w-full lg:w-64">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Do</label>
+            <input v-model="dateTo" type="date" class="w-full bg-slate-50 border border-slate-200 text-slate-900 py-3 px-4 rounded-xl text-sm font-bold focus:outline-none focus:border-stratton-gold cursor-pointer transition hover:bg-slate-100" />
           </div>
 
           <div class="relative w-full lg:w-64">
@@ -406,7 +459,9 @@ watch(
                   <span class="text-[10px] font-bold text-slate-500 border border-slate-200 px-3 py-1 rounded uppercase bg-white">{{ calc.status }}</span>
                 </td>
                 <td class="px-8 py-5 text-right">
-                  <button type="button" class="text-stratton-blue hover:text-white font-bold text-xs bg-blue-50 hover:bg-stratton-blue px-4 py-2 rounded-lg transition shadow-sm">Otwórz</button>
+                  <button type="button" class="text-stratton-blue hover:text-white font-bold text-xs bg-blue-50 hover:bg-stratton-blue px-4 py-2 rounded-lg transition shadow-sm" @click="openCalculation(calc)">
+                    Otwórz
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -438,13 +493,16 @@ watch(
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr class="hover:bg-red-50/10 transition bg-white group">
-                <td class="px-8 py-5 font-bold text-slate-800 text-base">Trans-Logistics Sp. z o.o.</td>
-                <td class="px-8 py-5 text-slate-500 font-mono text-xs">FV/2023/12/055</td>
-                <td class="px-8 py-5 font-bold text-slate-900 text-base">4,500.00 PLN</td>
-                <td class="px-8 py-5 text-slate-500">10.01.2024</td>
-                <td class="px-8 py-5 text-red-600 font-bold bg-red-50">+5 dni</td>
-                <td class="px-8 py-5"><span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold border border-red-200">WINDYKACJA</span></td>
+              <tr v-if="overdueInvoices.length === 0" class="bg-white">
+                <td colspan="7" class="px-8 py-6 text-sm text-slate-500">Brak zaległości płatniczych.</td>
+              </tr>
+              <tr v-for="inv in overdueInvoices" :key="inv.id" class="hover:bg-red-50/10 transition bg-white group">
+                <td class="px-8 py-5 font-bold text-slate-800 text-base">{{ inv.company }}</td>
+                <td class="px-8 py-5 text-slate-500 font-mono text-xs">{{ inv.number }}</td>
+                <td class="px-8 py-5 font-bold text-slate-900 text-base">{{ inv.amountGross.toFixed(2) }} PLN</td>
+                <td class="px-8 py-5 text-slate-500">{{ inv.dueDate }}</td>
+                <td class="px-8 py-5 text-red-600 font-bold bg-red-50">+{{ inv.daysOverdue ?? 0 }} dni</td>
+                <td class="px-8 py-5"><span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold border border-red-200">UNPAID</span></td>
                 <td class="px-8 py-5 text-right"><button type="button" class="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition shadow-sm">Szczegóły</button></td>
               </tr>
             </tbody>

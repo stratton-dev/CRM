@@ -1,6 +1,6 @@
 import { Config } from '../models/company';
 import { Pracownik } from '../models/employee';
-import { obliczWiek } from './dates';
+import { obliczWiek, czyZwolnionyZFpFgsp } from './dates';
 
 export interface ImportRow {
   id: number;
@@ -177,6 +177,15 @@ export const parseExcelData = (rows: any[], config: Config): ImportRow[] => {
 
       const nettoZasadnicza = typUmowy === 'UZ' ? config.minimalnaKwotaUZ.zasadniczaNetto : config.placaMinimalna.netto;
 
+      const isExemptByAge = czyZwolnionyZFpFgsp(dataUrodzenia, plec, config);
+      let skladkaFP = !isExemptByAge;
+      let skladkaFGSP = !isExemptByAge;
+
+      if (trybSkladek === 'STUDENT_UZ' || trybSkladek === 'INNY_TYTUL' || trybSkladek === 'EMERYT_RENCISTA') {
+        skladkaFP = false;
+        skladkaFGSP = false;
+      }
+
       const pracownik: Pracownik = {
         id: Date.now() + idx,
         imie,
@@ -192,8 +201,8 @@ export const parseExcelData = (rows: any[], config: Config): ImportRow[] => {
         nettoDocelowe: netto,
         nettoZasadnicza,
         pitMode,
-        skladkaFP: !isAgeInferred,
-        skladkaFGSP: !isAgeInferred,
+        skladkaFP,
+        skladkaFGSP,
       };
 
       if (!imie) errors.push('Brak imienia');

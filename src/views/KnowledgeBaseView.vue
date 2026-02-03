@@ -3,12 +3,15 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { useToastStore } from '@/stores/toast'
+import { useSessionStore } from '@/stores/session'
+import { api, apiBaseUrl } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
 import type { FileCategory, KnowledgeFile } from '@/types/models'
 
 const knowledgeBase = useKnowledgeBaseStore()
 const { files: knowledgeFiles } = storeToRefs(knowledgeBase)
 const toast = useToastStore()
+const session = useSessionStore()
 const searchQuery = ref('')
 const showUpload = ref(false)
 const uploadName = ref('')
@@ -27,6 +30,29 @@ const categoryNames: Record<FileCategory, string> = {
 }
 
 const safeFiles = computed<KnowledgeFile[]>(() => (Array.isArray(knowledgeFiles.value) ? knowledgeFiles.value : []))
+const canDeleteKnowledge = computed(() => session.isRole(['ADMIN']))
+
+const buildKnowledgeDownloadUrl = (file: KnowledgeFile) => {
+  return `${apiBaseUrl}/v1/crm-knowledge-files/${file.id}/download`
+}
+
+const downloadKnowledgeFile = async (file: KnowledgeFile) => {
+  try {
+    const response = await api.get(`/v1/crm-knowledge-files/${file.id}/download`, { responseType: 'blob' })
+    const blob = new Blob([response.data], { type: response.data?.type || 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    const link = document.createElement('a')
+    link.href = url
+    link.download = file.name || 'plik'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || error?.message || 'Nie udało się pobrać pliku.')
+  }
+}
 
 const filteredFiles = computed(() => {
   const query = searchQuery.value.toLowerCase()
@@ -122,6 +148,20 @@ const handleUpload = async () => {
   }
 }
 
+const deleteKnowledgeFile = async (file: KnowledgeFile) => {
+  if (!canDeleteKnowledge.value) {
+    toast.warning('Tylko administrator może usuwać pliki z bazy wiedzy.')
+    return
+  }
+  if (!window.confirm(`Czy na pewno usunąć plik "${file.name}"?`)) return
+  try {
+    await knowledgeBase.deleteFile(file.id)
+    toast.success('Plik został usunięty.')
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || error?.message || 'Nie udało się usunąć pliku.')
+  }
+}
+
 onMounted(() => {
   knowledgeBase.fetchFiles()
 })
@@ -163,9 +203,17 @@ onMounted(() => {
                 </div>
                 <div class="flex items-center space-x-4">
                   <span class="text-xs text-gray-400 font-mono">{{ file.size }}</span>
-                  <a :href="file.fileUrl" download class="px-3 py-1.5 bg-sky-600 text-white rounded-md text-xs font-bold hover:bg-sky-700 transition-colors shadow-sm">
+                  <button type="button" class="px-3 py-1.5 bg-sky-600 text-white rounded-md text-xs font-bold hover:bg-sky-700 transition-colors shadow-sm" @click="downloadKnowledgeFile(file)">
                     Pobierz
-                  </a>
+                  </button>
+                  <button
+                    v-if="canDeleteKnowledge"
+                    type="button"
+                    class="px-3 py-1.5 bg-red-500 text-white rounded-md text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
+                    @click="deleteKnowledgeFile(file)"
+                  >
+                    Usuń
+                  </button>
                 </div>
               </li>
             </ul>

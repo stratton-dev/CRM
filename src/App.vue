@@ -156,7 +156,12 @@ const navLinks = computed(() => {
     { label: 'Baza Wiedzy', path: '/app/knowledge-base', icon: 'book-open', viewKey: 'knowledge-base' }
   )
 
-  return links.filter((link) => viewPermissions.isViewAllowed(link.viewKey, role))
+  return links.filter((link) => {
+    if (link.viewKey === 'settings') {
+      return viewPermissions.isSettingsAllowed(role)
+    }
+    return viewPermissions.isViewAllowed(link.viewKey, role)
+  })
 })
 
 const myNotifications = computed(() => {
@@ -182,7 +187,9 @@ const commandResults = computed(() => {
   const query = commandQuery.value.toLowerCase()
   if (!query) return { actions: [], clients: [], users: [] }
 
-  const actions = predefinedActions.filter((action) => action.label.toLowerCase().includes(query))
+  const actions = predefinedActions
+    .filter((action) => action.label.toLowerCase().includes(query))
+    .filter((action) => action.label !== 'Ustawienia' || viewPermissions.isSettingsAllowed(user?.role))
   const user = currentUser.value
 
   let visibleClients = clients.value

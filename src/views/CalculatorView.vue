@@ -14,7 +14,7 @@ import CompanyStep from '@/components/calculator/steps/CompanyStep.vue';
 import EmployeesStep from '@/components/calculator/steps/EmployeesStep.vue';
 import ResultsStandardStep from '@/components/calculator/steps/ResultsStandardStep.vue';
 import ResultsSplitStep from '@/components/calculator/steps/ResultsSplitStep.vue';
-import ComparisonStep from '@/components/calculator/steps/ComparisonStep.vue';
+import BusinessCaseStep from '@/components/calculator/steps/BusinessCaseStep.vue';
 import SummaryStep from '@/components/calculator/steps/SummaryStep.vue';
 
 const store = useCalculatorStore();
@@ -32,7 +32,7 @@ const steps = [
   { id: 1, label: 'Pracownicy', icon: 'users' },
   { id: 2, label: 'Standard', icon: 'chart-line' },
   { id: 3, label: 'Podział', icon: 'chart-pie' },
-  { id: 4, label: 'Porównanie', icon: 'sliders' },
+  { id: 4, label: 'Porównanie', icon: 'arrow-trending-up' },
   { id: 5, label: 'Podsumowanie', icon: 'file-invoice-dollar' },
 ];
 
@@ -77,8 +77,37 @@ const selectCompany = (clientId: string) => {
     telefon: match.contactPhone || '',
     osobaKontaktowa: match.contactName || '',
   };
+  void fetchClientContacts(match.id);
   store.setContext({ clientId: match.id });
   showCompanyPicker.value = false;
+};
+
+const fetchClientContacts = async (clientId: string) => {
+  if (!auth.enabled) return;
+  try {
+    const { data } = await api.get(`/v1/clients/${clientId}/contacts`);
+    const contacts = Array.isArray(data)
+      ? data.map((item: any) => ({
+          id: String(item.id),
+          name: String(item.name || ''),
+          position: item.position || null,
+          phone: item.phone || null,
+          email: item.email || null,
+          is_decision_maker: item.is_decision_maker ?? item.isDecisionMaker ?? null,
+        }))
+      : [];
+    store.firma.kontakty = contacts;
+    const decisionIds = contacts.filter((c: any) => c.is_decision_maker).map((c: any) => c.id);
+    store.firma.kontaktIds = decisionIds.length > 0 ? decisionIds : contacts.slice(0, 1).map((c: any) => c.id);
+    const decision = contacts.find((c: any) => c.is_decision_maker) || contacts[0];
+    if (decision) {
+      store.firma.osobaKontaktowa = decision.name || store.firma.osobaKontaktowa;
+      store.firma.email = decision.email || store.firma.email;
+      store.firma.telefon = decision.phone || store.firma.telefon;
+    }
+  } catch (error) {
+    // ignore missing contacts in calculator context
+  }
 };
 
 const seedEmployees = (count: number, avgWage: number, contractType: string | null) => {
@@ -142,6 +171,32 @@ onMounted(() => {
         const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać danych klienta.';
         toast.warning(message);
       });
+  }
+
+  if (auth.enabled && clientId) {
+    void fetchClientContacts(String(clientId));
+  }
+
+  if (auth.enabled && meetingId) {
+    api.get('/v1/meeting-analyses', { params: { meeting_id: meetingId, per_page: 1 } })
+      .then(({ data }) => {
+        const list = Array.isArray(data?.data) ? data.data : [];
+        const analysis = list.length ? list[0] : null;
+        if (!analysis) return;
+        store.firma = {
+          ...store.firma,
+          branza: analysis.industry || store.firma.branza,
+          benefity: analysis.benefits || store.firma.benefity,
+          udzialWProjekcie: analysis.project_participation || store.firma.udzialWProjekcie,
+          oszczednosciPrzeszle: analysis.past_savings || store.firma.oszczednosciPrzeszle,
+          oszczednosciAktualne: analysis.current_savings || store.firma.oszczednosciAktualne,
+          inwestycjePlanowane: analysis.planned_investments || store.firma.inwestycjePlanowane,
+          kwotaOszczednosciDeklarowana: analysis.declared_savings || store.firma.kwotaOszczednosciDeklarowana,
+          zadluzenia: analysis.debts || store.firma.zadluzenia,
+          ryczaltVat: analysis.vat_model || store.firma.ryczaltVat,
+        };
+      })
+      .catch(() => {});
   }
 });
 </script>
@@ -238,7 +293,7 @@ onMounted(() => {
         <EmployeesStep v-else-if="currentStep === 1" />
         <ResultsStandardStep v-else-if="currentStep === 2" />
         <ResultsSplitStep v-else-if="currentStep === 3" />
-        <ComparisonStep v-else-if="currentStep === 4" />
+        <BusinessCaseStep v-else-if="currentStep === 4" />
         <SummaryStep v-else @backToDashboard="currentStep = -1" />
       </section>
     </div>

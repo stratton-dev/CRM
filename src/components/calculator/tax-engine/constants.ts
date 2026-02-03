@@ -1,6 +1,11 @@
 import { Config } from '../models/company';
 
 export const DEFAULT_CONFIG: Config = {
+  branding: {
+    footerLine1: 'STRATTON PRIME TO FIRMA DORADZTWA BIZNESOWEGO ODDZIAŁ W POLSCE',
+    footerLine2: 'STRATTON PRIME SP. Z O.O. ODDZIAŁ W POLSCE UL. XXXX 80-999 GDAŃSK, KRS: 000000000, NIP: 9999999999, INFOLINIA: 9999999, E-MAIL: BIURO@STRATTON-PRIME.PL, WWW.STRATTON-PRIME.PL',
+    footerLogoUrl: '/logo_paper.png',
+  },
   zus: {
     uop: {
       pracownik: { emerytalna: 9.76, rentowa: 1.5, chorobowa: 2.45 },
@@ -42,4 +47,5 @@ export const DEFAULT_CONFIG: Config = {
     standard: 28,
     plus: 26,
   },
+  offerValidDays: 14,
 };

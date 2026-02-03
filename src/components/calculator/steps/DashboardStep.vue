@@ -44,7 +44,8 @@ const startFresh = () => {
   emit('start');
 };
 
-const saveAndStart = () => {
+const saveAndStart = async () => {
+  await store.saveCalculationToApi();
   store.saveToHistory();
   startFresh();
 };

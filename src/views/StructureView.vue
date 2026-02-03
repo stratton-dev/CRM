@@ -169,6 +169,46 @@ const confirmDeleteTeam = async () => {
   }
 }
 
+const deleteRemovedUsersPermanently = async (node: User) => {
+  if (currentUser.value?.role !== 'ADMIN') return
+  if (!node.teamGroupPath) return
+  if (!window.confirm(`Usunąć trwale wszystkich usuniętych w zespole ${node.name}?`)) return
+  try {
+    const result = await structure.deleteRemovedTeamUsersFromDb(node.teamGroupPath)
+    const deleted = result?.deleted ?? 0
+    if (deleted > 0) {
+      toast.success(`Usunięto trwale: ${deleted} użytkowników.`)
+    } else {
+      toast.info('Brak użytkowników do trwałego usunięcia.')
+    }
+    await structure.fetchStructure()
+  } catch {
+    toast.error('Nie udało się usunąć użytkowników trwale.')
+  }
+}
+
+const restoreTeamUsers = async (node: User) => {
+  if (currentUser.value?.role !== 'ADMIN') return
+  if (!node.teamGroupPath) return
+  if (!window.confirm(`Przywrócić wszystkich usuniętych w zespole ${node.name}?`)) return
+  try {
+    const result = await structure.restoreTeamUsers(node.teamGroupPath)
+    const restored = result?.restored ?? 0
+    const total = result?.total ?? 0
+    if (restored > 0) {
+      toast.success(`Przywrócono ${restored}/${total} użytkowników.`)
+    } else {
+      toast.info('Brak użytkowników do przywrócenia.')
+    }
+    if (result?.errors?.length) {
+      toast.warning(`Nie przywrócono: ${result.errors.length} użytkowników.`)
+    }
+    await structure.fetchStructure()
+  } catch {
+    toast.error('Nie udało się przywrócić użytkowników zespołu.')
+  }
+}
+
 watch(
   () => users.value,
   (userList) => {
@@ -199,6 +239,8 @@ watch(
 )
 
 const canAddGlobal = computed(() => currentUser.value?.role === 'ADMIN')
+const roleOptions = ['DIRECTOR', 'MANAGER', 'SALES']
+const roleOverrides = ref<Record<string, string>>({})
 
 const isExpanded = (id: string) => expandedNodes.value.has(id)
 
@@ -212,6 +254,23 @@ const toggleNode = (id: string) => {
 
 const toggleDetails = (id: string) => {
   selectedNodeId.value = selectedNodeId.value === id ? null : id
+}
+
+const getRoleValue = (node: User) => roleOverrides.value[node.id] || node.role || 'SALES'
+
+const setRoleValue = (node: User, value: string) => {
+  roleOverrides.value = { ...roleOverrides.value, [node.id]: value }
+}
+
+const saveRole = async (node: User) => {
+  if (!currentUser.value) return
+  const role = getRoleValue(node)
+  try {
+    await structure.updateUserAdmin(node.id, { role }, currentUser.value.id)
+    toast.success(`Zmieniono rolę na ${role}.`)
+  } catch {
+    toast.error('Nie udało się zmienić roli.')
+  }
 }
 
 const visibleNodes = computed<TreeNode[]>(() => {
@@ -1001,6 +1060,25 @@ const addUser = async () => {
                     Draft
                   </span>
                 </div>
+                <div v-if="currentUser?.role === 'ADMIN'">
+                  <span class="font-bold block text-gray-400 uppercase text-[10px]">Rola</span>
+                  <div class="flex items-center gap-2 mt-1">
+                    <select
+                      class="border border-gray-200 rounded px-2 py-1 text-xs"
+                      :value="getRoleValue(node)"
+                      @change="setRoleValue(node, ($event.target as HTMLSelectElement).value)"
+                    >
+                      <option v-for="role in roleOptions" :key="role" :value="role">{{ role }}</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="px-2 py-1 text-xs font-bold bg-slate-900 text-white rounded hover:bg-slate-800"
+                      @click.stop="saveRole(node)"
+                    >
+                      Zapisz
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="flex justify-end items-center space-x-2">
                 <button
@@ -1070,12 +1148,32 @@ const addUser = async () => {
               <button
                 v-if="node.teamGroupPath"
                 type="button"
+                class="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 transition shadow-sm text-xs font-bold inline-flex items-center"
+                :title="`Przywróć wszystkich usuniętych w zespole: ${node.name}`"
+                @click.stop="restoreTeamUsers(node)"
+              >
+                <AppIcon name="refresh" class="w-4 h-4 mr-2" />
+                Przywróć usuniętych
+              </button>
+              <button
+                v-if="node.teamGroupPath"
+                type="button"
                 class="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100 transition shadow-sm text-xs font-bold inline-flex items-center"
                 :title="`Usuń zespół: ${node.name}`"
                 @click.stop="openDeleteTeamModal(node)"
               >
                 <AppIcon name="x-circle" class="w-4 h-4 mr-2" />
                 Usuń zespół
+              </button>
+              <button
+                v-if="node.teamGroupPath"
+                type="button"
+                class="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded hover:bg-rose-100 transition shadow-sm text-xs font-bold inline-flex items-center"
+                :title="`Usuń trwale wszystkich usuniętych w zespole: ${node.name}`"
+                @click.stop="deleteRemovedUsersPermanently(node)"
+              >
+                <AppIcon name="trash" class="w-4 h-4 mr-2" />
+                Usuń trwale
               </button>
             </div>
           </div>

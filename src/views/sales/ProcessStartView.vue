@@ -3,11 +3,15 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
-import { api } from '@/api/client'
+import { api, apiBaseUrl } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
+import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
+import type { KnowledgeFile } from '@/types/models'
+import { VueFilesPreview } from 'vue-files-preview'
+import 'vue-files-preview/lib/style.css'
 
 const auth = useAuthStore()
 const session = useSessionStore()
@@ -16,6 +20,8 @@ const toast = useToastStore()
 const { currentUser } = storeToRefs(session)
 const router = useRouter()
 const route = useRoute()
+const knowledgeBase = useKnowledgeBaseStore()
+const { files: knowledgeFiles } = storeToRefs(knowledgeBase)
 
 const isProcessActive = ref(false)
 const step = ref(1)
@@ -63,8 +69,30 @@ const contactEdit = ref({
   is_decision_maker: false,
 })
 
-const consentList = ref<Array<{ id: string; code: string; title: string; description: string; required: boolean }>>([])
+const consentList = ref<Array<{ id: string; code: string; title: string; description: string; required: boolean; file_url?: string | null; file_name?: string | null }>>([])
 const consentAccepted = ref<Record<string, boolean>>({})
+
+const openConsentFile = async (consent: { id: string; file_name?: string | null }, download = false) => {
+  try {
+    const { data } = await api.get(`/v1/consents/${consent.id}/file`, {
+      params: download ? { download: 1 } : undefined,
+      responseType: 'blob',
+    })
+    const url = window.URL.createObjectURL(data)
+    if (download) {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = consent.file_name || 'consent.pdf'
+      a.click()
+      window.URL.revokeObjectURL(url)
+      return
+    }
+    window.open(url, '_blank')
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać pliku.'
+    toast.warning(message)
+  }
+}
 
 const analysis = ref({
   industry: '',
@@ -73,6 +101,14 @@ const analysis = ref({
   avgEarnings: null as number | null,
   zusCost: null as number | null,
   isInvesting: null as boolean | null,
+  benefits: '',
+  projectParticipation: '',
+  pastSavings: '',
+  currentSavings: '',
+  plannedInvestments: '',
+  declaredSavings: '',
+  debts: '',
+  vatModel: '',
 })
 
 const userName = computed(() => currentUser.value?.name || 'Użytkowniku')
@@ -87,6 +123,176 @@ const meetingId = ref<string | null>(null)
 const meetingAnalysisId = ref<string | null>(null)
 const isLoadingExisting = ref(false)
 const calcTarget = ref<'quick' | 'detailed'>('quick')
+const knowledgeSearch = ref('')
+const showPreview = ref(false)
+const previewUrl = ref('')
+const previewName = ref('')
+const previewIndex = ref<number | null>(null)
+const previewContainer = ref<HTMLElement | null>(null)
+const previewFile = ref<File | null>(null)
+const previewKey = ref(0)
+
+const safeKnowledgeFiles = computed<KnowledgeFile[]>(() => (Array.isArray(knowledgeFiles.value) ? knowledgeFiles.value : []))
+const filteredKnowledgeFiles = computed(() => {
+  const query = knowledgeSearch.value.trim().toLowerCase()
+  if (!query) return safeKnowledgeFiles.value
+  return safeKnowledgeFiles.value.filter((file) => {
+    return file.name.toLowerCase().includes(query) || file.description.toLowerCase().includes(query)
+  })
+})
+
+const buildKnowledgeDownloadUrl = (file: KnowledgeFile) => {
+  return `${apiBaseUrl}/v1/crm-knowledge-files/${file.id}/download`
+}
+
+const normalizeFileExt = (value?: string | null) => {
+  const raw = String(value || '').trim().toLowerCase()
+  if (!raw) return ''
+  if (raw.startsWith('.')) return raw.slice(1)
+  if (raw.includes('/')) {
+    const mimeMap: Record<string, string> = {
+      'application/pdf': 'pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+      'text/plain': 'txt',
+      'text/markdown': 'md',
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+    }
+    return mimeMap[raw] || ''
+  }
+  return raw
+}
+
+const extractExtFromName = (name?: string | null) => {
+  const ext = (name || '').split('.').pop()?.toLowerCase() || ''
+  return ext === name?.toLowerCase() ? '' : ext
+}
+
+const extractExtFromUrl = (url?: string | null) => {
+  if (!url) return ''
+  const clean = url.split('?')[0] || ''
+  const ext = clean.split('.').pop()?.toLowerCase() || ''
+  return ext === clean.toLowerCase() ? '' : ext
+}
+
+const buildPreviewFilename = (file: KnowledgeFile, ext: string) => {
+  const original = file.name || ''
+  if (!ext) return original || 'plik'
+  if (!original) return `plik.${ext}`
+  if (original.toLowerCase().endsWith(`.${ext}`)) return original
+  return `${original}.${ext}`
+}
+
+const setPreviewUrl = (url: string) => {
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+  }
+  previewUrl.value = url
+}
+
+const openKnowledgeFile = async (file: KnowledgeFile, index?: number) => {
+  if (!file.fileUrl || file.fileUrl === '#') {
+    toast.warning('Brak podpiętego pliku do podglądu.')
+    return
+  }
+  const supported = ['pdf', 'docx', 'xlsx', 'pptx', 'txt', 'md', 'markdown', 'png', 'jpg', 'jpeg']
+  const typeFromMeta = normalizeFileExt(file.fileType)
+  const typeFromName = extractExtFromName(file.name)
+  const typeFromUrl = extractExtFromUrl(file.fileUrl)
+  const fileType = (typeFromMeta || typeFromName || typeFromUrl || '').toLowerCase()
+  if (supported.includes(fileType)) {
+    try {
+      const mimeMap: Record<string, string> = {
+        pdf: 'application/pdf',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        txt: 'text/plain',
+        md: 'text/markdown',
+        markdown: 'text/markdown',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+      }
+      const response = await api.get(`/v1/crm-knowledge-files/${file.id}/download`, { responseType: 'blob' })
+      const blobData = response.data as Blob
+      const mimeType = mimeMap[fileType] || blobData.type || 'application/octet-stream'
+      const blob = new Blob([blobData], { type: mimeType })
+      const filename = buildPreviewFilename(file, fileType)
+      previewFile.value = new File([blob], filename, { type: blob.type })
+      setPreviewUrl(URL.createObjectURL(blob))
+      previewName.value = file.name
+      previewIndex.value = typeof index === 'number' ? index : null
+      showPreview.value = true
+      previewKey.value += 1
+      return
+    } catch (error) {
+      console.error(error)
+      toast.warning('Nie udało się wczytać pliku do podglądu. Użyj opcji Zapisz.')
+      return
+    }
+  }
+
+  toast.warning('Ten format nie jest obsługiwany w podglądzie. Użyj opcji Zapisz.')
+}
+
+const downloadKnowledgeFile = (file: KnowledgeFile) => {
+  if (!file.fileUrl || file.fileUrl === '#') {
+    toast.warning('Brak podpiętego pliku do pobrania.')
+    return
+  }
+  api.get(`/v1/crm-knowledge-files/${file.id}/download`, { responseType: 'blob' })
+    .then((response) => {
+      const blob = new Blob([response.data], { type: response.data?.type || 'application/octet-stream' })
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank', 'noopener,noreferrer')
+      const link = document.createElement('a')
+      link.href = url
+      link.download = file.name || 'plik'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    })
+    .catch((error) => {
+      console.error(error)
+      toast.error('Nie udało się pobrać pliku.')
+    })
+}
+
+
+const previewNext = (direction: 1 | -1) => {
+  if (previewIndex.value === null) return
+  const list = filteredKnowledgeFiles.value
+  if (list.length === 0) return
+  const nextIndex = (previewIndex.value + direction + list.length) % list.length
+  const nextFile = list[nextIndex]
+  if (!nextFile) return
+  void openKnowledgeFile(nextFile, nextIndex)
+}
+
+const togglePreviewFullscreen = async () => {
+  const el = previewContainer.value
+  if (!el) return
+  if (document.fullscreenElement) {
+    await document.exitFullscreen()
+  } else {
+    await el.requestFullscreen()
+  }
+}
+
+const closePreview = () => {
+  showPreview.value = false
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+  }
+  previewUrl.value = ''
+  previewName.value = ''
+  previewFile.value = null
+  previewIndex.value = null
+}
 
 const normalizeNip = (nip: string) => nip.replace(/\D/g, '')
 
@@ -451,6 +657,14 @@ const saveMeetingAnalysis = async () => {
       zus_cost_level: analysis.value.zusCost ?? null,
       investments_planned: analysis.value.isInvesting ?? null,
       expected_savings: analysis.value.avgEarnings ?? null,
+      benefits: analysis.value.benefits || null,
+      project_participation: analysis.value.projectParticipation || null,
+      past_savings: analysis.value.pastSavings || null,
+      current_savings: analysis.value.currentSavings || null,
+      planned_investments: analysis.value.plannedInvestments || null,
+      declared_savings: analysis.value.declaredSavings || null,
+      debts: analysis.value.debts || null,
+      vat_model: analysis.value.vatModel || null,
     }
 
     if (meetingAnalysisId.value) {
@@ -535,8 +749,27 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
         avgEarnings: analysisItem?.expected_savings ?? null,
         zusCost: analysisItem?.zus_cost_level ?? null,
         isInvesting: analysisItem?.investments_planned ?? null,
+        benefits: analysisItem?.benefits || '',
+        projectParticipation: analysisItem?.project_participation || '',
+        pastSavings: analysisItem?.past_savings || '',
+        currentSavings: analysisItem?.current_savings || '',
+        plannedInvestments: analysisItem?.planned_investments || '',
+        declaredSavings: analysisItem?.declared_savings || '',
+        debts: analysisItem?.debts || '',
+        vatModel: analysisItem?.vat_model || '',
       }
     }
+
+    const hasProfileData = Boolean(
+      analysis.value.benefits ||
+      analysis.value.projectParticipation ||
+      analysis.value.pastSavings ||
+      analysis.value.currentSavings ||
+      analysis.value.plannedInvestments ||
+      analysis.value.declaredSavings ||
+      analysis.value.debts ||
+      analysis.value.vatModel,
+    )
 
     if (!meetingId.value) {
       step.value = 1
@@ -544,8 +777,10 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       step.value = 2
     } else if (!analysis.value.industry || !analysis.value.contractType) {
       step.value = 3
-    } else {
+    } else if (!hasProfileData) {
       step.value = 4
+    } else {
+      step.value = 5
     }
 
     isProcessActive.value = true
@@ -585,6 +820,10 @@ const getCurrentStepName = computed(() => {
     case 3:
       return 'Analiza Potrzeb'
     case 4:
+      return 'Profil Firmy'
+    case 5:
+      return 'Baza Wiedzy'
+    case 6:
       return 'Prezentacja Oferty'
     default:
       return ''
@@ -599,6 +838,8 @@ const isStepValid = computed(() => {
       return consentList.value.filter((c) => c.required).every((c) => consentAccepted.value[c.id])
     case 3:
       return !!analysis.value.industry && !!analysis.value.contractType
+    case 4:
+      return true
     default:
       return true
   }
@@ -617,8 +858,12 @@ const nextStep = async () => {
     const ok = await saveMeetingAnalysis()
     if (!ok) return
   }
+  if (step.value === 4) {
+    const ok = await saveMeetingAnalysis()
+    if (!ok) return
+  }
 
-  if (step.value < 4) {
+  if (step.value < 6) {
     step.value += 1
     return
   }
@@ -639,6 +884,12 @@ const nextStep = async () => {
   })
 }
 
+const prevStep = () => {
+  if (step.value > 1) {
+    step.value -= 1
+  }
+}
+
 const getButtonLabel = computed(() => {
   switch (step.value) {
     case 1:
@@ -646,8 +897,12 @@ const getButtonLabel = computed(() => {
     case 2:
       return 'Dalej: Analiza'
     case 3:
-      return 'Dalej: Oferta'
+      return 'Dalej: Profil firmy'
     case 4:
+      return 'Dalej: Baza wiedzy'
+    case 5:
+      return 'Dalej: Oferta'
+    case 6:
       return 'Stwórz Kalkulację'
     default:
       return 'Dalej'
@@ -665,11 +920,14 @@ onMounted(() => {
       title: String(item.title || item.code || ''),
       description: String(item.description || ''),
       required: Boolean(item.required),
+      file_url: item.file_url || null,
+      file_name: item.file_name || null,
     }))
     consentAccepted.value = consentList.value.reduce<Record<string, boolean>>((acc, consent) => {
       acc[consent.id] = false
       return acc
     }, {})
+    knowledgeBase.fetchFiles()
   }
 
   if (route.query.mode === 'new') {
@@ -794,7 +1052,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="hidden md:flex items-center gap-2">
-          <div v-for="i in [1, 2, 3, 4]" :key="i" class="h-1.5 w-12 rounded-full" :class="step >= i ? 'bg-slate-800' : 'bg-slate-200'"></div>
+          <div v-for="i in [1, 2, 3, 4, 5, 6]" :key="i" class="h-1.5 w-12 rounded-full" :class="step >= i ? 'bg-slate-800' : 'bg-slate-200'"></div>
         </div>
       </div>
     </header>
@@ -977,6 +1235,10 @@ onMounted(() => {
                 <div>
                   <span class="font-bold text-slate-900">{{ consent.title }}<span v-if="consent.required"> *</span></span>
                   <p class="text-slate-500 text-sm">{{ consent.description }}</p>
+                  <div v-if="consent.file_url" class="mt-2 flex items-center gap-3 text-xs">
+                    <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, false)">Podgląd</button>
+                    <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, true)">Pobierz</button>
+                  </div>
                 </div>
               </label>
             </div>
@@ -1016,6 +1278,82 @@ onMounted(() => {
             </div>
           </div>
 
+          <div v-else-if="step === 4" class="space-y-6 animate-fade-in-up">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Benefity</label>
+                <input v-model="analysis.benefits" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Udział w projekcie</label>
+                <input v-model="analysis.projectParticipation" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Przeszłe oszczędności</label>
+                <input v-model="analysis.pastSavings" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Aktualne oszczędności</label>
+                <input v-model="analysis.currentSavings" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Planowane inwestycje</label>
+                <input v-model="analysis.plannedInvestments" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Deklarowana kwota oszczędności</label>
+                <input v-model="analysis.declaredSavings" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Zadłużenia</label>
+                <input v-model="analysis.debts" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Ryczałt / VAT</label>
+                <input v-model="analysis.vatModel" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="step === 5" class="space-y-6 animate-fade-in-up">
+            <div>
+              <h3 class="text-lg font-bold text-slate-800">Materiały z bazy wiedzy</h3>
+              <p class="text-xs text-slate-500">Wyszukaj i otwórz potrzebne dokumenty przed zakończeniem spotkania.</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="relative flex-1">
+                <AppIcon name="magnifying-glass" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input v-model="knowledgeSearch" type="text" placeholder="Szukaj plików po nazwie lub opisie..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-slate-400 focus:border-slate-400" />
+              </div>
+              <button type="button" class="px-4 py-2 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" @click="knowledgeBase.fetchFiles(knowledgeSearch)">
+                Odśwież
+              </button>
+            </div>
+            <div v-if="knowledgeBase.loading" class="text-xs text-slate-400">Ładowanie plików...</div>
+            <div v-else-if="filteredKnowledgeFiles.length === 0" class="text-sm text-slate-500">
+              Brak plików spełniających kryteria wyszukiwania.
+            </div>
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div v-for="(file, index) in filteredKnowledgeFiles" :key="file.id" class="border border-slate-200 rounded-xl p-4 bg-white hover:border-stratton-gold/50 transition">
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="font-semibold text-slate-900">{{ file.name }}</p>
+                    <p class="text-xs text-slate-500 line-clamp-2">{{ file.description || 'Brak opisu' }}</p>
+                    <p class="text-[11px] text-slate-400 mt-1">{{ file.category }}</p>
+                  </div>
+                  <div class="flex flex-col items-end gap-2">
+                    <button type="button" class="text-xs font-semibold text-stratton-gold hover:underline" @click="openKnowledgeFile(file, index)">
+                      Otwórz
+                    </button>
+                    <button type="button" class="text-[11px] font-semibold text-slate-500 hover:text-slate-700" @click="downloadKnowledgeFile(file)">
+                      Zapisz
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div v-else class="space-y-6 animate-fade-in-up">
             <div class="text-center">
               <AppIcon name="signature" class="w-10 h-10 text-stratton-gold mb-4 mx-auto" />
@@ -1045,8 +1383,15 @@ onMounted(() => {
               </div>
             </div>
           </div>
-
-          <div class="mt-10 pt-6 border-t border-slate-100 flex justify-end">
+          <div class="mt-10 pt-6 border-t border-slate-100 flex items-center justify-between">
+            <button
+              type="button"
+              class="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wide border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="step <= 1"
+              @click="prevStep"
+            >
+              Wstecz
+            </button>
             <button type="button" class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide hover:bg-indigo-700 transition flex items-center gap-3 shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!isStepValid" @click="nextStep">
               {{ getButtonLabel }}
               <AppIcon :name="isStepValid ? 'arrow-right' : 'lock-closed'" class="w-4 h-4" />
@@ -1055,6 +1400,32 @@ onMounted(() => {
         </div>
       </div>
     </main>
+
+    <div v-if="showPreview" class="fixed inset-0 z-[60] flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/50" @click="closePreview"></div>
+      <div ref="previewContainer" class="relative bg-white w-[90vw] max-w-5xl h-[80vh] rounded-2xl shadow-2xl border border-slate-200 p-4 flex flex-col">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-semibold text-slate-700">{{ previewName || 'Podgląd pliku' }}</div>
+          <div class="flex items-center gap-2">
+            <button type="button" class="text-xs font-semibold text-slate-500 hover:text-slate-700" @click="previewNext(-1)">
+              Poprzedni
+            </button>
+            <button type="button" class="text-xs font-semibold text-slate-500 hover:text-slate-700" @click="previewNext(1)">
+              Następny
+            </button>
+            <button type="button" class="text-xs font-semibold text-slate-500 hover:text-slate-700" @click="togglePreviewFullscreen">
+              Pełny ekran
+            </button>
+            <button type="button" class="text-xs font-semibold text-slate-500 hover:text-slate-700" @click="closePreview">
+              Zamknij
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-hidden">
+          <VueFilesPreview :key="previewKey" :file="previewFile" :url="previewUrl" class="w-full h-full" />
+        </div>
+      </div>
+    </div>
 
     <div v-if="isContactEditOpen" class="fixed inset-0 z-[60] flex items-center justify-center">
       <div class="absolute inset-0 bg-black/40" @click="closeContactEdit"></div>

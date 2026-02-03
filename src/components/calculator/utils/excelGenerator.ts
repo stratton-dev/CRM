@@ -20,6 +20,8 @@ interface ColumnDef {
   };
 }
 
+const round = (value: number) => Math.round(value * 100) / 100;
+
 const saveWorkbook = async (workbook: any, fileName: string) => {
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -59,103 +61,304 @@ const applyColumnStyles = (row: any, columns: ColumnDef[]) => {
 };
 
 export const excelGenerator = {
-  generateManagementReport: async ({ firma, wyniki, prowizjaProc }: ReportData) => {
+  generateManagementReport: async (
+    { firma, wyniki, prowizjaProc }: ReportData,
+    options?: { returnBuffer?: boolean }
+  ) => {
     const workbook = new ExcelJS.Workbook();
-    const wsSummary = workbook.addWorksheet('Podsumowanie', { views: [{ showGridLines: false }] });
+    const styles = {
+      headerFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } },
+      headerFont: { bold: true, size: 10, color: { argb: 'FF334155' } },
+      currency: '#,##0.00 "zł"',
+      inputFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF000' } },
+    };
 
-    wsSummary.columns = [
-      { key: 'A', width: 5 },
-      { key: 'B', width: 35 },
-      { key: 'C', width: 20 },
-      { key: 'D', width: 20 },
-      { key: 'E', width: 20 },
-      { key: 'F', width: 20 },
-    ];
+    const wsSummary = workbook.addWorksheet('Podsumowanie Menadżerskie', { views: [{ showGridLines: false }] });
 
-    wsSummary.mergeCells('B2:F2');
+    wsSummary.mergeCells('B2:E2');
     const titleCell = wsSummary.getCell('B2');
-    titleCell.value = `RAPORT OPTYMALIZACJI: ${firma.nazwa.toUpperCase()}`;
-    titleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF0F172A' } };
+    titleCell.value = `RAPORT OPTYMALIZACJI KOSZTÓW: ${firma.nazwa?.toUpperCase() || 'FIRMA'}`;
+    titleCell.font = { size: 16, bold: true, color: { argb: 'FF0F172A' } };
 
-    wsSummary.mergeCells('B3:F3');
-    const dateCell = wsSummary.getCell('B3');
-    dateCell.value = `Data symulacji: ${new Date().toLocaleDateString('pl-PL')}`;
-    dateCell.font = { name: 'Calibri', size: 10, color: { argb: 'FF64748B' } };
+    wsSummary.getCell('B3').value = `Data symulacji: ${new Date().toLocaleDateString('pl-PL')}`;
+    wsSummary.getCell('B3').font = { color: { argb: 'FF64748B' } };
 
-    const stats = wyniki.podsumowanie;
-    const isPlus = prowizjaProc === 26;
-    const prowizjaTotal = stats.prowizja;
-    let feeCost = prowizjaTotal;
-    let raiseCost = 0;
+    const kpiRow = 5;
+    const totalStandardCost = wyniki.szczegoly.reduce((acc, w) => acc + round(w.standard.kosztPracodawcy), 0);
 
-    if (isPlus) {
-      feeCost = prowizjaTotal * (20 / 26);
-      raiseCost = prowizjaTotal * (6 / 26);
-    }
+    wsSummary.getCell(`B${kpiRow}`).value = 'Aktualny Koszt (Msc)';
+    wsSummary.getCell(`B${kpiRow + 1}`).value = totalStandardCost;
+    wsSummary.getCell(`B${kpiRow + 1}`).numFmt = styles.currency;
+    wsSummary.getCell(`B${kpiRow + 1}`).font = { size: 14, color: { argb: 'FF64748B' } };
 
-    const standardTotal = stats.sumaKosztStandard;
-    const elitonTotal = stats.sumaKosztPodzial + prowizjaTotal;
-    const savingsMonth = standardTotal - elitonTotal;
-    const savingsYear = savingsMonth * 12;
+    wsSummary.getCell(`C${kpiRow}`).value = 'Nowy Koszt (Msc)';
+    wsSummary.getCell(`C${kpiRow + 1}`).value = { formula: 'D14' };
+    wsSummary.getCell(`C${kpiRow + 1}`).numFmt = styles.currency;
+    wsSummary.getCell(`C${kpiRow + 1}`).font = { size: 14, color: { argb: 'FF0F172A' }, bold: true };
 
-    const kpiLabelsRow = wsSummary.getRow(5);
-    kpiLabelsRow.values = ['', 'Aktualny koszt (msc)', 'Nowy koszt (msc)', 'Miesięczna oszczędność', 'Roczna oszczędność'];
-    kpiLabelsRow.font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } };
+    wsSummary.getCell(`D${kpiRow}`).value = 'Miesięczna Oszczędność';
+    wsSummary.getCell(`D${kpiRow + 1}`).value = { formula: `B${kpiRow + 1}-C${kpiRow + 1}` };
+    wsSummary.getCell(`D${kpiRow + 1}`).numFmt = styles.currency;
+    wsSummary.getCell(`D${kpiRow + 1}`).font = { size: 14, color: { argb: 'FF059669' }, bold: true };
+    wsSummary.getCell(`D${kpiRow + 1}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
 
-    const kpiValuesRow = wsSummary.getRow(6);
-    kpiValuesRow.values = ['', standardTotal, elitonTotal, savingsMonth, savingsYear];
-    kpiValuesRow.font = { name: 'Calibri', size: 12, bold: true };
-    [2, 3, 4, 5].forEach((c) => (kpiValuesRow.getCell(c).numFmt = '#,##0.00 zl'));
+    wsSummary.getCell(`E${kpiRow}`).value = 'Roczna Oszczędność';
+    wsSummary.getCell(`E${kpiRow + 1}`).value = { formula: `D${kpiRow + 1}*12` };
+    wsSummary.getCell(`E${kpiRow + 1}`).numFmt = styles.currency;
+    wsSummary.getCell(`E${kpiRow + 1}`).font = { size: 14, color: { argb: 'FF059669' }, bold: true };
 
-    const tableHeaderRow = wsSummary.getRow(9);
-    tableHeaderRow.values = ['', 'Kategoria', 'Model Standard', 'Model Prime', 'Różnica'];
-    ['B9', 'C9', 'D9', 'E9'].forEach((key) => {
-      const cell = wsSummary.getCell(key);
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF334155' } };
-      cell.border = { bottom: { style: 'thin', color: { argb: 'FF94A3B8' } } };
+    const tableRow = 9;
+    const headers = ['Kategoria', 'Model Standard (As-Is)', 'Model Eliton (To-Be)', 'Różnica'];
+    headers.forEach((header, index) => {
+      const cell = wsSummary.getCell(tableRow, 2 + index);
+      cell.value = header;
+      cell.fill = styles.headerFill;
+      cell.font = styles.headerFont;
+      cell.border = { bottom: { style: 'thick', color: { argb: 'FF334155' } } };
     });
 
-    const rows = [
-      {
-        name: 'Wynagrodzenia Brutto',
-        std: wyniki.szczegoly.reduce((acc, w) => acc + w.standard.brutto, 0),
-        new: wyniki.szczegoly.reduce((acc, w) => acc + w.podzial.pit.lacznyPrzychod, 0),
-      },
-      {
-        name: 'ZUS Pracodawcy',
-        std: wyniki.szczegoly.reduce((acc, w) => acc + w.standard.zusPracodawca.suma, 0),
-        new: wyniki.szczegoly.reduce((acc, w) => acc + w.podzial.zasadnicza.zusPracodawca.suma, 0),
-      },
-      { name: 'Koszt operacyjny (prowizja)', std: 0, new: feeCost },
+    const addDashboardRow = (
+      label: string,
+      standardValue: number | null,
+      targetValueOrFormula: any,
+      rowIndex: number,
+      isTotal = false,
+      isDynamic = false,
+    ) => {
+      wsSummary.getCell(`B${rowIndex}`).value = label;
+      wsSummary.getCell(`C${rowIndex}`).value = standardValue ?? 0;
+      wsSummary.getCell(`D${rowIndex}`).value = targetValueOrFormula;
+      wsSummary.getCell(`E${rowIndex}`).value = { formula: `C${rowIndex}-D${rowIndex}` };
+
+      ['C', 'D', 'E'].forEach((col) => {
+        wsSummary.getCell(`${col}${rowIndex}`).numFmt = styles.currency;
+        if (isTotal) wsSummary.getCell(`${col}${rowIndex}`).font = { bold: true };
+      });
+
+      if (isDynamic) {
+        wsSummary.getCell(`B${rowIndex}`).font = { color: { argb: 'FFD97706' }, italic: true };
+        wsSummary.getCell(`D${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
+      }
+    };
+
+    const statsStandard = {
+      brutto: wyniki.szczegoly.reduce((acc, w) => acc + round(w.standard.brutto), 0),
+      zus: wyniki.szczegoly.reduce((acc, w) => acc + round(w.standard.zusPracodawca.suma), 0),
+    };
+
+    const statsStratton = {
+      brutto: wyniki.szczegoly.reduce((acc, w) => {
+        const isStudent = w.pracownik.trybSkladek === 'STUDENT_UZ';
+        return acc + round(isStudent ? w.standard.brutto : w.podzial.pit.lacznyPrzychod);
+      }, 0),
+      zus: wyniki.szczegoly.reduce((acc, w) => {
+        const isStudent = w.pracownik.trybSkladek === 'STUDENT_UZ';
+        return acc + round(isStudent ? w.standard.zusPracodawca.suma : w.podzial.zasadnicza.zusPracodawca.suma);
+      }, 0),
+      prowizja: round(
+        wyniki.szczegoly.reduce((acc, w) => {
+          const isStudent = w.pracownik.trybSkladek === 'STUDENT_UZ';
+          if (isStudent) return acc;
+          return acc + round(w.podzial.swiadczenie.brutto);
+        }, 0) * (prowizjaProc / 100),
+      ),
+    };
+
+    addDashboardRow('Wynagrodzenia Brutto', statsStandard.brutto, statsStratton.brutto, tableRow + 1);
+    addDashboardRow('ZUS Pracodawcy', statsStandard.zus, statsStratton.zus, tableRow + 2);
+    addDashboardRow('Koszt Operacyjny (Prowizja)', 0, statsStratton.prowizja, tableRow + 3);
+    addDashboardRow('Budżet na dodatkowe podwyżki', 0, { formula: "'Kalkulator Podwyżek'!$M$2" }, tableRow + 4, false, true);
+
+    wsSummary.getCell(`B${tableRow + 5}`).value = 'CAŁKOWITY KOSZT';
+    wsSummary.getCell(`B${tableRow + 5}`).font = { bold: true };
+    wsSummary.getCell(`C${tableRow + 5}`).value = { formula: `SUM(C${tableRow + 1}:C${tableRow + 4})` };
+    wsSummary.getCell(`D${tableRow + 5}`).value = { formula: `SUM(D${tableRow + 1}:D${tableRow + 4})` };
+    wsSummary.getCell(`E${tableRow + 5}`).value = { formula: `C${tableRow + 5}-D${tableRow + 5}` };
+
+    ['C', 'D', 'E'].forEach((col) => {
+      wsSummary.getCell(`${col}${tableRow + 5}`).numFmt = styles.currency;
+      wsSummary.getCell(`${col}${tableRow + 5}`).font = { bold: true, size: 12 };
+      wsSummary.getCell(`${col}${tableRow + 5}`).border = { top: { style: 'double' } };
+    });
+    wsSummary.getCell(`E${tableRow + 5}`).font = { color: { argb: 'FF059669' }, bold: true, size: 12 };
+
+    wsSummary.getColumn('B').width = 35;
+    wsSummary.getColumn('C').width = 25;
+    wsSummary.getColumn('D').width = 25;
+    wsSummary.getColumn('E').width = 25;
+
+    const wsDetails = workbook.addWorksheet('Kalkulator Podwyżek');
+    const isPlusVariant = prowizjaProc === 26;
+    const dataStartRow = 5;
+    const dataEndRow = dataStartRow + wyniki.szczegoly.length - 1;
+
+    wsDetails.mergeCells('B2:F2');
+    wsDetails.getCell('B2').value = 'SYMULACJA PODZIAŁU NADWYŻKI I PODWYŻEK';
+    wsDetails.getCell('B2').font = { bold: true, size: 14, color: { argb: 'FF1E40AF' } };
+
+    wsDetails.getCell('M1').value = 'SUMA PODWYŻEK (TECH)';
+    wsDetails.getCell('M2').value = { formula: `SUM(H${dataStartRow}:H${dataEndRow})` };
+    wsDetails.getCell('M2').font = { color: { argb: 'FFFFFFFF' } };
+
+    wsDetails.getCell('I2').value = 'Dodatkowa podwyżka od pracodawcy (% od podstawy ZUS):';
+    wsDetails.getCell('I2').font = { bold: true };
+    wsDetails.getCell('I2').alignment = { horizontal: 'right' };
+
+    const inputCell = wsDetails.getCell('K2');
+    inputCell.value = 0;
+    inputCell.numFmt = '0.00%';
+    inputCell.fill = styles.inputFill;
+    inputCell.font = { bold: true, color: { argb: 'FF000000' } };
+    inputCell.border = { top: { style: 'medium' }, left: { style: 'medium' }, bottom: { style: 'medium' }, right: { style: 'medium' } };
+    inputCell.alignment = { horizontal: 'center' };
+
+    wsDetails.getCell('L2').value = '⬅ Wpisz % tutaj';
+    wsDetails.getCell('L2').font = { italic: true, color: { argb: 'FF64748B' } };
+
+    const simHeaderRowIdx = 4;
+    const simHeaders = [
+      'LP',
+      'Imię i Nazwisko',
+      'Obecne\nNetto',
+      'Nowa Baza\n(ZUS)',
+      'Świadczenie\n(Benefit)',
+      isPlusVariant ? 'Podwyżka Systemowa\n(Stratton 4%)' : 'Podwyżka Systemowa\n(Brak)',
+      'Bonus Administracyjny\n(2% - Budżet Firmy)',
+      'Podwyżka Dodatkowa\n(Od Pracodawcy)',
+      'NOWE ŁĄCZNE\nNETTO PRACOWNIKA',
+      'ZMIANA\n(ZYSK PRACOWNIKA)',
     ];
-    if (isPlus) rows.push({ name: 'Budżet na podwyżki', std: 0, new: raiseCost });
 
-    let currentRowIdx = 10;
-    rows.forEach((r) => {
-      const row = wsSummary.getRow(currentRowIdx);
-      const diffVal = r.std - r.new;
-      row.getCell(2).value = r.name;
-      row.getCell(3).value = r.std;
-      row.getCell(4).value = r.new;
-      row.getCell(5).value = diffVal;
-      [3, 4, 5].forEach((c) => (row.getCell(c).numFmt = '#,##0.00 zl'));
-      currentRowIdx++;
+    simHeaders.forEach((header, index) => {
+      const colLetter = String.fromCharCode(65 + index);
+      const cell = wsDetails.getCell(`${colLetter}${simHeaderRowIdx}`);
+      cell.value = header;
+      cell.style = {
+        font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } },
+        alignment: { horizontal: 'center', vertical: 'middle', wrapText: true },
+        border: { bottom: { style: 'medium' } },
+      };
+    });
+    wsDetails.getRow(simHeaderRowIdx).height = 50;
+
+    wyniki.szczegoly.forEach((w, index) => {
+      const rowIndex = dataStartRow + index;
+      const isStudent = w.pracownik.trybSkladek === 'STUDENT_UZ';
+
+      wsDetails.getCell(`A${rowIndex}`).value = index + 1;
+      wsDetails.getCell(`B${rowIndex}`).value = `${w.pracownik.imie} ${w.pracownik.nazwisko}${isStudent ? ' (Student)' : ''}`;
+      wsDetails.getCell(`C${rowIndex}`).value = w.standard.netto;
+
+      if (isStudent) {
+        wsDetails.getCell(`D${rowIndex}`).value = w.standard.netto;
+        wsDetails.getCell(`E${rowIndex}`).value = 0;
+        wsDetails.getCell(`F${rowIndex}`).value = 0;
+        wsDetails.getCell(`G${rowIndex}`).value = 0;
+        wsDetails.getCell(`H${rowIndex}`).value = 0;
+
+        for (let colCode = 65; colCode <= 74; colCode++) {
+          wsDetails.getCell(`${String.fromCharCode(colCode)}${rowIndex}`).fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF1F5F9' },
+          };
+        }
+      } else {
+        wsDetails.getCell(`D${rowIndex}`).value = w.podzial.zasadnicza.nettoGotowka;
+        wsDetails.getCell(`E${rowIndex}`).value = w.podzial.swiadczenie.netto;
+
+        let systemRaise = 0;
+        let adminBonus = 0;
+        if (isPlusVariant) {
+          const swiadczenieBrutto = w.podzial.swiadczenie.brutto;
+          systemRaise = swiadczenieBrutto * 0.04;
+          adminBonus = swiadczenieBrutto * 0.02;
+        }
+
+        wsDetails.getCell(`F${rowIndex}`).value = systemRaise;
+        wsDetails.getCell(`F${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
+
+        wsDetails.getCell(`G${rowIndex}`).value = adminBonus;
+        wsDetails.getCell(`G${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } };
+
+        wsDetails.getCell(`H${rowIndex}`).value = { formula: `D${rowIndex}*$K$2` };
+        wsDetails.getCell(`H${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
+      }
+
+      wsDetails.getCell(`I${rowIndex}`).value = { formula: `D${rowIndex}+E${rowIndex}+F${rowIndex}+H${rowIndex}` };
+      wsDetails.getCell(`I${rowIndex}`).font = { bold: true };
+      if (!isStudent) wsDetails.getCell(`I${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
+
+      wsDetails.getCell(`J${rowIndex}`).value = { formula: `I${rowIndex}-C${rowIndex}` };
+      wsDetails.getCell(`J${rowIndex}`).font = { bold: true, color: { argb: 'FF059669' } };
+
+      for (let col = 3; col <= 10; col++) {
+        wsDetails.getCell(rowIndex, col).numFmt = '#,##0.00';
+        wsDetails.getCell(rowIndex, col).border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+      }
     });
 
-    const totalRow = wsSummary.getRow(currentRowIdx);
-    totalRow.getCell(2).value = 'CAŁKOWITY KOSZT';
-    totalRow.getCell(3).value = standardTotal;
-    totalRow.getCell(4).value = elitonTotal;
-    totalRow.getCell(5).value = savingsMonth;
-    [2, 3, 4, 5].forEach((c) => {
-      const cell = totalRow.getCell(c);
-      cell.font = { bold: true, size: 11 };
-      cell.border = { top: { style: 'double' } };
-      if (c > 2) cell.numFmt = '#,##0.00 zl';
-    });
+    wsDetails.getColumn('A').width = 5;
+    wsDetails.getColumn('B').width = 25;
+    wsDetails.getColumn('C').width = 13;
+    wsDetails.getColumn('D').width = 13;
+    wsDetails.getColumn('E').width = 13;
+    wsDetails.getColumn('F').width = 15;
+    wsDetails.getColumn('G').width = 15;
+    wsDetails.getColumn('H').width = 16;
+    wsDetails.getColumn('I').width = 18;
+    wsDetails.getColumn('J').width = 14;
 
-    await saveWorkbook(workbook, `Raport_${firma.nazwa || 'Firma'}`);
+    const summaryStartCol = 'L';
+    const summaryValueCol = 'M';
+    const sumStartRow = 5;
+
+    wsDetails.mergeCells(`${summaryStartCol}${sumStartRow}:${summaryValueCol}${sumStartRow}`);
+    const sumTitle = wsDetails.getCell(`${summaryStartCol}${sumStartRow}`);
+    sumTitle.value = 'PODSUMOWANIE BUDŻETU (MIESIĘCZNIE)';
+    sumTitle.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+    sumTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+    sumTitle.alignment = { horizontal: 'center', vertical: 'middle' };
+
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 1}`).value = isPlusVariant
+      ? 'Podwyżki Systemowe (Stratton 4%)'
+      : 'Podwyżki Systemowe (Brak)';
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 1}`).font = { size: 10 };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 1}`).value = { formula: `SUM(F${dataStartRow}:F${dataEndRow})` };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 1}`).numFmt = styles.currency;
+
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 2}`).value = 'Budżet Administracyjny (2%)';
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 2}`).font = { size: 10 };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 2}`).value = { formula: `SUM(G${dataStartRow}:G${dataEndRow})` };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 2}`).numFmt = styles.currency;
+
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 3}`).value = 'Dodatkowa Podwyżka (Pracodawca)';
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 3}`).font = { size: 10, bold: true, color: { argb: 'FFD97706' } };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 3}`).value = { formula: `SUM(H${dataStartRow}:H${dataEndRow})` };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 3}`).numFmt = styles.currency;
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 3}`).font = { bold: true };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 3}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
+
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 4}`).value = 'ŁĄCZNA PULA NA PODWYŻKI';
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 4}`).font = { bold: true };
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 4}`).border = { top: { style: 'double' } };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 4}`).value = {
+      formula: `SUM(${summaryValueCol}${sumStartRow + 1}:${summaryValueCol}${sumStartRow + 3})`,
+    };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 4}`).numFmt = styles.currency;
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 4}`).font = { bold: true, size: 12, color: { argb: 'FF059669' } };
+    wsDetails.getCell(`${summaryValueCol}${sumStartRow + 4}`).border = { top: { style: 'double' } };
+
+    wsDetails.getColumn('L').width = 35;
+    wsDetails.getColumn('M').width = 20;
+
+    const fileName = `Raport_${firma.nazwa || 'Firma'}`;
+    if (options?.returnBuffer) {
+      const buffer = await workbook.xlsx.writeBuffer();
+      return { buffer, fileName };
+    }
+    await saveWorkbook(workbook, fileName);
   },
 
   generateDetailedReport: async ({ firma, wyniki }: ReportData) => {
@@ -352,7 +555,7 @@ export const excelGenerator = {
 
     const exampleRow = worksheet.getRow(2);
     exampleRow.height = 30;
-    exampleRow.values = ['Jan Kowalski', 'DD.MM.RRRR', 'Wybierz', 'Wybierz', 'Wybierz', 5000, 'AUTO', '300', 'TAK/NIE', 'AUTO', 'Info'];
+    exampleRow.values = ['Jan Kowalski', 'DD.MM.RRRR', 'Wybierz', 'Wybierz', 'Wybierz', 5000, 'AUTO (formuła)', '300 / 150 / 100 / 0', 'TAK / NIE', 'AUTO (formuła)', 'Info'];
     exampleRow.eachCell((cell: any) => {
       cell.font = { color: { argb: 'FF000000' }, size: 10, name: 'Calibri' };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
@@ -380,6 +583,19 @@ export const excelGenerator = {
       worksheet.getCell(`D${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: [umowaList] };
       worksheet.getCell(`E${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: [zusList] };
       worksheet.getCell(`I${rowIndex}`).dataValidation = { type: 'list', allowBlank: true, formulae: [ulgaList] };
+
+      const colD = `D${rowIndex}`;
+      const colI = `I${rowIndex}`;
+      const cellG = worksheet.getCell(`G${rowIndex}`);
+      cellG.value = { formula: `IF(${colD}=\"Umowa zlecenie\",\"20%\",\"250\")` };
+      cellG.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+      cellG.font = { color: { argb: 'FF0284C7' }, bold: true };
+
+      const cellJ = worksheet.getCell(`J${rowIndex}`);
+      cellJ.value = { formula: `IF(${colI}=\"TAK\",0,0.12)` };
+      cellJ.numFmt = '0%';
+      cellJ.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+      cellJ.font = { color: { argb: 'FF0284C7' }, bold: true };
     }
 
     await saveWorkbook(workbook, 'Szablon_Import_Pracownikow');

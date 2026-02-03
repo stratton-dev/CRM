@@ -14,6 +14,15 @@ export interface Firma {
   email?: string;
   telefon?: string;
   osobaKontaktowa?: string;
+  branza?: string;
+  benefity?: string;
+  udzialWProjekcie?: string;
+  oszczednosciPrzeszle?: string;
+  oszczednosciAktualne?: string;
+  inwestycjePlanowane?: string;
+  kwotaOszczednosciDeklarowana?: string;
+  zadluzenia?: string;
+  ryczaltVat?: string;
   kontakty?: ContactPerson[];
   kontaktIds?: string[];
   okres: string;
@@ -21,6 +30,11 @@ export interface Firma {
 }
 
 export interface Config {
+  branding?: {
+    footerLine1?: string;
+    footerLine2?: string;
+    footerLogoUrl?: string;
+  };
   zus: {
     uop: {
       pracownik: { emerytalna: number; rentowa: number; chorobowa: number };
@@ -62,4 +76,5 @@ export interface Config {
     standard: number;
     plus: number;
   };
+  offerValidDays: number;
 }

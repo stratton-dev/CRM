@@ -7,6 +7,15 @@ import ImportModal from './ImportModal.vue';
 const store = useCalculatorStore();
 const search = ref('');
 const showImport = ref(false);
+const expandedIds = ref<Record<number, boolean>>({});
+
+const toggleExpand = (id: number) => {
+  expandedIds.value = { ...expandedIds.value, [id]: !expandedIds.value[id] };
+};
+
+const toggleFpFgsp = (id: number, disabled: boolean) => {
+  store.updateEmployee(id, { skladkaFP: !disabled, skladkaFGSP: !disabled });
+};
 
 const filteredEmployees = computed(() => {
   if (!search.value.trim()) return store.pracownicy;
@@ -67,7 +76,8 @@ const applyMinWage = (type: 'UOP' | 'UZ') => {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-for="emp in filteredEmployees" :key="emp.id" class="hover:bg-slate-50">
+            <template v-for="emp in filteredEmployees" :key="emp.id">
+            <tr class="hover:bg-slate-50">
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
                   <input v-model="emp.imie" type="text" class="border border-slate-200 rounded px-2 py-1 w-24" @input="store.updateEmployee(emp.id, { imie: emp.imie })" />
@@ -91,10 +101,104 @@ const applyMinWage = (type: 'UOP' | 'UZ') => {
                 <input v-model.number="emp.nettoZasadnicza" type="number" class="border border-slate-200 rounded px-2 py-1 w-28 text-right font-mono" @input="store.updateEmployee(emp.id, { nettoZasadnicza: emp.nettoZasadnicza })" />
               </td>
               <td class="px-4 py-3 text-right">
+                <button type="button" class="text-xs text-slate-500 mr-2" @click="toggleExpand(emp.id)">
+                  {{ expandedIds[emp.id] ? 'Zwiń' : 'Szczegóły' }}
+                </button>
                 <button type="button" class="text-xs text-slate-500 mr-2" @click="store.duplicateEmployee(emp.id)">Duplikuj</button>
                 <button type="button" class="text-xs text-rose-500" @click="store.removeEmployee(emp.id)">Usuń</button>
               </td>
             </tr>
+            <tr v-if="expandedIds[emp.id]" class="bg-slate-50">
+              <td colspan="5" class="px-4 py-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs text-slate-500">
+                  <div>
+                    <div class="font-bold text-slate-700 mb-1">Dane osobowe</div>
+                    <div class="space-y-2">
+                      <label class="block">
+                        <span class="block text-[11px] uppercase">Data urodzenia</span>
+                        <input v-model="emp.dataUrodzenia" type="date" class="border border-slate-200 rounded px-2 py-1 w-full" @input="store.updateEmployee(emp.id, { dataUrodzenia: emp.dataUrodzenia })" />
+                      </label>
+                      <label class="block">
+                        <span class="block text-[11px] uppercase">Płeć</span>
+                        <select v-model="emp.plec" class="border border-slate-200 rounded px-2 py-1 w-full" @change="store.updateEmployee(emp.id, { plec: emp.plec })">
+                          <option value="M">Mężczyzna</option>
+                          <option value="K">Kobieta</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-700 mb-1">Parametry umowy</div>
+                    <div class="space-y-2">
+                      <label class="block">
+                        <span class="block text-[11px] uppercase">Tryb ZUS</span>
+                        <select v-model="emp.trybSkladek" class="border border-slate-200 rounded px-2 py-1 w-full" @change="store.updateEmployee(emp.id, { trybSkladek: emp.trybSkladek })">
+                          <option value="PELNE">Pełne składki</option>
+                          <option value="BEZ_CHOROBOWEJ">Bez chorobowej</option>
+                          <option value="STUDENT_UZ">Student &lt; 26 lat</option>
+                          <option value="INNY_TYTUL">Inny tytuł (tylko zdrowotna)</option>
+                          <option value="EMERYT_RENCISTA">Emeryt/Rencista</option>
+                        </select>
+                      </label>
+                      <label class="block">
+                        <span class="block text-[11px] uppercase">Koszty uzyskania (KUP)</span>
+                        <select v-model="emp.kupTyp" class="border border-slate-200 rounded px-2 py-1 w-full" @change="store.updateEmployee(emp.id, { kupTyp: emp.kupTyp })">
+                          <option value="STANDARD">Standardowe (250 zł)</option>
+                          <option value="PODWYZSZONE">Podwyższone (300 zł)</option>
+                          <option value="PROC_20">Ryczałtowe 20%</option>
+                          <option value="PROC_50">Autorskie 50%</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-700 mb-1">Podatki i ulgi</div>
+                    <div class="space-y-2">
+                      <label class="block">
+                        <span class="block text-[11px] uppercase">Kwota wolna (PIT-2)</span>
+                        <select v-model="emp.pit2" class="border border-slate-200 rounded px-2 py-1 w-full" @change="store.updateEmployee(emp.id, { pit2: emp.pit2 })">
+                          <option value="300">300 zł (1/12)</option>
+                          <option value="150">150 zł (1/24)</option>
+                          <option value="100">100 zł (1/36)</option>
+                          <option value="0">Brak (0 zł)</option>
+                        </select>
+                      </label>
+                      <label class="block">
+                        <span class="block text-[11px] uppercase">Zaliczka PIT</span>
+                        <select v-model="emp.pitMode" class="border border-slate-200 rounded px-2 py-1 w-full" @change="store.updateEmployee(emp.id, { pitMode: emp.pitMode })">
+                          <option value="AUTO">Automatycznie (progi)</option>
+                          <option value="FLAT_12">Liniowo 12%</option>
+                          <option value="FLAT_32">Liniowo 32%</option>
+                          <option value="FLAT_0">Zwolnienie (0%)</option>
+                        </select>
+                      </label>
+                      <label class="flex items-center gap-2">
+                        <input v-model="emp.ulgaMlodych" type="checkbox" class="rounded border-slate-300" @change="store.updateEmployee(emp.id, { ulgaMlodych: emp.ulgaMlodych })" />
+                        <span>Ulga dla młodych (&lt;26)</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="font-bold text-slate-700 mb-1">Składki dodatkowe</div>
+                    <div class="space-y-2">
+                      <label class="flex items-center gap-2">
+                        <input :checked="!(emp.skladkaFP && emp.skladkaFGSP)" type="checkbox" class="rounded border-slate-300" @change="toggleFpFgsp(emp.id, ($event.target as HTMLInputElement).checked)" />
+                        <span>Zwolnienie FP/FGŚP</span>
+                      </label>
+                      <label class="flex items-center gap-2">
+                        <input v-model="emp.skladkaFP" type="checkbox" class="rounded border-slate-300" @change="store.updateEmployee(emp.id, { skladkaFP: emp.skladkaFP })" />
+                        <span>Składka FP</span>
+                      </label>
+                      <label class="flex items-center gap-2">
+                        <input v-model="emp.skladkaFGSP" type="checkbox" class="rounded border-slate-300" @change="store.updateEmployee(emp.id, { skladkaFGSP: emp.skladkaFGSP })" />
+                        <span>Składka FGŚP</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            </template>
           </tbody>
         </table>
       </div>

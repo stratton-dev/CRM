@@ -29,6 +29,14 @@ export type CrmViewKey =
   | 'calculator'
   | 'leaderboard'
   | 'settings'
+  | 'settings-backend'
+  | 'settings-auth'
+  | 'settings-mail'
+  | 'settings-consents'
+  | 'settings-crm-permissions'
+  | 'settings-calculator'
+  | 'settings-statuses'
+  | 'settings-broadcasts'
 
 export type ViewPermissionEntry = {
   view_key: CrmViewKey
@@ -62,6 +70,25 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'calculator', label: 'Kalkulator' },
   { key: 'leaderboard', label: 'Rankingi' },
   { key: 'settings', label: 'Ustawienia' },
+  { key: 'settings-backend', label: 'Ustawienia: Backend API' },
+  { key: 'settings-auth', label: 'Ustawienia: Auth' },
+  { key: 'settings-mail', label: 'Ustawienia: Poczta' },
+  { key: 'settings-consents', label: 'Ustawienia: Zgody' },
+  { key: 'settings-crm-permissions', label: 'Ustawienia: Uprawnienia CRM' },
+  { key: 'settings-calculator', label: 'Ustawienia: Kalkulator' },
+  { key: 'settings-statuses', label: 'Ustawienia: Statusy' },
+  { key: 'settings-broadcasts', label: 'Ustawienia: Broadcasty' },
+]
+
+const SETTINGS_TAB_KEYS: CrmViewKey[] = [
+  'settings-backend',
+  'settings-auth',
+  'settings-mail',
+  'settings-consents',
+  'settings-crm-permissions',
+  'settings-calculator',
+  'settings-statuses',
+  'settings-broadcasts',
 ]
 
 const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
@@ -89,6 +116,14 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   calculator: ['ADMIN', 'SALES'],
   leaderboard: ['ADMIN'],
   settings: ['ADMIN'],
+  'settings-backend': ['ADMIN'],
+  'settings-auth': ['ADMIN'],
+  'settings-mail': ['ADMIN'],
+  'settings-consents': ['ADMIN'],
+  'settings-crm-permissions': ['ADMIN'],
+  'settings-calculator': ['ADMIN'],
+  'settings-statuses': ['ADMIN'],
+  'settings-broadcasts': ['ADMIN'],
 }
 
 const toMap = (entries: ViewPermissionEntry[]) => {
@@ -171,6 +206,11 @@ export const useViewPermissionsStore = defineStore('view-permissions', () => {
     return roles.includes(role as UserRole)
   }
 
+  const isSettingsAllowed = (role?: string | null) => {
+    if (isViewAllowed('settings', role)) return true
+    return SETTINGS_TAB_KEYS.some((key) => isViewAllowed(key, role))
+  }
+
   return {
     loading,
     loaded,
@@ -183,5 +223,6 @@ export const useViewPermissionsStore = defineStore('view-permissions', () => {
     fetchPermissions,
     savePermissions,
     isViewAllowed,
+    isSettingsAllowed,
   }
 })

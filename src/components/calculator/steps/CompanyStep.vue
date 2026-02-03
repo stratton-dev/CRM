@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import AppIcon from '@/components/AppIcon.vue';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { validateNIP } from '../utils/validators';
+import { api } from '@/api/client';
+import { useAuthStore } from '@/stores/auth';
 
 const store = useCalculatorStore();
+const auth = useAuthStore();
 const nipCheck = validateNIP(store.firma.nip || '');
 
 const newContact = ref({
@@ -48,6 +51,45 @@ const addContact = () => {
   newContact.value = { name: '', email: '', phone: '' };
   syncLegacyContact();
 };
+
+const loadClientContacts = async (clientId: string) => {
+  if (!auth.enabled) return;
+  if ((store.firma.kontakty || []).length > 0) return;
+  try {
+    const { data } = await api.get(`/v1/clients/${clientId}/contacts`);
+    const contacts = Array.isArray(data)
+      ? data.map((item: any) => ({
+          id: String(item.id),
+          name: String(item.name || ''),
+          position: item.position || null,
+          phone: item.phone || null,
+          email: item.email || null,
+          is_decision_maker: item.is_decision_maker ?? item.isDecisionMaker ?? null,
+        }))
+      : [];
+    store.firma.kontakty = contacts;
+    if (!store.firma.kontaktIds || store.firma.kontaktIds.length === 0) {
+      const decisionIds = contacts.filter((c: any) => c.is_decision_maker).map((c: any) => c.id);
+      store.firma.kontaktIds = decisionIds.length > 0 ? decisionIds : contacts.slice(0, 1).map((c: any) => c.id);
+      syncLegacyContact();
+    }
+  } catch {
+    // ignore if contacts cannot be loaded
+  }
+};
+
+onMounted(() => {
+  if (store.context.clientId) {
+    void loadClientContacts(store.context.clientId);
+  }
+});
+
+watch(
+  () => store.context.clientId,
+  (clientId) => {
+    if (clientId) void loadClientContacts(clientId);
+  }
+);
 </script>
 
 <template>
