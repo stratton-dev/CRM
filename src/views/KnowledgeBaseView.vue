@@ -21,13 +21,24 @@ const uploadFile = ref<File | null>(null)
 const uploadError = ref('')
 const uploadLoading = ref(false)
 
-const categoryOrder: FileCategory[] = ['UMOWY', 'PROCESY', 'PRAWO', 'MARKETING']
+const categoryOrder: FileCategory[] = ['CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO', 'UMOWY', 'PROCESY', 'PRAWO', 'MARKETING']
 const categoryNames: Record<FileCategory, string> = {
+  CASH_FLOW: 'Analiza Cash Flow',
+  LEGAL: 'Kwestie Prawne',
+  GRAPHIC: 'Graficzne Przedstawienie',
+  VIDEO: 'Film Wideo',
   UMOWY: 'Umowy i Wzory',
   PROCESY: 'Procesy Sprzedażowe',
   PRAWO: 'Wiedza Prawna',
   MARKETING: 'Materiały Marketingowe',
 }
+
+const presentationTypes = [
+  { id: 'CASH_FLOW', title: 'Dokumenty do pobrania', desc: 'Analiza finansowa', icon: 'chart-pie', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'hover:border-emerald-500' },
+  { id: 'LEGAL', title: 'Podstawa prawna', desc: 'Bezpieczeństwo i przepisy', icon: 'scale', color: 'text-blue-600', bg: 'bg-blue-50', border: 'hover:border-blue-500' },
+  { id: 'GRAPHIC', title: 'Schemat działania usługi', desc: 'Wizualizacja modelu', icon: 'presentation-chart-line', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'hover:border-indigo-500' },
+  { id: 'VIDEO', title: 'Materiały wideo', desc: 'Materiał multimedialny', icon: 'video-camera', color: 'text-red-600', bg: 'bg-red-50', border: 'hover:border-red-500' },
+]
 
 const safeFiles = computed<KnowledgeFile[]>(() => (Array.isArray(knowledgeFiles.value) ? knowledgeFiles.value : []))
 const canDeleteKnowledge = computed(() => session.isRole(['ADMIN']))
@@ -169,6 +180,12 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
+    <div class="mb-4">
+      <RouterLink to="/app/dashboard" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm group">
+        <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+        <span class="text-xs font-bold uppercase tracking-widest">Powrót</span>
+      </RouterLink>
+    </div>
     <div class="flex justify-between items-center">
       <div>
         <h1 class="text-2xl font-bold text-gray-900">Baza Wiedzy</h1>
@@ -182,6 +199,28 @@ onMounted(() => {
         <button type="button" class="px-4 py-2 bg-sky-600 text-white rounded-md text-sm font-semibold shadow hover:bg-sky-700" @click="openUpload">
           Dodaj plik
         </button>
+      </div>
+    </div>
+
+    <!-- Presentation Tiles Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div 
+        v-for="tile in presentationTypes" 
+        :key="tile.id"
+        class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg group"
+        :class="searchQuery ? 'opacity-50 hover:opacity-100' : ''"
+        @click="searchQuery = categoryNames[tile.id as FileCategory]"
+      >
+         <div class="flex items-start justify-between mb-4">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center transition-colors" :class="[tile.bg, tile.color]">
+               <AppIcon :name="tile.icon" class="w-6 h-6" />
+            </div>
+            <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+               <AppIcon name="arrow-right" class="w-4 h-4 text-slate-400" />
+            </div>
+         </div>
+         <h3 class="font-bold text-slate-800 text-lg mb-1">{{ tile.title }}</h3>
+         <p class="text-xs text-slate-400">{{ tile.desc }}</p>
       </div>
     </div>
 

@@ -198,7 +198,7 @@ export interface Email {
   folder: 'INBOX' | 'SENT' | 'TRASH'
 }
 
-export type FileCategory = 'UMOWY' | 'PROCESY' | 'PRAWO' | 'MARKETING'
+export type FileCategory = 'UMOWY' | 'PROCESY' | 'PRAWO' | 'MARKETING' | 'CASH_FLOW' | 'LEGAL' | 'GRAPHIC' | 'VIDEO'
 export type FileType = 'pdf' | 'docx' | 'xlsx' | 'pptx'
 
 export interface KnowledgeFile {

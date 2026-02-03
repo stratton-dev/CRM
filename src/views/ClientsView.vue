@@ -12,6 +12,8 @@ import { useToastStore } from '@/stores/toast'
 import { useMailboxStore } from '@/stores/mailbox'
 import { api } from '@/api/client'
 import type { Client } from '@/types/models'
+import { excelGenerator } from '@/components/calculator/utils/excelGenerator'
+import AppIcon from '@/components/AppIcon.vue'
 
 type ClientContact = {
   id: string
@@ -330,6 +332,7 @@ const fetchClientCalculations = async (clientId: string) => {
       savingsAmount: Number(item.savings_amount || 0),
       validUntil: item.valid_until,
       createdAt: item.created_at || null,
+      valueJson: item.value_json || null,
     }))
   } catch (error: any) {
     calculationsError.value = error?.response?.data?.message || error?.message || 'Nie udało się pobrać kalkulacji.'
@@ -601,9 +604,8 @@ const changeStatus = (event: Event, clientId: string) => {
 
 const continueProcess = (client: Client) => {
   router.push({
-    path: '/app/sales/start',
+    path: '/app/calculator', // Changed from quick-calculator
     query: {
-      mode: 'continue',
       clientId: client.id,
       meetingId: client.meetingId || undefined,
     },
@@ -906,8 +908,12 @@ if (route.query.expand) {
               </div>
               <div class="text-xs text-gray-400 mt-3 flex justify-between items-center">
                 <span>{{ client.city }}</span>
-                <button type="button" class="p-1 hover:bg-gray-100 rounded" title="Pokaż szczegóły" @click.stop="selectClient(client)">
-                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                <button type="button" class="p-1 hover:bg-gray-100 rounded group relative" title="Pokaż szczegóły" @click.stop="selectClient(client)">
+                  <span class="absolute inset-0 m-1 bg-emerald-400 rounded-full animate-ping opacity-50"></span>
+                  <svg class="relative w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -1205,18 +1211,27 @@ if (route.query.expand) {
                     </div>
                   </div>
                   <div class="mt-3 flex items-center justify-between">
-                    <div class="text-xs text-gray-400">Status</div>
-                    <select
-                      class="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
-                      :value="calc.status"
-                      :disabled="isReadOnly"
-                      @change="updateCalculationStatus(calc.id, ($event.target as HTMLSelectElement).value)"
-                    >
-                      <option v-for="status in calculationStatuses" :key="status.key" :value="status.key">{{ status.label }}</option>
-                      <option v-if="calculationStatuses.length === 0" value="PREPARING">W trakcie przygotowania</option>
-                      <option v-if="calculationStatuses.length === 0" value="READY">Gotowa</option>
-                      <option v-if="calculationStatuses.length === 0" value="SENT">Wysłana</option>
-                    </select>
+                    <div class="flex items-center space-x-2">
+                      <select
+                        class="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                        :value="calc.status"
+                        :disabled="isReadOnly"
+                        @change="updateCalculationStatus(calc.id, ($event.target as HTMLSelectElement).value)"
+                      >
+                        <option v-for="status in calculationStatuses" :key="status.key" :value="status.key">{{ status.label }}</option>
+                        <option v-if="calculationStatuses.length === 0" value="PREPARING">W trakcie przygotowania</option>
+                        <option v-if="calculationStatuses.length === 0" value="READY">Gotowa</option>
+                        <option v-if="calculationStatuses.length === 0" value="SENT">Wysłana</option>
+                      </select>
+                      <button
+                        v-if="calc.valueJson"
+                        @click="downloadCalculationExcel(calc)"
+                        class="text-[10px] text-brand hover:text-brand/80 flex items-center bg-white border border-brand/20 rounded px-2 py-1 transition-colors"
+                      >
+                        <AppIcon name="DocumentArrowDownIcon" class="w-3 h-3 mr-1" />
+                        Pobierz Excel
+                      </button>
+                    </div>
                   </div>
                   <div class="mt-3 flex items-center justify-end">
                     <button type="button" class="text-xs font-semibold px-3 py-1.5 rounded border border-indigo-200 text-indigo-700 hover:bg-indigo-50" @click="openOfferEmail(calc)">

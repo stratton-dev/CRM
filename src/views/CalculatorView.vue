@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import AppIcon from '@/components/AppIcon.vue';
 import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore';
 import { Pracownik } from '@/components/calculator/models/employee';
@@ -19,6 +19,7 @@ import SummaryStep from '@/components/calculator/steps/SummaryStep.vue';
 
 const store = useCalculatorStore();
 const route = useRoute();
+const router = useRouter();
 const auth = useAuthStore();
 const toast = useToastStore();
 const clientStore = useClientStore();
@@ -27,12 +28,20 @@ const currentStep = ref(-1);
 const companySearch = ref('');
 const showCompanyPicker = ref(false);
 
+const handleBack = () => {
+  if (currentStep.value > -1) {
+    currentStep.value--;
+  } else {
+    router.push('/app/quick-calculator');
+  }
+};
+
 const steps = [
   { id: 0, label: 'Firma', icon: 'building' },
   { id: 1, label: 'Pracownicy', icon: 'users' },
-  { id: 2, label: 'Standard', icon: 'chart-line' },
-  { id: 3, label: 'Podział', icon: 'chart-pie' },
-  { id: 4, label: 'Porównanie', icon: 'arrow-trending-up' },
+  { id: 2, label: 'Obecny model wynagrodzenia', icon: 'chart-line' },
+  { id: 3, label: 'Podział wynagrodzenia na zasadnicze i świadczenie', icon: 'chart-pie' },
+  { id: 4, label: 'Oszczędności', icon: 'sliders' },
   { id: 5, label: 'Podsumowanie', icon: 'file-invoice-dollar' },
 ];
 
@@ -49,7 +58,6 @@ const eligibleClients = computed(() => {
   const list = Array.isArray(clients.value) ? clients.value : [];
   const term = companySearch.value.trim().toLowerCase();
   return list
-    .filter((client) => eligibleStatuses.has(client.status))
     .filter((client) => {
       if (!term) return true;
       const hay = `${client.name} ${client.nip}`.toLowerCase();
@@ -155,16 +163,18 @@ onMounted(() => {
     clientStore.fetchClients({ perPage: 200 });
   }
 
-  if (auth.enabled && clientId && !store.firma.nazwa) {
+  if (auth.enabled && clientId) { // Removed !store.firma.nazwa check to always refresh selected client
     api.get(`/v1/clients/${clientId}`)
       .then(({ data }) => {
         store.firma = {
           ...store.firma,
           nazwa: data?.name || store.firma.nazwa,
           nip: data?.nip || store.firma.nip,
-          adres: data?.address_line1 || store.firma.adres,
-          kodPocztowy: data?.postal_code || store.firma.kodPocztowy,
+          adres: data?.street || store.firma.adres, // Corrected from address_line1 based on other views
+          kodPocztowy: data?.zip || store.firma.kodPocztowy, // Corrected from postal_code based on other views
           miasto: data?.city || store.firma.miasto,
+          email: data?.email || store.firma.email,
+          telefon: data?.phone || store.firma.telefon,
         };
       })
       .catch((error) => {
@@ -205,16 +215,19 @@ onMounted(() => {
   <div class="w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
     <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-serif font-bold text-slate-900">Kalkulator szczegółowy</h1>
+        <h1 class="text-2xl font-serif font-bold text-slate-900 flex items-center gap-3">
+          Kalkulator szczegółowy
+          <span class="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-wider">Aktywny</span>
+        </h1>
         <p class="text-xs text-slate-400 uppercase tracking-widest">
           {{ currentStep === -1 ? 'Pulpit' : `Krok ${currentStep + 1} / ${steps.length}` }}
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" :disabled="currentStep <= 0" @click="currentStep--">
+        <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors" @click="handleBack">
           Wstecz
         </button>
-        <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg bg-slate-900 text-white disabled:opacity-40" :disabled="!canProceed || currentStep >= steps.length - 1" @click="currentStep++">
+        <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all" :disabled="!canProceed || currentStep >= steps.length - 1" @click="currentStep++">
           Dalej
         </button>
       </div>
@@ -267,7 +280,7 @@ onMounted(() => {
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <aside class="lg:col-span-3 space-y-3">
-        <button type="button" class="w-full p-4 rounded-xl border text-left transition" :class="currentStep === -1 ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600'" @click="currentStep = -1">
+        <button type="button" class="w-full p-4 rounded-xl border text-left transition" :class="currentStep === -1 ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-slate-50'" @click="currentStep = -1">
           <div class="flex items-center gap-3">
             <AppIcon name="dashboard" class="w-5 h-5" />
             <div>
@@ -276,7 +289,7 @@ onMounted(() => {
             </div>
           </div>
         </button>
-        <button v-for="step in steps" :key="step.id" type="button" class="w-full p-4 rounded-xl border text-left transition" :class="currentStep === step.id ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-600'" @click="currentStep = step.id">
+        <button v-for="step in steps" :key="step.id" type="button" class="w-full p-4 rounded-xl border text-left transition" :class="currentStep === step.id ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-slate-50'" @click="currentStep = step.id">
           <div class="flex items-center gap-3">
             <AppIcon :name="step.icon" class="w-5 h-5" />
             <div>

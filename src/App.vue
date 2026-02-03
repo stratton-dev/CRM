@@ -206,12 +206,12 @@ const commandResults = computed(() => {
 
 const getPageTitle = () => {
   const path = route.path
-  if (path.includes('dashboard')) return 'Kokpit Zarządczy'
+  if (path.includes('dashboard')) return 'Kokpit'
   if (path.includes('clients')) return 'Baza Klientów'
   if (path.includes('structure')) return 'Struktura Organizacyjna'
   if (path.includes('settings')) return 'Ustawienia Systemu'
   if (path.includes('analytics')) return 'Analityka i Raporty'
-  if (path.includes('calendar')) return 'Kalendarz Spotkań'
+  if (path.includes('calendar')) return ''
   return 'Stratton CRM'
 }
 
@@ -396,7 +396,7 @@ onBeforeUnmount(() => {
 
       <div v-if="session.isImpersonating" class="bg-amber-400 text-amber-900 text-sm py-2 px-4 text-center font-bold flex justify-center items-center shadow-md z-30 animate-pulse">
         <AppIcon name="mask" class="w-4 h-4 mr-2" />
-        <span class="mr-4 uppercase tracking-wider">TRYB PODGLĄDU: {{ currentUser?.name }}</span>
+        <span class="mr-4 uppercase tracking-wider">TRYB PODGLĄDU: {{ session.impersonatedUser?.name || 'Ładowanie...' }}</span>
         <button type="button" class="bg-white text-amber-900 px-3 py-1 rounded text-xs hover:bg-amber-50 shadow-sm border border-amber-500 uppercase font-bold" @click="session.stopImpersonation">
           Zakończ
         </button>

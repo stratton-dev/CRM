@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import AppIcon from '@/components/AppIcon.vue';
 import { formatPLN } from '../utils/formatters';
 import { useCalculatorStore } from '../store/useCalculatorStore';
@@ -27,30 +28,34 @@ const props = withDefaults(
 const emit = defineEmits<{ (event: 'transfer'): void }>();
 
 const store = useCalculatorStore();
+const router = useRouter();
 
 const empCount = ref(props.initialEmployees);
-const avgSalary = ref(props.initialAvgWage);
+// Initialize two separate salary refs
+const avgSalaryUop = ref(props.initialAvgWage);
+const avgSalaryUz = ref(props.initialAvgWage);
 const salaryMode = ref<'NETTO' | 'BRUTTO'>(props.initialSalaryMode);
-const contractType = ref<ContractType>(props.initialContractType);
-const mixRatio = ref(50);
+
+const countUopInput = ref(props.initialContractType === 'UZ' ? 0 : (props.initialContractType === 'MIXED' ? Math.floor(props.initialEmployees / 2) : props.initialEmployees));
+const countUzInput = ref(props.initialContractType === 'UOP' ? 0 : (props.initialContractType === 'MIXED' ? Math.ceil(props.initialEmployees / 2) : props.initialEmployees));
+
 const strategy = ref<StrategyType>('WIN_WIN');
-const contractOptions: ContractType[] = ['UOP', 'MIXED', 'UZ'];
+
+const isCountValid = computed(() => {
+  return (countUopInput.value + countUzInput.value) <= empCount.value;
+});
 
 const simulation = computed(() => {
-  let countUOP = 0;
-  let countUZ = 0;
-
-  if (contractType.value === 'UOP') countUOP = empCount.value;
-  else if (contractType.value === 'UZ') countUZ = empCount.value;
-  else {
-    countUZ = Math.round(empCount.value * (mixRatio.value / 100));
-    countUOP = empCount.value - countUZ;
-  }
+  const countUOP = countUopInput.value;
+  const countUZ = countUzInput.value;
 
   const calculateOne = (type: 'UOP' | 'UZ') => {
-    let baseNetto = avgSalary.value;
+    // Select the correct base wage
+    let baseNetto = type === 'UOP' ? avgSalaryUop.value : avgSalaryUz.value;
+    
+    // Apply Brutto conversion based on which wage is being processed
     if (salaryMode.value === 'BRUTTO') {
-      baseNetto = type === 'UOP' ? avgSalary.value * 0.71 : avgSalary.value * 0.78;
+      baseNetto = type === 'UOP' ? baseNetto * 0.71 : baseNetto * 0.78;
     }
 
     const dummyEmployee: Pracownik = {
@@ -119,24 +124,38 @@ const handleTransfer = () => {
   const newEmployees: Pracownik[] = [];
   let idCounter = Date.now();
 
-  const createEmp = (type: 'UOP' | 'UZ', i: number): Pracownik => ({
-    id: idCounter + i,
-    imie: 'Pracownik',
-    nazwisko: `${type} ${i + 1}`,
-    dataUrodzenia: '1990-01-01',
-    plec: 'M',
-    typUmowy: type,
-    trybSkladek: 'PELNE',
-    choroboweAktywne: true,
-    pit2: '300',
-    ulgaMlodych: false,
-    kupTyp: type === 'UZ' ? 'PROC_20' : 'STANDARD',
-    nettoDocelowe: salaryMode.value === 'NETTO' ? avgSalary.value : type === 'UOP' ? avgSalary.value * 0.71 : avgSalary.value * 0.78,
-    nettoZasadnicza: type === 'UZ' ? store.config.minimalnaKwotaUZ.zasadniczaNetto : store.config.placaMinimalna.netto,
-    pitMode: 'AUTO',
-    skladkaFP: true,
-    skladkaFGSP: true,
-  });
+  const createEmp = (type: 'UOP' | 'UZ', i: number): Pracownik => {
+    // Determine wage based on type
+    const sourceWage = type === 'UOP' ? avgSalaryUop.value : avgSalaryUz.value;
+    
+    // Calculate netto target based on current mode
+    let target = sourceWage;
+    if (salaryMode.value === 'NETTO') {
+      target = sourceWage;
+    } else {
+      // Brutto mode conversion
+      target = type === 'UOP' ? sourceWage * 0.71 : sourceWage * 0.78;
+    }
+    
+    return {
+      id: idCounter + i,
+      imie: 'Pracownik',
+      nazwisko: `${type} ${i + 1}`,
+      dataUrodzenia: '1990-01-01',
+      plec: 'M',
+      typUmowy: type,
+      trybSkladek: 'PELNE',
+      choroboweAktywne: true,
+      pit2: '300',
+      ulgaMlodych: false,
+      kupTyp: type === 'UZ' ? 'PROC_20' : 'STANDARD',
+      nettoDocelowe: target,
+      nettoZasadnicza: type === 'UZ' ? store.config.minimalnaKwotaUZ.zasadniczaNetto : store.config.placaMinimalna.netto,
+      pitMode: 'AUTO',
+      skladkaFP: true,
+      skladkaFGSP: true,
+    };
+  };
 
   for (let i = 0; i < genUOP; i++) newEmployees.push(createEmp('UOP', i));
   for (let i = 0; i < genUZ; i++) newEmployees.push(createEmp('UZ', genUOP + i));
@@ -155,65 +174,97 @@ const handleTransfer = () => {
           <div class="p-1.5 bg-emerald-500/10 rounded-lg">
             <AppIcon name="bolt" class="w-5 h-5" />
           </div>
-          <span class="font-bold uppercase tracking-widest text-xs">Szybka Symulacja v2.0</span>
+          <span class="font-bold uppercase tracking-widest text-xs">Szybka Symulacja v2.8</span>
         </div>
-        <h2 class="text-2xl font-bold text-white leading-tight">Parametry Biznesowe</h2>
+        <h2 class="text-2xl font-bold text-white leading-tight">Struktura zatrudnienia</h2>
         <p class="text-slate-400 text-sm mt-2 leading-relaxed">Skonfiguruj strukturę zatrudnienia i wybierz strategię optymalizacji.</p>
       </div>
 
       <div class="p-8 space-y-10 flex-1">
         <div class="space-y-4">
-          <div class="flex justify-between items-end">
-            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-              <AppIcon name="users" class="w-4 h-4" />
-              Zatrudnienie
-            </label>
-            <span class="text-2xl font-bold text-white">{{ empCount }}</span>
-          </div>
-          <input v-model.number="empCount" type="range" min="1" max="300" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400" />
-          <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-            <span>1</span><span>150</span><span>300</span>
-          </div>
-        </div>
-
-        <div class="space-y-4">
           <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <AppIcon name="filter" class="w-4 h-4" />
-            Struktura Umów
-          </label>
-
-          <div class="grid grid-cols-3 gap-2">
-            <button
-              v-for="type in contractOptions"
-              :key="type"
-              type="button"
-              class="py-2 px-1 text-xs font-bold rounded-md border transition-all"
-              :class="contractType === type ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/50' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white'"
-              @click="contractType = type"
-            >
-              {{ type === 'MIXED' ? 'MIESZANY' : type }}
-            </button>
-          </div>
-
-          <div v-if="contractType === 'MIXED'" class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 animate-fade-in">
-            <div class="flex justify-between text-xs font-bold mb-2">
-              <span class="text-blue-400">{{ 100 - mixRatio }}% UoP</span>
-              <span class="text-amber-400">{{ mixRatio }}% UZ</span>
-            </div>
-            <input v-model.number="mixRatio" type="range" min="0" max="100" step="10" class="w-full h-1.5 bg-slate-600 rounded-lg appearance-none cursor-pointer accent-white" />
-          </div>
-        </div>
-
-        <div class="space-y-4">
-          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-            <AppIcon name="wallet" class="w-4 h-4" />
-            Średnia Płaca
+            <AppIcon name="users" class="w-4 h-4" />
+            pracownicy zatrudnieni ogółem:
           </label>
           <div class="relative group">
-            <input v-model.number="avgSalary" type="number" class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3.5 pl-4 pr-20 text-white font-bold text-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all group-hover:border-slate-600" />
-            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex bg-slate-700 rounded-lg p-1">
-              <button type="button" class="px-2 py-1 text-[10px] font-bold rounded" :class="salaryMode === 'NETTO' ? 'bg-emerald-600 text-white' : 'text-slate-400'" @click="salaryMode = 'NETTO'">NET</button>
-              <button type="button" class="px-2 py-1 text-[10px] font-bold rounded" :class="salaryMode === 'BRUTTO' ? 'bg-emerald-600 text-white' : 'text-slate-400'" @click="salaryMode = 'BRUTTO'">BRU</button>
+            <input v-model.number="empCount" type="number" min="1" class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3.5 px-4 text-white font-bold text-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all group-hover:border-slate-600" />
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <AppIcon name="filter" class="w-4 h-4" />
+              Struktura Umów
+            </label>
+            <div class="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
+              <button 
+                type="button" 
+                class="px-2 py-0.5 text-[10px] font-bold rounded transition-colors" 
+                :class="salaryMode === 'NETTO' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'" 
+                @click="salaryMode = 'NETTO'"
+              >
+                netto
+              </button>
+              <button 
+                type="button" 
+                class="px-2 py-0.5 text-[10px] font-bold rounded transition-colors" 
+                :class="salaryMode === 'BRUTTO' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'" 
+                @click="salaryMode = 'BRUTTO'"
+              >
+                brutto
+              </button>
+            </div>
+          </div>
+          <div v-if="!isCountValid" class="text-[10px] text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded animate-pulse text-center">
+             Suma zatrudnionych przekracza zadeklarowane zatrudnienie
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Column UoP -->
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <label class="text-[10px] text-slate-500 font-bold uppercase">Umowa o Pracę</label>
+                <input 
+                  v-model.number="countUopInput" 
+                  type="number" 
+                  min="0"
+                  class="w-full bg-slate-800 border rounded-xl py-3 px-3 text-white font-bold focus:ring-1 outline-none transition-all"
+                  :class="!isCountValid ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:ring-blue-500'"
+                />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] text-slate-500 font-bold uppercase">Średnia płaca UoP</label>
+                <input 
+                  v-model.number="avgSalaryUop" 
+                  type="number" 
+                  min="0"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <!-- Column UZ -->
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <label class="text-[10px] text-slate-500 font-bold uppercase">Umowa Zlecenie</label>
+                <input 
+                  v-model.number="countUzInput" 
+                  type="number" 
+                  min="0"
+                  class="w-full bg-slate-800 border rounded-xl py-3 px-3 text-white font-bold focus:ring-1 outline-none transition-all"
+                  :class="!isCountValid ? 'border-red-500 focus:ring-red-500' : 'border-slate-700 focus:ring-amber-500'" 
+                />
+              </div>
+              <div class="space-y-1">
+                <label class="text-[10px] text-slate-500 font-bold uppercase">Średnia płaca UZ</label>
+                <input 
+                  v-model.number="avgSalaryUz" 
+                  type="number" 
+                  min="0"
+                  class="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-white font-bold focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -221,7 +272,7 @@ const handleTransfer = () => {
         <div class="space-y-4">
           <label class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
             <AppIcon name="layers" class="w-4 h-4" />
-            Strategia
+            wybierz modele dla klienta:
           </label>
           <div class="grid grid-cols-1 gap-3">
             <button
@@ -234,7 +285,7 @@ const handleTransfer = () => {
                 <AppIcon name="users" class="w-3 h-3" />
               </div>
               <div>
-                <div class="text-sm font-bold text-white">Model Win-Win (Domyślny)</div>
+                <div class="text-sm font-bold text-white">Eliton Prime PLUS<sup class="text-[8px] ml-0.5">TM</sup></div>
                 <div class="text-[10px] text-slate-400 mt-0.5">Oszczędność + podwyżki. Prowizja 26%.</div>
               </div>
             </button>
@@ -249,7 +300,7 @@ const handleTransfer = () => {
                 <AppIcon name="arrow-trending-up" class="w-3 h-3" />
               </div>
               <div>
-                <div class="text-sm font-bold text-white">Max oszczędności</div>
+                <div class="text-sm font-bold text-white">Eliton Prime<sup class="text-[8px] ml-0.5">TM</sup></div>
                 <div class="text-[10px] text-slate-400 mt-0.5">Wszystkie zyski dla firmy. Prowizja 28%.</div>
               </div>
             </button>
@@ -257,8 +308,21 @@ const handleTransfer = () => {
         </div>
       </div>
 
-      <div class="p-6 border-t border-slate-800 bg-slate-900/90 backdrop-blur sticky bottom-0">
-        <button type="button" class="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-wide rounded-xl shadow-lg shadow-indigo-500/30 transition-all flex items-center justify-center gap-3 group" @click="handleTransfer">
+      <div class="p-6 border-t border-slate-800 bg-slate-900/90 backdrop-blur sticky bottom-0 flex items-center gap-3">
+        <button 
+          type="button" 
+          class="flex-1 h-12 bg-slate-800 hover:bg-slate-700 text-white font-bold uppercase tracking-wide rounded-xl transition-all flex items-center justify-center gap-2"
+          @click="router.push('/app/dashboard')"
+        >
+          <AppIcon name="arrow-left" class="w-5 h-5" />
+          <span>Wstecz</span>
+        </button>
+        <button 
+          type="button" 
+          class="flex-[2] h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-wide rounded-xl shadow-lg shadow-indigo-500/30 transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none" 
+          :disabled="!isCountValid"
+          @click="handleTransfer"
+        >
           <span>Przejdź do szczegółów</span>
           <AppIcon name="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
         </button>
@@ -313,11 +377,11 @@ const handleTransfer = () => {
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
           <div class="flex items-center justify-between mb-8">
             <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-              <AppIcon name="shield-check" class="text-blue-500" />
+              <AppIcon name="coins" class="text-emerald-500" />
               Porównanie kosztów
             </h3>
             <div class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-              {{ contractType === 'MIXED' ? `Mix: ${100 - mixRatio}% UoP / ${mixRatio}% UZ` : contractType }}
+              UoP: {{ countUopInput }} / UZ: {{ countUzInput }}
             </div>
           </div>
 

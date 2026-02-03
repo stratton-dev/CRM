@@ -207,7 +207,7 @@ onMounted(() => {
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center mb-2">
-      <h1 class="text-xl font-semibold text-gray-800">Mój Kokpit - Analityka</h1>
+      <h1 class="text-xl font-semibold text-gray-800">Dashboard - Analityka</h1>
       <span class="text-xs text-gray-500">Ostatnia aktualizacja: Dzisiaj</span>
     </div>
 

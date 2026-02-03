@@ -6,6 +6,8 @@ import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useClientStore } from '@/stores/client'
 import { useMailboxStore } from '@/stores/mailbox'
+import { useViewPermissionsStore } from '@/stores/viewPermissions'
+import { useRouter } from 'vue-router'
 import AdminPanelView from '@/views/admin/AdminPanelView.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
@@ -16,6 +18,7 @@ const router = useRouter()
 const dashboard = useDashboardStore()
 const clientStore = useClientStore()
 const mailboxStore = useMailboxStore()
+const viewPermissions = useViewPermissionsStore()
 const { clients } = storeToRefs(clientStore)
 const { emails: mailboxEmails } = storeToRefs(mailboxStore)
 const props = withDefaults(defineProps<{ showAdminPanel?: boolean }>(), {
@@ -27,8 +30,15 @@ const viewMode = ref<'hub' | 'stats'>('hub')
 const isAdmin = computed(() => userRole.value === 'ADMIN')
 const firstName = computed(() => session.currentUser?.name?.split(' ')[0] || 'Użytkowniku')
 
-const dateFrom = ref('')
-const dateTo = ref('')
+const canAddClient = computed(() => viewPermissions.isViewAllowed('sales-start', session.currentUser?.role))
+const handleAddClientClick = (e: Event) => {
+  if (!canAddClient.value) {
+    e.preventDefault()
+    alert(`Brak uprawnień do "Dodaj Klienta". Twoja rola: ${session.currentUser?.role || 'Nieznana'}`)
+  }
+}
+
+const selectedPeriod = ref('current')
 const viewScope = ref('structure')
 const showTargets = ref(true)
 const isRefreshing = ref(false)
@@ -40,22 +50,84 @@ const leadCount = computed(() => {
 
 const todaysMeetings = computed(() => {
   const today = new Date()
-  return dashboard.events.filter((event) => {
-    const date = new Date(event.start_at)
-    return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()
-  }).length
+  const list = Array.isArray(clients.value) ? clients.value : []
+  let count = 0
+  list.forEach((c) => {
+    if (c.activityHistory) {
+      c.activityHistory.forEach((a: any) => {
+        if (a.type === 'MEETING') {
+          const d = new Date(a.date)
+          if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
+            count++
+          }
+        }
+      })
+    }
+  })
+  return count
 })
 
-const upcomingEvents = computed(() => dashboard.events.map((event) => {
-  const start = new Date(event.start_at)
-  return {
-    id: event.id,
-    month: start.toLocaleDateString('pl-PL', { month: 'short' }).toUpperCase(),
-    day: String(start.getDate()).padStart(2, '0'),
-    time: start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    title: event.title,
+const upcomingEvents = computed(() => {
+  const list: any[] = []
+  const now = new Date()
+  const limitDate = new Date()
+  limitDate.setDate(now.getDate() + 3)
+  limitDate.setHours(23, 59, 59, 999)
+
+  const relevantTypes = ['MEETING', 'CALL']
+  const allClients = Array.isArray(clients.value) ? clients.value : []
+  
+  allClients.forEach((client: any) => {
+    if (client.activityHistory) {
+      client.activityHistory.forEach((act: any) => {
+        const d = new Date(act.date)
+        if (d >= now && d <= limitDate && relevantTypes.includes(act.type)) {
+           list.push({
+             id: act.id,
+             dateObj: d,
+             month: d.toLocaleDateString('pl-PL', { month: 'short' }).toUpperCase(),
+             day: String(d.getDate()).padStart(2, '0'),
+             time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             title: `${act.type === 'MEETING' ? 'Spotkanie' : 'Telefon'}: ${client.name}`,
+           })
+        }
+      })
+    }
+  })
+
+  // Mix in dashboard general events if any
+  if (Array.isArray(dashboard.events)) {
+    dashboard.events.forEach((ev) => {
+      const d = new Date(ev.start_at)
+      if (d >= now && d <= limitDate) {
+         list.push({
+             id: ev.id,
+             dateObj: d,
+             month: d.toLocaleDateString('pl-PL', { month: 'short' }).toUpperCase(),
+             day: String(d.getDate()).padStart(2, '0'),
+             time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+             title: ev.title,
+         })
+      }
+    })
   }
-}))
+
+  list.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
+  
+  return list
+})
+
+const goToEvent = (event: any) => {
+  if (event.id && event.dateObj) {
+    router.push({ 
+      path: '/app/calendar', 
+      query: { 
+        openEventId: event.id, 
+        date: event.dateObj.toISOString() 
+      } 
+    })
+  }
+}
 
 const newsItems = computed(() => dashboard.news.map((item) => ({
   id: item.id,
@@ -216,7 +288,7 @@ watch(
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-12">
-        <RouterLink to="/app/sales/start" class="bg-white rounded-2xl shadow-sm p-8 flex flex-col items-center justify-center gap-4 text-center border-2 border-green-400 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition group h-48">
+        <RouterLink :to="canAddClient ? '/app/sales/start' : ''" @click="handleAddClientClick" class="bg-white rounded-2xl shadow-sm p-8 flex flex-col items-center justify-center gap-4 text-center border-2 border-green-400 transition group h-48" :class="canAddClient ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1' : 'opacity-50 grayscale cursor-not-allowed'">
           <div class="w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-full bg-green-50 text-green-600 flex items-center justify-center text-2xl group-hover:bg-green-600 group-hover:text-white transition">
             <AppIcon name="user-plus" class="w-6 h-6" />
           </div>
@@ -231,7 +303,7 @@ watch(
             <AppIcon name="calculator" class="w-6 h-6" />
           </div>
           <div>
-            <h3 class="font-bold text-slate-800 text-lg">Kalkulator Prime</h3>
+            <h3 class="font-bold text-slate-800 text-lg">Kalkulator oszczędności</h3>
             <p class="text-xs text-slate-400 mt-1">Szybka wycena</p>
           </div>
         </RouterLink>
@@ -241,7 +313,7 @@ watch(
             <AppIcon name="chart-pie" class="w-6 h-6" />
           </div>
           <div>
-            <h3 class="font-bold text-slate-800 text-lg">Mój Kokpit</h3>
+            <h3 class="font-bold text-slate-800 text-lg">Dashboard</h3>
             <p class="text-xs text-slate-400 mt-1">Wyniki i Prowizje</p>
           </div>
         </div>
@@ -251,7 +323,7 @@ watch(
             <AppIcon name="envelope" class="w-6 h-6" />
           </div>
           <div>
-            <h3 class="font-bold text-slate-800 text-lg">Email</h3>
+            <h3 class="font-bold text-slate-800 text-lg">Poczta</h3>
             <p class="text-xs text-slate-400 mt-1">Skrzynka ({{ unreadCount }})</p>
           </div>
         </RouterLink>
@@ -271,8 +343,48 @@ watch(
             <AppIcon name="graduation-cap" class="w-6 h-6" />
           </div>
           <div>
-            <h3 class="font-bold text-slate-800 text-lg">Edukacja</h3>
+            <h3 class="font-bold text-slate-800 text-lg">Baza Wiedzy</h3>
             <p class="text-xs text-slate-400 mt-1">Wiedza i Certyfikaty</p>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/structure" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition group h-48">
+          <div class="w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-2xl group-hover:bg-orange-600 group-hover:text-white transition">
+            <AppIcon name="people-group" class="w-6 h-6" />
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Mój Zespół</h3>
+            <p class="text-xs text-slate-400 mt-1">Struktura i Wyniki</p>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/clients" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition group h-48">
+          <div class="w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-full bg-cyan-50 text-cyan-600 flex items-center justify-center text-2xl group-hover:bg-cyan-600 group-hover:text-white transition">
+            <AppIcon name="address-book" class="w-6 h-6" />
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Klienci</h3>
+            <p class="text-xs text-slate-400 mt-1">Baza Kontaktów</p>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/calendar" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition group h-48">
+          <div class="w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center text-2xl group-hover:bg-pink-600 group-hover:text-white transition">
+            <AppIcon name="calendar" class="w-6 h-6" />
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Kalendarz</h3>
+            <p class="text-xs text-slate-400 mt-1">Harmonogram</p>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/settlements" class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 transition group h-48">
+          <div class="w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-2xl group-hover:bg-purple-600 group-hover:text-white transition">
+            <AppIcon name="wallet" class="w-6 h-6" />
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Rozliczenia</h3>
+            <p class="text-xs text-slate-400 mt-1">Finanse</p>
           </div>
         </RouterLink>
       </div>
@@ -287,7 +399,7 @@ watch(
             </div>
           </div>
           <div class="space-y-4">
-            <div v-for="event in upcomingEvents" :key="event.id" class="bg-slate-50 rounded-xl p-4 flex items-center gap-4 hover:bg-slate-100 transition cursor-pointer group">
+            <div v-for="event in upcomingEvents" :key="event.id" class="bg-slate-50 rounded-xl p-4 flex items-center gap-4 hover:bg-slate-100 transition cursor-pointer group" @click="goToEvent(event)">
               <div class="bg-white rounded-lg p-2 text-center w-14 shadow-sm">
                 <div class="text-[10px] text-slate-400 uppercase font-bold">{{ event.month }}</div>
                 <div class="text-xl font-bold text-slate-800">{{ event.day }}</div>
@@ -335,11 +447,12 @@ watch(
 
     <div v-else class="space-y-8">
       <div class="flex items-center justify-between border-b border-slate-200 pb-6 animate-fade-in">
-        <button type="button" class="flex items-center text-slate-500 hover:text-stratton-dark transition font-medium" @click="viewMode = 'hub'">
-          <AppIcon name="arrow-left" class="w-4 h-4 mr-2" /> Wróć do Menu
+        <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm group" @click="viewMode = 'hub'">
+          <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span class="text-xs font-bold uppercase tracking-widest">Powrót</span>
         </button>
         <div class="text-center">
-          <h2 class="font-serif font-bold text-3xl text-slate-900">Mój Kokpit</h2>
+          <h2 class="font-serif font-bold text-3xl text-slate-900">Dashboard</h2>
           <p class="text-xs text-slate-400 cursor-pointer hover:text-blue-500 mt-2 uppercase tracking-wider" @click="toggleRole">Widok: {{ userRole }}</p>
         </div>
         <div class="w-20"></div>
@@ -411,7 +524,111 @@ watch(
       </div>
 
       <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="p-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50">
+        <!-- New Gauges Row based on user snippet -->
+        <div class="p-8 border-b border-slate-100 bg-slate-50/50">
+           <div class="flex flex-col md:flex-row justify-around items-center gap-8 font-sans">
+             
+             <!-- Gauge 1: Zlecone kalkulacje -->
+             <div class="flex flex-col items-center gap-4">
+               <div class="relative w-[260px] h-[130px] overflow-hidden">
+                  <div class="absolute top-0 left-0 w-full h-[200%] rounded-[50%]"
+                      style="background: conic-gradient(from 270deg, #2ecc71 0deg, #f1c40f 90deg, #e74c3c 180deg);
+                             mask: radial-gradient(circle, transparent 55%, black 56%);
+                             -webkit-mask: radial-gradient(circle, transparent 55%, black 56%);">
+                  </div>
+                  <div class="absolute bottom-0 left-1/2 w-1.5 h-[90%] bg-red-600 z-10 origin-bottom rounded-t-full shadow-sm"
+                       :style="{ transform: `translateX(-50%) rotate(${(Math.min(activeCalculations.length / 10, 1) * 180) - 90}deg)`, transition: 'transform 1s ease-in-out' }">
+                  </div>
+                  <div class="absolute bottom-[-6px] left-1/2 w-4 h-4 bg-slate-400 rounded-full -translate-x-1/2 z-20 border-2 border-white shadow-sm"></div>
+                  <div class="absolute w-full h-full text-xs font-bold text-slate-500 uppercase">
+                    <span class="absolute left-2 bottom-3 rotate-[-45deg]">0</span>
+                    <span class="absolute left-1/2 top-2 -translate-x-1/2">5</span>
+                    <span class="absolute right-2 bottom-3 rotate-[45deg]">10</span>
+                  </div>
+               </div>
+               <div class="text-center">
+                  <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Zlecone kalkulacje</div>
+                  <div class="text-2xl font-bold text-slate-900 mt-1">{{ activeCalculations.length }} szt.</div>
+               </div>
+             </div>
+
+             <!-- Gauge 2: Ilość wprowadzonych klientów -->
+             <div class="flex flex-col items-center gap-4">
+               <div class="relative w-[260px] h-[130px] overflow-hidden">
+                  <div class="absolute top-0 left-0 w-full h-[200%] rounded-[50%]"
+                      style="background: conic-gradient(from 270deg, #2ecc71 0deg, #f1c40f 90deg, #e74c3c 180deg);
+                             mask: radial-gradient(circle, transparent 55%, black 56%);
+                             -webkit-mask: radial-gradient(circle, transparent 55%, black 56%);">
+                  </div>
+                  <div class="absolute bottom-0 left-1/2 w-1.5 h-[90%] bg-red-600 z-10 origin-bottom rounded-t-full shadow-sm"
+                       :style="{ transform: `translateX(-50%) rotate(${(Math.min((clients.filter(c => c.status === 'NEW').length) / 10, 1) * 180) - 90}deg)`, transition: 'transform 1s ease-in-out' }">
+                  </div>
+                  <div class="absolute bottom-[-6px] left-1/2 w-4 h-4 bg-slate-400 rounded-full -translate-x-1/2 z-20 border-2 border-white shadow-sm"></div>
+                  <div class="absolute w-full h-full text-xs font-bold text-slate-500 uppercase">
+                    <span class="absolute left-2 bottom-3 rotate-[-45deg]">0</span>
+                    <span class="absolute left-1/2 top-2 -translate-x-1/2">5</span>
+                    <span class="absolute right-2 bottom-3 rotate-[45deg]">10</span>
+                  </div>
+               </div>
+               <div class="text-center">
+                  <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Wprowadzeni Klienci</div>
+                  <div class="text-2xl font-bold text-slate-900 mt-1">{{ clients.filter(c => c.status === 'NEW').length }} szt.</div>
+               </div>
+             </div>
+
+             <!-- Gauge 3: Liczba podpisanych umów -->
+             <div class="flex flex-col items-center gap-4">
+               <div class="relative w-[260px] h-[130px] overflow-hidden">
+                  <div class="absolute top-0 left-0 w-full h-[200%] rounded-[50%]"
+                      style="background: conic-gradient(from 270deg, #e74c3c 0deg, #f1c40f 90deg, #2ecc71 180deg); /* Reversed colors for 'good is high' */
+                             mask: radial-gradient(circle, transparent 55%, black 56%);
+                             -webkit-mask: radial-gradient(circle, transparent 55%, black 56%);">
+                  </div>
+                  <div class="absolute bottom-0 left-1/2 w-1.5 h-[90%] bg-red-600 z-10 origin-bottom rounded-t-full shadow-sm"
+                       :style="{ transform: `translateX(-50%) rotate(${(Math.min((clients.filter(c => c.status === 'SIGNED').length) / 10, 1) * 180) - 90}deg)`, transition: 'transform 1s ease-in-out' }">
+                  </div>
+                  <div class="absolute bottom-[-6px] left-1/2 w-4 h-4 bg-slate-400 rounded-full -translate-x-1/2 z-20 border-2 border-white shadow-sm"></div>
+                  <div class="absolute w-full h-full text-xs font-bold text-slate-500 uppercase">
+                    <span class="absolute left-2 bottom-3 rotate-[-45deg]">Min</span>
+                    <span class="absolute left-1/2 top-2 -translate-x-1/2">Cel</span>
+                    <span class="absolute right-2 bottom-3 rotate-[45deg]">Max</span>
+                  </div>
+               </div>
+               <div class="text-center">
+                  <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Podpisane Umowy</div>
+                  <div class="text-2xl font-bold text-slate-900 mt-1">{{ clients.filter(c => c.status === 'SIGNED').length }} szt.</div>
+               </div>
+             </div>
+
+             <!-- Gauge 4: Punkty Prowizyjne -->
+             <div class="flex flex-col items-center gap-4">
+               <div class="relative w-[260px] h-[130px] overflow-hidden">
+                  <div class="absolute top-0 left-0 w-full h-[200%] rounded-[50%]"
+                      style="background: conic-gradient(from 270deg, #e74c3c 0deg, #f1c40f 90deg, #2ecc71 180deg);
+                             mask: radial-gradient(circle, transparent 55%, black 56%);
+                             -webkit-mask: radial-gradient(circle, transparent 55%, black 56%);">
+                  </div>
+                  <!-- Mock value 450k for demo -->
+                  <div class="absolute bottom-0 left-1/2 w-1.5 h-[90%] bg-red-600 z-10 origin-bottom rounded-t-full shadow-sm"
+                       :style="{ transform: `translateX(-50%) rotate(${(Math.min(450000 / 1000000, 1) * 180) - 90}deg)`, transition: 'transform 1s ease-in-out' }">
+                  </div>
+                  <div class="absolute bottom-[-6px] left-1/2 w-4 h-4 bg-slate-400 rounded-full -translate-x-1/2 z-20 border-2 border-white shadow-sm"></div>
+                  <div class="absolute w-full h-full text-xs font-bold text-slate-500 uppercase">
+                    <span class="absolute left-2 bottom-3 rotate-[-45deg]">0</span>
+                    <span class="absolute left-1/2 top-2 -translate-x-1/2">500k</span>
+                    <span class="absolute right-2 bottom-3 rotate-[45deg]">1M</span>
+                  </div>
+               </div>
+               <div class="text-center">
+                  <div class="text-sm font-bold text-slate-500 uppercase tracking-widest">Punkty Prowizyjne</div>
+                  <div class="text-2xl font-bold text-slate-900 mt-1">450 000 pkt</div>
+               </div>
+             </div>
+             
+           </div>
+        </div>
+
+        <div class="p-8 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white">
           <div class="flex items-center gap-5">
             <div class="bg-amber-100 p-4 rounded-xl text-amber-600 shadow-sm min-w-12 min-h-12 aspect-square shrink-0 flex items-center justify-center"><AppIcon name="stopwatch" class="w-6 h-6" /></div>
             <div>
