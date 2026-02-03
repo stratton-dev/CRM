@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 
 .env
+tmp/oferta-nowa.pdf
+.gitignore
+wzor_oferty.pdf
+oferta-z-systemu.pdf
