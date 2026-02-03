@@ -9,6 +9,7 @@ import { useStructureStore } from '@/stores/structure'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import type { Email } from '@/types/models'
+import AppIcon from '@/components/AppIcon.vue'
 
 const mailboxStore = useMailboxStore()
 const session = useSessionStore()
@@ -143,6 +144,12 @@ const formatDoc = (command: string, value?: string) => {
 <template>
   <div class="h-full bg-white rounded-lg shadow border border-gray-200 flex overflow-hidden">
     <div class="w-64 bg-gray-50 border-r border-gray-200 p-4 flex flex-col">
+      <div class="mb-6">
+        <RouterLink to="/app/dashboard" class="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all shadow-sm group w-full justify-center">
+          <AppIcon name="arrow-left" class="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
+          <span class="text-[10px] font-bold uppercase tracking-widest">Powrót</span>
+        </RouterLink>
+      </div>
       <h2 class="text-lg font-bold text-gray-800 mb-6">Skrzynka Pocztowa</h2>
 
       <button type="button" class="w-full bg-sky-600 text-white font-bold py-2 px-4 rounded hover:bg-sky-700 mb-6 shadow" @click="openCompose">

@@ -449,16 +449,33 @@ export const useClientStore = defineStore('client', () => {
     }
   }
 
-  const addActivity = (clientId: string, activity: Omit<ClientActivity, 'id' | 'date'>, customDate?: string) => {
+  const addActivity = async (clientId: string, activity: Omit<ClientActivity, 'id' | 'date'>, customDate?: string) => {
     if (auth.enabled) {
       const dateToUse = customDate || new Date().toISOString()
-      api.post('/v1/crm-client-activities', {
-        client_id: clientId,
-        user_id: activity.authorId,
-        type: activity.type,
-        description: activity.description,
-        occurred_at: dateToUse,
-      }).then(() => fetchActivities()).catch(() => toast.error('Nie udało się dodać aktywności.'))
+      try {
+        if (activity.type === 'MEETING') {
+             await api.post('/v1/meetings', {
+                client_id: clientId,
+                user_id: activity.authorId,
+                status: 'open',
+                offer_status: 'preparing',
+                resume_at: dateToUse,
+             })
+        } else {
+             await api.post('/v1/crm-client-activities', {
+                client_id: clientId,
+                user_id: activity.authorId,
+                type: activity.type,
+                description: activity.description,
+                occurred_at: dateToUse,
+             })
+        }
+        await fetchActivities()
+        await fetchMeetings()
+        toast.success('Dodano aktywność')
+      } catch(e) { 
+        toast.error('Nie udało się dodać aktywności.')
+      }
       return
     }
 
@@ -543,6 +560,82 @@ export const useClientStore = defineStore('client', () => {
     })
   }
 
+  const removeActivity = async (clientId: string, activityId: string) => {
+    if (auth.enabled) {
+      const idStr = String(activityId)
+      try {
+        if (idStr.startsWith('meeting-')) {
+          const id = idStr.replace('meeting-', '')
+          await api.delete(`/v1/meetings/${id}`)
+        } else if (idStr.startsWith('activity-')) {
+          const id = idStr.replace('activity-', '')
+          await api.delete(`/v1/crm-client-activities/${id}`)
+        } else {
+          console.warn('Nieznany format ID:', idStr)
+          throw new Error('Unknown ID format')
+        }
+        await refreshApiData()
+        toast.success('Usunięto zdarzenie')
+      } catch (e) {
+        console.error('Remove activity error:', e)
+        toast.error('Nie udało się usunąć zdarzenia')
+      }
+      return
+    }
+
+    const client = dataClients.value.find((item) => item.id === clientId)
+    if (client && client.activityHistory) {
+      const newHistory = client.activityHistory.filter((a) => a.id !== activityId)
+      data.rawUpdateClient(clientId, {
+        activityHistory: newHistory,
+      })
+      toast.success('Usunięto zdarzenie')
+    }
+  }
+
+  const updateActivity = async (clientId: string, activity: ClientActivity) => {
+    if (auth.enabled) {
+      const idStr = String(activity.id)
+      try {
+        if (idStr.startsWith('meeting-')) {
+          const id = idStr.replace('meeting-', '')
+          await api.patch(`/v1/meetings/${id}`, {
+             resume_at: activity.date,
+             status: 'open', 
+          })
+        } else if (idStr.startsWith('activity-')) {
+          const id = idStr.replace('activity-', '')
+          await api.patch(`/v1/crm-client-activities/${id}`, {
+            type: activity.type,
+            description: activity.description,
+            occurred_at: activity.date,
+            user_id: activity.authorId
+          })
+        }
+        await refreshApiData()
+        toast.success('Zaktualizowano zdarzenie')
+      } catch (e) {
+        console.error('Update activity error:', e)
+        toast.error('Nie udało się zaktualizować zdarzenia')
+      }
+      return
+    }
+
+    const client = dataClients.value.find((item) => item.id === clientId)
+    if (client) {
+        const activityHistory = client.activityHistory || []
+        const index = activityHistory.findIndex(a => a.id === activity.id)
+        if (index !== -1) {
+            const newHistory = [...activityHistory]
+            newHistory[index] = { ...newHistory[index], ...activity }
+             data.rawUpdateClient(clientId, {
+                activityHistory: newHistory,
+              })
+             toast.success('Zaktualizowano zdarzenie')
+        }
+    }
+  }
+
   return {
     clients,
     clientPage,
@@ -552,6 +645,8 @@ export const useClientStore = defineStore('client', () => {
     signContract,
     saveOffer,
     addActivity,
+    removeActivity,
+    updateActivity,
     checkSla,
     checkReservations,
     fetchClients,

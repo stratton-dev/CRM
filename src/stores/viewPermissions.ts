@@ -85,8 +85,8 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   calendar: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   mailbox: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'knowledge-base': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
-  'quick-calculator': ['ADMIN', 'SALES'],
-  calculator: ['ADMIN', 'SALES'],
+  'quick-calculator': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
+  calculator: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   leaderboard: ['ADMIN'],
   settings: ['ADMIN'],
 }

@@ -41,7 +41,10 @@ export const useSessionStore = defineStore('session', () => {
     if (auth.enabled) {
       try {
         currentUserId.value = null
-        originalUserId.value = null
+        // Check local storage for impersonation marker
+        const impersonationId = localStorage.getItem('x_impersonate_user')
+        originalUserId.value = impersonationId ? 'ADMIN_MARKER' : null
+        
         const { data } = await api.get('/v1/me')
         apiUser.value = data
       } catch (error) {
@@ -70,10 +73,16 @@ export const useSessionStore = defineStore('session', () => {
     currentUserId.value = null
     originalUserId.value = null
     apiUser.value = null
+    localStorage.removeItem('x_impersonate_user')
   }
 
-  const impersonate = (targetUserId: string) => {
-    if (auth.enabled) return
+  const impersonate = async (targetUserId: string) => {
+    if (auth.enabled) {
+      localStorage.setItem('x_impersonate_user', targetUserId)
+      await resolveUserFromAuth()
+      return
+    }
+
     const actor = currentUser.value
     const list = Array.isArray(users.value) ? users.value : []
     const target = list.find((user) => user.id === targetUserId)
@@ -84,8 +93,13 @@ export const useSessionStore = defineStore('session', () => {
     currentUserId.value = target.id
   }
 
-  const stopImpersonation = () => {
-    if (auth.enabled) return
+  const stopImpersonation = async () => {
+    if (auth.enabled) {
+      localStorage.removeItem('x_impersonate_user')
+      await resolveUserFromAuth()
+      return
+    }
+
     if (!originalUser.value) return
     data.logAction(originalUser.value.id, 'STOP_IMPERSONATE', 'Zakończono podgląd konta', currentUser.value?.id)
     currentUserId.value = originalUser.value.id
@@ -134,6 +148,7 @@ export const useSessionStore = defineStore('session', () => {
     clearSession,
     impersonate,
     stopImpersonation,
+    impersonatedUser: computed(() => (auth.enabled && originalUserId.value ? apiUser.value : null)),
     isRole,
   }
 })

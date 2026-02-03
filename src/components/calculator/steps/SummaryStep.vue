@@ -54,7 +54,8 @@ const handleGenerateOffer = async () => {
     store.saveToHistory();
     store.generateOfferPdf(snapshot);
     await store.updateMeetingOfferStatus('generated');
-    await store.updateMeetingOfferStatus('sent');
+    // await store.updateMeetingOfferStatus('sent'); // Don't mark as sent yet
+    await store.updateClientStatus('OFFER_GENERATED');
   } catch (error) {
     console.error(error);
   } finally {

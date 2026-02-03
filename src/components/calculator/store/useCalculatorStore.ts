@@ -404,6 +404,17 @@ export const useCalculatorStore = defineStore('calculator', () => {
     }
   };
 
+  const updateClientStatus = async (status: string) => {
+    const auth = useAuthStore();
+    if (!auth.enabled || !context.value.clientId) return;
+    try {
+      await api.patch(`/v1/clients/${context.value.clientId}`, { status });
+      toast.success('Zaktualizowano status klienta.');
+    } catch (error) {
+      console.error('Failed to update client status', error);
+    }
+  };
+
   const saveCalculationToApi = async () => {
     if (!auth.enabled || !context.value.meetingId) {
       toast.warning('Brak aktywnego spotkania do zapisu.');
@@ -418,8 +429,15 @@ export const useCalculatorStore = defineStore('calculator', () => {
       meeting_id: Number(context.value.meetingId),
       employee_count: pracownicy.value.length,
       savings_amount: Math.max(0, Math.round(wyniki.value.podsumowanie.oszczednoscNetto)),
+      value_json: {
+        firma: firma.value,
+        pracownicy: pracownicy.value,
+        config: config.value,
+        prowizjaProc: prowizjaProc.value,
+        wyniki: wyniki.value.podsumowanie,
+      },
       valid_until: validUntil.toISOString().slice(0, 10),
-      status: 'PREPARING',
+      status: 'GENERATED',
     };
 
     try {
@@ -531,6 +549,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
     generateDetailedExcelReport,
     generateImportTemplate,
     updateMeetingOfferStatus,
+    updateClientStatus,
     saveCalculationToApi,
     fetchConfigFromApi,
     saveConfigToApi,

@@ -22,8 +22,10 @@ import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CircleStackIcon,
   ClockIcon,
   Cog6ToothIcon,
+  CurrencyDollarIcon,
   DocumentTextIcon,
   EyeIcon,
   ExclamationTriangleIcon,
@@ -51,6 +53,10 @@ import {
   UserPlusIcon,
   XMarkIcon,
   XCircleIcon,
+  ScaleIcon,
+  VideoCameraIcon,
+  PresentationChartLineIcon,
+  PlayIcon
 } from '@heroicons/vue/24/outline'
 
 const props = withDefaults(
@@ -84,6 +90,9 @@ const iconMap: Record<string, any> = {
   award: TrophyIcon,
   calculator: CalculatorIcon,
   'hand-holding-dollar': BanknotesIcon,
+  oil: CircleStackIcon,
+  coins: CircleStackIcon,
+  dollar: CurrencyDollarIcon,
   calendar: CalendarDaysIcon,
   envelope: EnvelopeIcon,
   'book-open': BookOpenIcon,
@@ -122,6 +131,10 @@ const iconMap: Record<string, any> = {
   phone: PhoneIcon,
   printer: PrinterIcon,
   'pencil-square': PencilSquareIcon,
+  'scale': ScaleIcon,
+  'video-camera': VideoCameraIcon,
+  'presentation-chart-line': PresentationChartLineIcon,
+  'play': PlayIcon
 }
 
 const icon = computed(() => iconMap[props.name] || QuestionMarkCircleIcon)

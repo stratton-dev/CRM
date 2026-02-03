@@ -579,9 +579,9 @@ const closeImpersonateModal = () => {
   userToImpersonate.value = null
 }
 
-const confirmImpersonate = () => {
+const confirmImpersonate = async () => {
   if (!userToImpersonate.value) return
-  session.impersonate(userToImpersonate.value.id)
+  await session.impersonate(userToImpersonate.value.id)
   closeImpersonateModal()
   router.push('/app/dashboard')
 }

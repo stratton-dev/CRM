@@ -18,6 +18,13 @@ api.interceptors.request.use((config) => {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${token}`
   }
+  
+  const impersonateId = localStorage.getItem('x_impersonate_user')
+  if (impersonateId) {
+    config.headers = config.headers || {}
+    config.headers['X-Impersonate-User'] = impersonateId
+  }
+  
   return config
 })
 
