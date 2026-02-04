@@ -7,7 +7,6 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useClientStore } from '@/stores/client'
 import { useMailboxStore } from '@/stores/mailbox'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
-import { useRouter } from 'vue-router'
 import AdminPanelView from '@/views/admin/AdminPanelView.vue'
 import AppIcon from '@/components/AppIcon.vue'
 
