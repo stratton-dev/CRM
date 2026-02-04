@@ -604,7 +604,7 @@ const changeStatus = (event: Event, clientId: string) => {
 
 const continueProcess = (client: Client) => {
   router.push({
-    path: '/app/calculator', // Changed from quick-calculator
+    path: '/app/sales/start',
     query: {
       clientId: client.id,
       meetingId: client.meetingId || undefined,

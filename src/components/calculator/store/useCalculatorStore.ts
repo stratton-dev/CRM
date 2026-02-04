@@ -588,9 +588,22 @@ export const useCalculatorStore = defineStore('calculator', () => {
 
   const updateClientStatus = async (status: string) => {
     const auth = useAuthStore();
+    const session = useSessionStore();
     if (!auth.enabled || !context.value.clientId) return;
     try {
-      await api.patch(`/v1/clients/${context.value.clientId}`, { status });
+      const { data } = await api.get('/v1/crm-client-profiles', { params: { client_id: context.value.clientId, per_page: 1 } });
+      const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+      const profile = list.length ? list[0] : null;
+      const payload: Record<string, any> = {
+        client_id: context.value.clientId,
+        owner_user_id: session.currentUser?.id || null,
+        status,
+      };
+      if (profile?.id) {
+        await api.patch(`/v1/crm-client-profiles/${profile.id}`, payload);
+      } else {
+        await api.post('/v1/crm-client-profiles', payload);
+      }
       toast.success('Zaktualizowano status klienta.');
     } catch (error) {
       console.error('Failed to update client status', error);
@@ -698,6 +711,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
     let created = 0;
     let skipped = 0;
     let missingClient = 0;
+    const keepIds = new Set<string>();
 
     for (const entry of entries) {
       const nip = normalizeNip(entry.dane.firma.nip || '');
@@ -717,6 +731,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
 
       if (duplicate) {
         skipped += 1;
+        keepIds.add(String(entry.id));
         continue;
       }
 
@@ -735,10 +750,18 @@ export const useCalculatorStore = defineStore('calculator', () => {
       try {
         await api.post('/v1/calculations', payload);
         created += 1;
+        keepIds.add(String(entry.id));
       } catch (error) {
         console.error('syncHistoryToApiByNip failed', error);
       }
     }
+
+    // Remove entries that were not saved or found in CRM during sync
+    historia.value = historia.value.filter((entry) => {
+      const hasNip = (entry.dane?.firma?.nip || '').trim().length > 0;
+      if (!hasNip) return true;
+      return keepIds.has(String(entry.id));
+    });
 
     toast.success(`Synchronizacja zakończona: dodano ${created}, pominięto ${skipped}, brak klienta ${missingClient}.`);
   };

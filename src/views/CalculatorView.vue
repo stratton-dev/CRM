@@ -155,9 +155,17 @@ onMounted(() => {
   const employees = Array.isArray(route.query.employees) ? route.query.employees[0] : route.query.employees;
   const avgWage = Array.isArray(route.query.avgWage) ? route.query.avgWage[0] : route.query.avgWage;
   const contractType = Array.isArray(route.query.contractType) ? route.query.contractType[0] : route.query.contractType;
+  const stepParam = Array.isArray(route.query.step) ? route.query.step[0] : route.query.step;
 
   store.setContext({ meetingId: meetingId ? String(meetingId) : null, clientId: clientId ? String(clientId) : null, source: 'detailed' });
   seedEmployees(Number(employees || 0), Number(avgWage || 0), contractType ? String(contractType) : null);
+
+  if (stepParam) {
+    const normalized = String(stepParam).toLowerCase();
+    if (normalized === 'summary' || normalized === 'podsumowanie' || normalized === '5') {
+      currentStep.value = 5;
+    }
+  }
 
   if (auth.enabled) {
     clientStore.fetchClients({ perPage: 200 });

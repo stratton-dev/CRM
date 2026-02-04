@@ -13,24 +13,21 @@ const { files: knowledgeFiles } = storeToRefs(knowledgeBase)
 const toast = useToastStore()
 const session = useSessionStore()
 const searchQuery = ref('')
+const activeCategory = ref<FileCategory | null>(null)
 const showUpload = ref(false)
 const uploadName = ref('')
 const uploadDescription = ref('')
-const uploadCategory = ref<FileCategory>('UMOWY')
+const uploadCategory = ref<FileCategory>('CASH_FLOW')
 const uploadFile = ref<File | null>(null)
 const uploadError = ref('')
 const uploadLoading = ref(false)
 
-const categoryOrder: FileCategory[] = ['CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO', 'UMOWY', 'PROCESY', 'PRAWO', 'MARKETING']
+const categoryOrder: FileCategory[] = ['CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO']
 const categoryNames: Record<FileCategory, string> = {
   CASH_FLOW: 'Analiza Cash Flow',
   LEGAL: 'Kwestie Prawne',
   GRAPHIC: 'Graficzne Przedstawienie',
   VIDEO: 'Film Wideo',
-  UMOWY: 'Umowy i Wzory',
-  PROCESY: 'Procesy Sprzedażowe',
-  PRAWO: 'Wiedza Prawna',
-  MARKETING: 'Materiały Marketingowe',
 }
 
 const presentationTypes = [
@@ -66,9 +63,14 @@ const downloadKnowledgeFile = async (file: KnowledgeFile) => {
 }
 
 const filteredFiles = computed(() => {
+  const categoryFilter = activeCategory.value
   const query = searchQuery.value.toLowerCase()
-  if (!query) return safeFiles.value
-  return safeFiles.value.filter((file) => file.name.toLowerCase().includes(query) || file.description.toLowerCase().includes(query))
+  return safeFiles.value.filter((file) => {
+    const matchesCategory = categoryFilter ? file.category === categoryFilter : true
+    if (!matchesCategory) return false
+    if (!query) return true
+    return file.name.toLowerCase().includes(query) || file.description.toLowerCase().includes(query)
+  })
 })
 
 const categorizedFiles = computed(() => {
@@ -112,7 +114,7 @@ const pickFile = (event: Event) => {
 const resetUpload = () => {
   uploadName.value = ''
   uploadDescription.value = ''
-  uploadCategory.value = 'UMOWY'
+  uploadCategory.value = 'CASH_FLOW'
   uploadFile.value = null
   uploadError.value = ''
   uploadLoading.value = false
@@ -192,6 +194,10 @@ onMounted(() => {
         <p class="text-sm text-gray-500">Centralne repozytorium plików i dokumentów.</p>
       </div>
       <div class="flex items-center gap-3">
+        <div v-if="activeCategory" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-semibold">
+          <span>{{ categoryNames[activeCategory] }}</span>
+          <button type="button" class="text-sky-500 hover:text-sky-700" @click="activeCategory = null">✕</button>
+        </div>
         <div class="relative w-full max-w-sm">
           <input v-model="searchQuery" type="text" placeholder="Szukaj w plikach..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-sky-500 focus:border-sky-500" />
           <AppIcon name="search" class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -209,7 +215,7 @@ onMounted(() => {
         :key="tile.id"
         class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 cursor-pointer transition-all hover:-translate-y-1 hover:shadow-lg group"
         :class="searchQuery ? 'opacity-50 hover:opacity-100' : ''"
-        @click="searchQuery = categoryNames[tile.id as FileCategory]"
+        @click="activeCategory = tile.id as FileCategory"
       >
          <div class="flex items-start justify-between mb-4">
             <div class="w-12 h-12 rounded-xl flex items-center justify-center transition-colors" :class="[tile.bg, tile.color]">

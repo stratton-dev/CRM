@@ -77,6 +77,7 @@ const handleGenerateOffer = async (layout: 'horizontal' | 'vertical') => {
     store.saveToHistory();
     await store.generateOfferPdf(snapshot, { documentLayout: layout });
     await store.updateMeetingOfferStatus('generated');
+    await store.updateClientStatus('OFFER_GENERATED');
     if (calc?.id) {
       await store.updateCalculationStatus(String(calc.id), 'READY');
       latestCalculationId.value = String(calc.id);

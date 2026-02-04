@@ -117,6 +117,23 @@ const resolveClientFromApi = async (clientId: string) => {
       contactEmail: profile.contact_email || data?.email || null,
       contactName: profile.contact_name || null,
     }
+    if (!clientData.value.contactEmail) {
+      try {
+        const { data: contactsData } = await api.get(`/v1/clients/${clientId}/contacts`)
+        const contacts = Array.isArray(contactsData?.data) ? contactsData.data : Array.isArray(contactsData) ? contactsData : []
+        const decision = contacts.find((c: any) => c?.is_decision_maker && c?.email)
+        const fallback = contacts.find((c: any) => c?.email)
+        const resolvedEmail = decision?.email || fallback?.email || null
+        if (resolvedEmail) {
+          clientData.value = {
+            ...clientData.value,
+            contactEmail: resolvedEmail,
+          }
+        }
+      } catch (error) {
+        // ignore contact lookup failures
+      }
+    }
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać danych klienta.'
     toast.warning(message)
@@ -209,6 +226,28 @@ const cancel = () => {
   router.push('/app/dashboard')
 }
 
+const updateClientProfileStatus = async (status: string) => {
+  if (!auth.enabled || !resolvedClientId.value) return
+  try {
+    const { data } = await api.get('/v1/crm-client-profiles', { params: { client_id: resolvedClientId.value, per_page: 1 } })
+    const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+    const profile = list.length ? list[0] : null
+    const payload: Record<string, any> = {
+      client_id: resolvedClientId.value,
+      owner_user_id: session.currentUser?.id || null,
+      status,
+    }
+    if (profile?.id) {
+      await api.patch(`/v1/crm-client-profiles/${profile.id}`, payload)
+    } else {
+      await api.post('/v1/crm-client-profiles', payload)
+    }
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się zaktualizować statusu klienta.'
+    toast.warning(message)
+  }
+}
+
 const sendEmail = async () => {
   if (auth.enabled && meetingId.value) {
     try {
@@ -254,6 +293,7 @@ const sendEmail = async () => {
       }
     }
     await mailbox.sendEmail(user, emailTo.value, subject.value, content.value, attachments)
+    await updateClientProfileStatus('CALCULATION_SENT')
     toast.success('Pomyślnie wysłano ofertę!')
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'

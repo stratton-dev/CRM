@@ -41,6 +41,8 @@ const selectedPeriod = ref('current')
 const viewScope = ref('structure')
 const showTargets = ref(true)
 const isRefreshing = ref(false)
+const dateFrom = ref('')
+const dateTo = ref('')
 
 const leadCount = computed(() => {
   const list = Array.isArray(clients.value) ? clients.value : []

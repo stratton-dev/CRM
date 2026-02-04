@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, reactive } from 'vue'
+import { computed, onMounted, ref, reactive, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
@@ -11,7 +11,7 @@ import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
-import type { KnowledgeFile } from '@/types/models'
+import type { FileCategory, KnowledgeFile } from '@/types/models'
 import { VueFilesPreview } from 'vue-files-preview'
 import 'vue-files-preview/lib/style.css'
 
@@ -36,6 +36,8 @@ const companyData = ref({
   zip: '',
   city: '',
 })
+
+const industrySearch = ref('')
 
 const contactDraft = ref({
   name: '',
@@ -74,7 +76,6 @@ const contactEdit = ref({
 const consentList = ref<Array<{ id: string; code: string; title: string; description: string; required: boolean; file_url?: string | null; file_name?: string | null }>>([])
 const consentAccepted = ref<Record<string, boolean>>({})
 
-<<<<<<< HEAD
 const openConsentFile = async (consent: { id: string; file_name?: string | null }, download = false) => {
   try {
     const { data } = await api.get(`/v1/consents/${consent.id}/file`, {
@@ -95,7 +96,8 @@ const openConsentFile = async (consent: { id: string; file_name?: string | null 
     const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać pliku.'
     toast.warning(message)
   }
-=======
+}
+
 const showConsentModal = ref(false)
 const selectedConsentCode = ref('')
 const selectedConsentTitle = ref('')
@@ -105,8 +107,6 @@ const showPresentationModal = ref(false)
 const selectedPresentationType = ref('')
 const selectedPresentationTitle = ref('')
 const selectedPresentationFile = ref<any>(null)
-const knowledgeFiles = ref<Array<any>>([])
-const isLoadingFiles = ref(false)
 
 const consentTexts: Record<string, string> = {
   'marketing': `ZGODA MARKETINGOWA
@@ -231,7 +231,6 @@ const openPresentation = (type: string, title: string, file: any = null) => {
   selectedPresentationTitle.value = title
   selectedPresentationFile.value = file
   showPresentationModal.value = true
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
 }
 
 const analysis = ref({
@@ -247,18 +246,6 @@ const analysis = ref({
   uzCount: null as number | null,
   uzSalaryNet: null as number | null,
   zusCost: null as number | null,
-<<<<<<< HEAD
-  isInvesting: null as boolean | null,
-  benefits: '',
-  projectParticipation: '',
-  pastSavings: '',
-  currentSavings: '',
-  plannedInvestments: '',
-  declaredSavings: '',
-  debts: '',
-  vatModel: '',
-=======
-  
   // New fields
   planningInvestments: null as boolean | null,
   highZUSPayments: null as boolean | null,
@@ -268,8 +255,8 @@ const analysis = ref({
   needsFinancing: null as boolean | null,
   financingPurpose: '',
 
+  // Legacy fields
   isInvesting: null as boolean | null, // Legacy name for planningInvestments
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
 })
 
 const userName = computed(() => currentUser.value?.name || 'Użytkowniku')
@@ -282,9 +269,11 @@ const isCheckingNip = ref(false)
 const clientId = ref<string | null>(null)
 const meetingId = ref<string | null>(null)
 const meetingAnalysisId = ref<string | null>(null)
+const crmProfileId = ref<string | null>(null)
 const isLoadingExisting = ref(false)
 const calcTarget = ref<'quick' | 'detailed'>('quick')
 const knowledgeSearch = ref('')
+const selectedKnowledgeCategory = ref('all')
 const showPreview = ref(false)
 const previewUrl = ref('')
 const previewName = ref('')
@@ -293,11 +282,37 @@ const previewContainer = ref<HTMLElement | null>(null)
 const previewFile = ref<File | null>(null)
 const previewKey = ref(0)
 
+const categoryOrder: FileCategory[] = ['CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO']
+const categoryNames: Record<FileCategory, string> = {
+  CASH_FLOW: 'Analiza Cash Flow',
+  LEGAL: 'Kwestie Prawne',
+  GRAPHIC: 'Graficzne Przedstawienie',
+  VIDEO: 'Film Wideo',
+}
+
 const safeKnowledgeFiles = computed<KnowledgeFile[]>(() => (Array.isArray(knowledgeFiles.value) ? knowledgeFiles.value : []))
+const knowledgeCategories = computed(() => {
+  const categories = new Set<string>()
+  for (const file of safeKnowledgeFiles.value) {
+    if (file.category) {
+      categories.add(String(file.category))
+    }
+  }
+  const ordered: string[] = []
+  categoryOrder.forEach((category) => {
+    if (categories.has(category)) ordered.push(category)
+  })
+  const remaining = Array.from(categories).filter((cat) => !ordered.includes(cat))
+  remaining.sort((a, b) => a.localeCompare(b, 'pl'))
+  return [...ordered, ...remaining]
+})
 const filteredKnowledgeFiles = computed(() => {
   const query = knowledgeSearch.value.trim().toLowerCase()
-  if (!query) return safeKnowledgeFiles.value
+  const category = selectedKnowledgeCategory.value
   return safeKnowledgeFiles.value.filter((file) => {
+    const matchesCategory = category === 'all' ? true : String(file.category || '') === category
+    if (!matchesCategory) return false
+    if (!query) return true
     return file.name.toLowerCase().includes(query) || file.description.toLowerCase().includes(query)
   })
 })
@@ -804,6 +819,7 @@ const saveConsents = async () => {
       })
     }
 
+    await updateCrmReservationAndStatus()
     return true
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się zapisać zgód.'
@@ -811,6 +827,88 @@ const saveConsents = async () => {
     return false
   } finally {
     isSavingStep.value = false
+  }
+}
+
+const updateCrmReservationAndStatus = async () => {
+  if (!auth.enabled || !clientId.value) return
+  try {
+    let profile: any = null
+    if (!crmProfileId.value) {
+      const { data } = await api.get('/v1/crm-client-profiles', { params: { client_id: clientId.value, per_page: 1 } })
+      const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+      profile = list.length ? list[0] : null
+      crmProfileId.value = profile?.id ? String(profile.id) : null
+    }
+
+    let reservationEndDate: string | null = null
+    if (meetingId.value) {
+      const { data: meeting } = await api.get(`/v1/meetings/${meetingId.value}`)
+      reservationEndDate = meeting?.valid_until || null
+    }
+
+    const currentStatus = profile?.status || null
+    const nextStatus =
+      currentStatus && !['NEW', 'IN_TALKS'].includes(currentStatus) ? currentStatus : 'IN_TALKS'
+
+    const payload: Record<string, any> = {
+      client_id: clientId.value,
+      owner_user_id: currentUser.value?.id || null,
+      status: nextStatus,
+    }
+    if (reservationEndDate) {
+      payload.reservation_end_date = reservationEndDate
+    }
+
+    if (crmProfileId.value) {
+      await api.patch(`/v1/crm-client-profiles/${crmProfileId.value}`, payload)
+    } else {
+      const { data: created } = await api.post('/v1/crm-client-profiles', payload)
+      crmProfileId.value = created?.id ? String(created.id) : null
+    }
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się zaktualizować rezerwacji.'
+    toast.warning(message)
+  }
+}
+
+const updateCrmStatus = async (
+  status: 'NEW' | 'IN_TALKS' | 'OFFER_PREPARING' | 'OFFER_GENERATED' | 'CALCULATION_SENT' | 'SPECIAL_OFFER' | 'RESIGNED' | 'SIGNED' | 'TERMINATED'
+) => {
+  if (!auth.enabled || !clientId.value) return
+  try {
+    let profile: any = null
+    if (!crmProfileId.value) {
+      const { data } = await api.get('/v1/crm-client-profiles', { params: { client_id: clientId.value, per_page: 1 } })
+      const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+      profile = list.length ? list[0] : null
+      crmProfileId.value = profile?.id ? String(profile.id) : null
+    }
+
+    let reservationEndDate: string | null = null
+    if (meetingId.value) {
+      const { data: meeting } = await api.get(`/v1/meetings/${meetingId.value}`)
+      reservationEndDate = meeting?.valid_until || null
+    }
+
+    const payload: Record<string, any> = {
+      client_id: clientId.value,
+      owner_user_id: currentUser.value?.id || null,
+      status,
+    }
+    if (reservationEndDate) {
+      payload.reservation_end_date = reservationEndDate
+    }
+
+    if (crmProfileId.value) {
+      await api.patch(`/v1/crm-client-profiles/${crmProfileId.value}`, payload)
+    } else {
+      const { data: created } = await api.post('/v1/crm-client-profiles', payload)
+      crmProfileId.value = created?.id ? String(created.id) : null
+    }
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się zaktualizować statusu.'
+    toast.warning(message)
   }
 }
 
@@ -822,31 +920,16 @@ const saveMeetingAnalysis = async () => {
     const payload = {
       meeting_id: meetingId.value,
       industry: analysis.value.industry || null,
-<<<<<<< HEAD
-      tax_model: analysis.value.contractType || null,
-      zus_cost_level: analysis.value.zusCost ?? null,
-      investments_planned: analysis.value.isInvesting ?? null,
-      expected_savings: analysis.value.avgEarnings ?? null,
-      benefits: analysis.value.benefits || null,
-      project_participation: analysis.value.projectParticipation || null,
-      past_savings: analysis.value.pastSavings || null,
-      current_savings: analysis.value.currentSavings || null,
-      planned_investments: analysis.value.plannedInvestments || null,
-      declared_savings: analysis.value.declaredSavings || null,
-      debts: analysis.value.debts || null,
-      vat_model: analysis.value.vatModel || null,
-=======
-      tax_model: analysis.value.taxationType || null,
-      zus_cost_level: analysis.value.highZUSPayments ? 1 : 0,
-      investments_planned: analysis.value.planningInvestments,
-      expected_savings: analysis.value.desiredSavingsAmount || null,
-      debt_level: analysis.value.hasDebts ? 'yes' : 'no', // Simplified mapping
-      // Extra fields might be ignored by backend or stored in JSON if supported
-      // financing_needed: analysis.value.needsFinancing,
-      // financing_purpose: analysis.value.financingPurpose,
-      // employees_count: analysis.value.uopCount,
-      // benefits: analysis.value.hasBenefits
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
+      tax_model: analysis.value.taxationType || analysis.value.contractType || null,
+      zus_cost_level:
+        analysis.value.zusCost ?? (analysis.value.highZUSPayments === null ? null : analysis.value.highZUSPayments ? 1 : 0),
+      investments_planned: analysis.value.planningInvestments ?? analysis.value.isInvesting ?? null,
+      expected_savings: analysis.value.desiredSavingsAmount ?? analysis.value.avgEarnings ?? null,
+      debt_level: analysis.value.hasDebts === null ? null : analysis.value.hasDebts ? 'yes' : 'no',
+      financing_needed: analysis.value.needsFinancing ?? null,
+      financing_purpose: analysis.value.financingPurpose || null,
+      employees_count: analysis.value.uopCount ?? null,
+      benefits: analysis.value.hasBenefits === null ? null : analysis.value.hasBenefits ? 'Tak' : 'Nie',
     }
 
     if (meetingAnalysisId.value) {
@@ -887,6 +970,8 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
   try {
     const { data: client } = await api.get(`/v1/clients/${targetClientId}`)
     clientId.value = String(client?.id || targetClientId)
+    crmProfileId.value = client?.crm_profile?.id ? String(client.crm_profile.id) : null
+    const profileStatus = client?.crm_profile?.status || null
     companyData.value = {
       nip: client?.nip || '',
       name: client?.name || '',
@@ -911,6 +996,33 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       sessionId.value = `MEETING-${meetingId.value}`
     }
 
+    if (profileStatus === 'OFFER_PREPARING' && meetingId.value) {
+      isProcessActive.value = true
+      const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
+      router.push({
+        path: targetPath,
+        query: {
+          meetingId: meetingId.value || undefined,
+          clientId: clientId.value || undefined,
+        },
+      })
+      return
+    }
+
+    if (profileStatus === 'OFFER_GENERATED' && meetingId.value) {
+      isProcessActive.value = true
+      const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
+      router.push({
+        path: targetPath,
+        query: {
+          meetingId: meetingId.value || undefined,
+          clientId: clientId.value || undefined,
+          step: 'summary',
+        },
+      })
+      return
+    }
+
     const { data: consentEntries } = await api.get(`/v1/clients/${clientId.value}/consents`)
     const consentsData = Array.isArray(consentEntries) ? consentEntries : []
     const acceptedIds = new Set(consentsData.map((item: any) => String(item?.consent_id || item?.consent?.id || '')))
@@ -929,31 +1041,36 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       analysis.value = {
         ...analysis.value,
         industry: analysisItem?.industry || '',
+        taxationType: analysisItem?.tax_model || analysis.value.taxationType,
         contractType: analysisItem?.tax_model || '',
+        desiredSavingsAmount: analysisItem?.expected_savings ?? null,
         avgEarnings: analysisItem?.expected_savings ?? null,
+        highZUSPayments:
+          analysisItem?.zus_cost_level === null || typeof analysisItem?.zus_cost_level === 'undefined'
+            ? null
+            : Boolean(Number(analysisItem?.zus_cost_level)),
         zusCost: analysisItem?.zus_cost_level ?? null,
-        isInvesting: analysisItem?.investments_planned ?? null,
-        benefits: analysisItem?.benefits || '',
-        projectParticipation: analysisItem?.project_participation || '',
-        pastSavings: analysisItem?.past_savings || '',
-        currentSavings: analysisItem?.current_savings || '',
-        plannedInvestments: analysisItem?.planned_investments || '',
-        declaredSavings: analysisItem?.declared_savings || '',
-        debts: analysisItem?.debts || '',
-        vatModel: analysisItem?.vat_model || '',
+        planningInvestments: typeof analysisItem?.investments_planned === 'boolean' ? analysisItem?.investments_planned : null,
+        isInvesting: typeof analysisItem?.investments_planned === 'boolean' ? analysisItem?.investments_planned : null,
+        hasDebts:
+          analysisItem?.debt_level === 'yes' ? true : analysisItem?.debt_level === 'no' ? false : null,
+        needsFinancing:
+          typeof analysisItem?.financing_needed === 'boolean' ? analysisItem?.financing_needed : null,
+        financingPurpose: analysisItem?.financing_purpose || '',
+        hasBenefits:
+          typeof analysisItem?.benefits === 'boolean'
+            ? analysisItem?.benefits
+            : analysisItem?.benefits === 'yes'
+              ? true
+              : analysisItem?.benefits === 'no'
+                ? false
+                : analysisItem?.benefits === 'Tak'
+                  ? true
+                  : analysisItem?.benefits === 'Nie'
+                    ? false
+                : null,
       }
     }
-
-    const hasProfileData = Boolean(
-      analysis.value.benefits ||
-      analysis.value.projectParticipation ||
-      analysis.value.pastSavings ||
-      analysis.value.currentSavings ||
-      analysis.value.plannedInvestments ||
-      analysis.value.declaredSavings ||
-      analysis.value.debts ||
-      analysis.value.vatModel,
-    )
 
     if (!meetingId.value) {
       step.value = 1
@@ -961,10 +1078,8 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       step.value = 2
     } else if (!meetingAnalysisId.value) {
       step.value = 3
-    } else if (!hasProfileData) {
-      step.value = 4
     } else {
-      step.value = 5
+      step.value = 4
     }
 
     isProcessActive.value = true
@@ -983,6 +1098,7 @@ const startNewMeeting = () => {
   clientId.value = null
   meetingId.value = null
   meetingAnalysisId.value = null
+  crmProfileId.value = null
   existingContacts.value = []
   contactDrafts.value = []
   resetContactDraft()
@@ -1013,15 +1129,9 @@ const getCurrentStepName = computed(() => {
     case 3:
       return 'Analiza'
     case 4:
-<<<<<<< HEAD
-      return 'Profil Firmy'
-    case 5:
       return 'Baza Wiedzy'
-    case 6:
-      return 'Prezentacja Oferty'
-=======
-      return 'Prezentacja'
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
+    case 5:
+      return 'Kalkulacja'
     default:
       return ''
   }
@@ -1046,17 +1156,9 @@ const isStepValid = computed(() => {
     case 2:
       return consentList.value.filter((c) => c.required).every((c) => consentAccepted.value[c.id])
     case 3:
-<<<<<<< HEAD
-      return !!analysis.value.industry && !!analysis.value.contractType
+      return !!analysis.value.industry && !!(analysis.value.taxationType || analysis.value.contractType)
     case 4:
       return true
-=======
-      // More strict validation for Step 3
-      return (
-        !!analysis.value.industry &&
-        !!analysis.value.taxationType
-      )
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
     default:
       return true
   }
@@ -1084,16 +1186,14 @@ const nextStep = async () => {
     const ok = await saveMeetingAnalysis()
     if (!ok) return
   }
-  if (step.value === 4) {
-    const ok = await saveMeetingAnalysis()
-    if (!ok) return
-  }
 
-  if (step.value < 6) {
+  if (step.value < 4) {
     step.value += 1
     return
   }
 
+  step.value = 5
+  await updateCrmStatus('OFFER_PREPARING')
   await finalizeMeeting()
   const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
   router.push({
@@ -1102,7 +1202,7 @@ const nextStep = async () => {
       meetingId: meetingId.value || undefined,
       clientId: clientId.value || undefined,
       industry: analysis.value.industry,
-      goal: analysis.value.isInvesting ? 'Inwestycje' : 'Optymalizacja',
+      goal: (analysis.value.planningInvestments ?? analysis.value.isInvesting) ? 'Inwestycje' : 'Optymalizacja',
       // Pass split data
       uopCount: analysis.value.uopCount || undefined,
       uopSalaryNet: analysis.value.uopSalaryNet || undefined,
@@ -1127,21 +1227,24 @@ const getButtonLabel = computed(() => {
     case 2:
       return 'Dalej: Analiza'
     case 3:
-<<<<<<< HEAD
-      return 'Dalej: Profil firmy'
-=======
-      return 'Dalej: Prezentacja'
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
-    case 4:
       return 'Dalej: Baza wiedzy'
+    case 4:
+      return 'Stwórz Kalkulację'
     case 5:
-      return 'Dalej: Oferta'
-    case 6:
       return 'Stwórz Kalkulację'
     default:
       return 'Dalej'
   }
 })
+
+watch(
+  () => analysis.value.industry,
+  (value) => {
+    if (value && industrySearch.value !== value) {
+      industrySearch.value = value
+    }
+  }
+)
 
 onMounted(() => {
   const bootstrap = async () => {
@@ -1157,17 +1260,10 @@ onMounted(() => {
       try {
         const { data } = await api.get('/v1/consents', { params: { per_page: 200 } })
         list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
-
-        // Fetch knowledge files
-        isLoadingFiles.value = true
-        const { data: filesData } = await api.get('/v1/crm-knowledge-files')
-        knowledgeFiles.value = Array.isArray(filesData?.data) ? filesData.data : []
       } catch (e) {
         console.warn('Failed to fetch consents/files, using defaults', e)
-      } finally {
-        isLoadingFiles.value = false
       }
-      }
+    }
     
     if (list.length === 0) {
       list = defaults
@@ -1317,7 +1413,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="hidden md:flex items-center gap-2">
-          <div v-for="i in [1, 2, 3, 4, 5, 6]" :key="i" class="h-1.5 w-12 rounded-full" :class="step >= i ? 'bg-slate-800' : 'bg-slate-200'"></div>
+          <div v-for="i in [1, 2, 3, 4, 5]" :key="i" class="h-1.5 w-12 rounded-full" :class="step >= i ? 'bg-slate-800' : 'bg-slate-200'"></div>
         </div>
       </div>
     </header>
@@ -1496,23 +1592,13 @@ onMounted(() => {
                 class="flex items-start gap-4 p-4 rounded-xl border transition-all hover:shadow-sm"
                 :class="consentAccepted[consent.id] ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-200 bg-white'"
               >
-<<<<<<< HEAD
-                <input v-model="consentAccepted[consent.id]" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600" />
-                <div>
-                  <span class="font-bold text-slate-900">{{ consent.title }}<span v-if="consent.required"> *</span></span>
-                  <p class="text-slate-500 text-sm">{{ consent.description }}</p>
-                  <div v-if="consent.file_url" class="mt-2 flex items-center gap-3 text-xs">
-                    <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, false)">Podgląd</button>
-                    <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, true)">Pobierz</button>
-                  </div>
-=======
                 <div class="pt-1">
                   <input v-model="consentAccepted[consent.id]" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600 cursor-pointer" />
                 </div>
                 <div class="flex-1">
                   <div class="flex justify-between items-start">
                     <span class="font-bold text-slate-800 text-base mb-1 block">{{ consent.title }}<span v-if="consent.required" class="text-red-500"> *</span></span>
-                    <button 
+                    <button
                       v-if="consentTexts[consent.code] || consentTexts['marketing']"
                       @click.prevent="openConsentText(consent.code, consent.title)"
                       class="text-xs font-bold text-stratton-gold hover:text-stratton-gold/80 px-2 py-1 rounded hover:bg-amber-50 transition"
@@ -1521,7 +1607,10 @@ onMounted(() => {
                     </button>
                   </div>
                   <p class="text-slate-500 text-sm leading-relaxed">{{ consent.description }}</p>
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
+                  <div v-if="consent.file_url" class="mt-2 flex items-center gap-3 text-xs">
+                    <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, false)">Podgląd</button>
+                    <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, true)">Pobierz</button>
+                  </div>
                 </div>
               </label>
             </div>
@@ -1550,7 +1639,109 @@ onMounted(() => {
                <!-- Industry -->
                <div class="space-y-2">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Branża</label>
-                <select v-model="analysis.industry" class="w-full bg-slate-50 border-2 border-slate-200 rounded-lg px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all cursor-pointer hover:border-slate-300">
+                <div class="relative">
+                  <AppIcon name="magnifying-glass" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    v-model="industrySearch"
+                    list="industry-options"
+                    type="text"
+                    placeholder="Wyszukaj branżę..."
+                    class="w-full bg-white border-2 border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-800 font-semibold focus:border-stratton-gold focus:ring-2 focus:ring-amber-100 outline-none transition-all"
+                    @input="analysis.industry = industrySearch"
+                  />
+                </div>
+                <datalist id="industry-options">
+                  <option value="Uprawy rolne, chów i hodowla zwierząt, łowiectwo, włączając działalność usługową"></option>
+                  <option value="Leśnictwo i pozyskiwanie drewna"></option>
+                  <option value="Rybactwo"></option>
+                  <option value="Wydobywanie węgla kamiennego i węgla brunatnego (lignitu)"></option>
+                  <option value="Górnictwo ropy naftowej i gazu ziemnego"></option>
+                  <option value="Górnictwo rud metali"></option>
+                  <option value="Pozostałe górnictwo i wydobywanie"></option>
+                  <option value="Usługi wspomagające górnictwo i wydobywanie"></option>
+                  <option value="Produkcja art. spożywczych"></option>
+                  <option value="Produkcja napojów"></option>
+                  <option value="Produkcja wyrobów tytoniowych"></option>
+                  <option value="Produkcja wyrobów tekstylnych"></option>
+                  <option value="Produkcja odzieży"></option>
+                  <option value="Produkcja skór i wyrobów ze skór wyprawionych"></option>
+                  <option value="Produkcja wyrobów z drewna oraz korka, z wyłączeniem mebli; Produkcja wyrobów ze słomy i materiałów używanych do wyplatania"></option>
+                  <option value="Produkcja papieru i wyrobów z papieru"></option>
+                  <option value="Poligrafia i reprodukcja zapisanych nośników informacji"></option>
+                  <option value="Wytwarzanie i przetwarzanie koksu i produktów rafinacji ropy naftowej"></option>
+                  <option value="Produkcja chemikaliów i wyrobów chemicznych"></option>
+                  <option value="Produkcja podstawowych substancji farmaceutycznych oraz leków i pozostałych wyrobów farmaceutycznych"></option>
+                  <option value="Produkcja wyrobów z gumy i tworzyw sztucznych"></option>
+                  <option value="Produkcja wyrobów z pozostałych mineralnych surowców niemetalicznych"></option>
+                  <option value="Produkcja metali"></option>
+                  <option value="Produkcja metalowych wyrobów gotowych, z wyłączeniem maszyn i urządzeń"></option>
+                  <option value="Produkcja komputerów, wyrobów elektronicznych i optycznych"></option>
+                  <option value="Produkcja urządzeń elektrycznych"></option>
+                  <option value="Produkcja maszyn i urządzeń, gdzie indziej niesklasyfikowana"></option>
+                  <option value="Produkcja pojazdów samochodowych, przyczep i naczep, z wyłączeniem motocykli"></option>
+                  <option value="Produkcja pozostałego sprzętu transportowego"></option>
+                  <option value="Produkcja mebli"></option>
+                  <option value="Pozostała produkcja wyrobów"></option>
+                  <option value="Naprawa, konserwacja i instalowanie maszyn i urządzeń"></option>
+                  <option value="Wytwarzanie i zaopatrywanie w energię elektryczną, gaz, parę wodną, gorącą wodę i powietrze do układów klimatyzacyjnych"></option>
+                  <option value="Pobór, uzdatnianie i dostarczanie wody"></option>
+                  <option value="Odprowadzanie i oczyszczanie ścieków"></option>
+                  <option value="Zbieranie, przetwarzanie i unieszkodliwianie odpadów oraz odzysk surowców"></option>
+                  <option value="Rekultywacją i pozostałe usługi związane z gospodarką odpadami"></option>
+                  <option value="Roboty budowlane związane ze wznoszeniem budynków"></option>
+                  <option value="Roboty związane z budową obiektów inżynierii lądowej i wodnej"></option>
+                  <option value="Roboty budowlane specjalistyczne"></option>
+                  <option value="Handel hurtowy i detaliczny pojazdami samochodowymi; Naprawa pojazdów samochodowych"></option>
+                  <option value="Handel hurtowy (bez pojazdów samochodowych)"></option>
+                  <option value="Handel detaliczny (bez pojazdów samochodowych)"></option>
+                  <option value="Transport lądowy oraz rurociągowy"></option>
+                  <option value="Transport wodny"></option>
+                  <option value="Transport lotniczy"></option>
+                  <option value="Magazynowanie i usługi wspomagające transport"></option>
+                  <option value="Działalność pocztowa i kurierska"></option>
+                  <option value="Zakwaterowanie"></option>
+                  <option value="Wyżywienie"></option>
+                  <option value="Działalność wydawnicza"></option>
+                  <option value="Działalność filmowa, telewizyjna, dźwiękowa i muzyczna"></option>
+                  <option value="Nadawanie programów telewizyjnych i radiowych"></option>
+                  <option value="Telekomunikacja"></option>
+                  <option value="Oprogramowanie i doradztwo w zakresie informatyki"></option>
+                  <option value="Zarządzanie stronami WWW, przetwarzanie danych i hosting"></option>
+                  <option value="Usługi finansowe z wyłączeniem ubezpieczeń i funduszów emerytalnych"></option>
+                  <option value="Ubezpieczenia, reasekuracja i fundusze emerytalne, z wyłączeniem obowiązkowego ubezpieczenia społecznego"></option>
+                  <option value="Usługi objęte pośrednictwem finansowym"></option>
+                  <option value="Obsługa rynku nieruchomości"></option>
+                  <option value="Usługi prawnicze, rachunkowo-księgowe i doradztwo podatkowe"></option>
+                  <option value="Działalność firm centralnych i doradztwo związane z zarządzaniem"></option>
+                  <option value="Architektura, inżynieria, badania i analizy techniczne"></option>
+                  <option value="Badania naukowe i prace rozwojowe"></option>
+                  <option value="Reklama, badanie rynku i opinii publicznej"></option>
+                  <option value="Projektowanie, fotografia, tłumaczenia, działalność profesjonalna"></option>
+                  <option value="Weterynaria"></option>
+                  <option value="Wynajem i dzierżawa"></option>
+                  <option value="Zatrudnienie"></option>
+                  <option value="Turystyka"></option>
+                  <option value="Usługi detektywistyczne i ochroniarskie"></option>
+                  <option value="Sprzątanie budynków i gospodarowanie terenami zieleni"></option>
+                  <option value="Administracja biurowa i wspomaganie prowadzenia działalności gospodarczej"></option>
+                  <option value="Administracja publiczna, obrona narodowa i obowiązkowe zabezpieczenia społeczne"></option>
+                  <option value="Baza Wiedzy"></option>
+                  <option value="Opieka zdrowotna"></option>
+                  <option value="Pomoc społeczna (z zakwaterowaniem)"></option>
+                  <option value="Pomoc społeczna (bez zakwaterowania)"></option>
+                  <option value="Kultura i rozrywka"></option>
+                  <option value="Biblioteki, archiwa, muzea, zoo oraz inne obiekty kulturalne"></option>
+                  <option value="Gry losowe i zakłady wzajemne"></option>
+                  <option value="Sport, rozrywka i rekreacja"></option>
+                  <option value="Działalność organizacji członkowskich"></option>
+                  <option value="Naprawa komputerów i artykułów osobistych oraz domowych"></option>
+                  <option value="Pozostała indywidualna działalność usługowa"></option>
+                </datalist>
+                <select
+                  v-model="analysis.industry"
+                  class="w-full bg-slate-50 border-2 border-slate-200 rounded-lg px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all cursor-pointer hover:border-slate-300"
+                  @change="industrySearch = analysis.industry"
+                >
                   <option value="" disabled>Wybierz z listy...</option>
                   
                   <optgroup label="Rolnictwo, leśnictwo, łowiectwo i rybactwo">
@@ -1828,46 +2019,29 @@ onMounted(() => {
           </div>
 
           <div v-else-if="step === 4" class="space-y-6 animate-fade-in-up">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Benefity</label>
-                <input v-model="analysis.benefits" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Udział w projekcie</label>
-                <input v-model="analysis.projectParticipation" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Przeszłe oszczędności</label>
-                <input v-model="analysis.pastSavings" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Aktualne oszczędności</label>
-                <input v-model="analysis.currentSavings" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Planowane inwestycje</label>
-                <input v-model="analysis.plannedInvestments" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Deklarowana kwota oszczędności</label>
-                <input v-model="analysis.declaredSavings" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Zadłużenia</label>
-                <input v-model="analysis.debts" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">Ryczałt / VAT</label>
-                <input v-model="analysis.vatModel" type="text" class="w-full bg-slate-50 border-b-2 border-slate-200 px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-              </div>
-            </div>
-          </div>
-
-          <div v-else-if="step === 5" class="space-y-6 animate-fade-in-up">
             <div>
               <h3 class="text-lg font-bold text-slate-800">Materiały z bazy wiedzy</h3>
               <p class="text-xs text-slate-500">Wyszukaj i otwórz potrzebne dokumenty przed zakończeniem spotkania.</p>
+            </div>
+            <div v-if="knowledgeCategories.length" class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="px-3 py-1.5 text-xs font-semibold rounded-full border transition"
+                :class="selectedKnowledgeCategory === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                @click="selectedKnowledgeCategory = 'all'"
+              >
+                Wszystkie
+              </button>
+              <button
+                v-for="category in knowledgeCategories"
+                :key="category"
+                type="button"
+                class="px-3 py-1.5 text-xs font-semibold rounded-full border transition"
+                :class="selectedKnowledgeCategory === category ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                @click="selectedKnowledgeCategory = category"
+              >
+                {{ categoryNames[category as FileCategory] || category }}
+              </button>
             </div>
             <div class="flex items-center gap-3">
               <div class="relative flex-1">
@@ -1888,7 +2062,7 @@ onMounted(() => {
                   <div>
                     <p class="font-semibold text-slate-900">{{ file.name }}</p>
                     <p class="text-xs text-slate-500 line-clamp-2">{{ file.description || 'Brak opisu' }}</p>
-                    <p class="text-[11px] text-slate-400 mt-1">{{ file.category }}</p>
+                    <p class="text-[11px] text-slate-400 mt-1">{{ categoryNames[file.category as FileCategory] || file.category }}</p>
                   </div>
                   <div class="flex flex-col items-end gap-2">
                     <button type="button" class="text-xs font-semibold text-stratton-gold hover:underline" @click="openKnowledgeFile(file, index)">
@@ -1929,7 +2103,7 @@ onMounted(() => {
                     <h4 class="font-bold text-xl text-slate-900 group-hover:text-stratton-gold transition-colors line-clamp-2">{{ file.name }}</h4>
                  </div>
                  <div class="relative z-10 flex items-center justify-between mt-auto">
-                    <p class="text-sm text-slate-500 font-medium truncate pr-4">{{ file.category || 'Prezentacja' }}</p>
+                    <p class="text-sm text-slate-500 font-medium truncate pr-4">{{ categoryNames[file.category as FileCategory] || file.category || 'Prezentacja' }}</p>
                     <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-stratton-gold group-hover:text-white transition-colors shrink-0">
                        <AppIcon name="arrow-right" class="w-4 h-4" />
                     </div>
@@ -2018,24 +2192,23 @@ onMounted(() => {
                 @close="showPresentationModal = false"
             />
           </div>
-<<<<<<< HEAD
+
           <div class="mt-10 pt-6 border-t border-slate-100 flex items-center justify-between">
             <button
               type="button"
               class="px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wide border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="step <= 1"
+              :disabled="step <= 1 || isSavingStep"
               @click="prevStep"
             >
               Wstecz
             </button>
-            <button type="button" class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide hover:bg-indigo-700 transition flex items-center gap-3 shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!isStepValid" @click="nextStep">
-              {{ getButtonLabel }}
-=======
-
-          <div class="mt-10 pt-6 border-t border-slate-100 flex justify-end">
-            <button type="button" class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide hover:bg-indigo-700 transition flex items-center gap-3 shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed" :disabled="isSavingStep || isCheckingNip || isFetchingGus" @click="nextStep">
+            <button
+              type="button"
+              class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide hover:bg-indigo-700 transition flex items-center gap-3 shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isSavingStep || isCheckingNip || isFetchingGus || !isStepValid"
+              @click="nextStep"
+            >
               {{ isSavingStep ? 'Przetwarzanie...' : getButtonLabel }}
->>>>>>> 608c31387f3941abd873e2182d5738f271fec918
               <AppIcon :name="isStepValid ? 'arrow-right' : 'lock-closed'" class="w-4 h-4" />
             </button>
           </div>

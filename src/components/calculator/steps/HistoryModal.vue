@@ -78,6 +78,7 @@ const handlePdf = async (id: string) => {
   if (!item) return;
   store.generateOfferPdf(item);
   await store.updateMeetingOfferStatus('sent');
+  await store.updateClientStatus('CALCULATION_SENT');
 };
 
 const handleJsonUpload = (event: Event) => {

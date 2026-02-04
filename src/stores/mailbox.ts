@@ -173,7 +173,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
           from_name: senderName,
           from_email: senderEmail,
           attachments: attachments && attachments.length ? attachments : undefined,
-        }).then(fetchEmails).catch((error) => {
+        }).then(() => fetchEmails(['INBOX', 'SENT'])).catch((error) => {
           const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
           notify.add({ type: 'ERROR', message })
           throw error
@@ -187,7 +187,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
         to_email: toEmail,
         subject,
         body,
-      }).then(fetchEmails).catch((error) => {
+      }).then(() => fetchEmails(['INBOX', 'SENT'])).catch((error) => {
         const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
         notify.add({ type: 'ERROR', message })
         throw error
