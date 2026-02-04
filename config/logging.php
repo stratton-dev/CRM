@@ -88,6 +88,13 @@ return [
             'days' => env('LOG_USERS_DAYS', 14),
             'replace_placeholders' => true,
         ],
+        'mail' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/mail.log'),
+            'level' => env('LOG_MAIL_LEVEL', env('LOG_LEVEL', 'debug')),
+            'days' => env('LOG_MAIL_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
 
         'slack' => [
             'driver' => 'slack',

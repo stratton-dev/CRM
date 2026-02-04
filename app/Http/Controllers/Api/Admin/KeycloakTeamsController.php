@@ -84,4 +84,6 @@ class KeycloakTeamsController extends Controller
             return response()->json(['message' => $exception->getMessage()], 409);
         }
     }
+
+    // rename disabled
 }

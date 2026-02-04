@@ -256,6 +256,7 @@ class KeycloakAdminClient
         $response->throw();
     }
 
+
     public function getClientRole(string $clientUuid, string $roleName): array
     {
         $response = $this->adminRequest()

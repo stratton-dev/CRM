@@ -9,6 +9,10 @@ use App\Http\Controllers\Api\PermissionsController;
 use App\Http\Controllers\Api\CrmViewPermissionsController;
 use App\Http\Controllers\Api\CrmAuditLogsController;
 use App\Http\Controllers\Api\CrmEmailsController;
+use App\Http\Controllers\Api\CrmMailSettingsController;
+use App\Http\Controllers\Api\CrmMailboxController;
+use App\Http\Controllers\Api\ImapServiceController;
+use App\Http\Controllers\Api\ImapAdminController;
 use App\Http\Controllers\Api\CrmKnowledgeFilesController;
 use App\Http\Controllers\Api\CrmInvoicesController;
 use App\Http\Controllers\Api\CrmCommissionConfigsController;
@@ -44,6 +48,7 @@ use App\Http\Controllers\Api\PayrollCalculationsController;
 use App\Http\Controllers\Api\CalculatorConfigsController;
 use App\Http\Controllers\Api\NotificationsController;
 use App\Http\Controllers\Api\DocumentsController;
+use App\Http\Controllers\Api\AutentiStatusController;
 use App\Http\Controllers\Api\AutentiWebhookController;
 use App\Http\Controllers\Api\AutentiDocumentsController;
 use App\Http\Controllers\Api\DocumentTemplatesController;
@@ -61,6 +66,10 @@ Route::post('autenti/webhook', AutentiWebhookController::class);
 
 Broadcast::routes(['middleware' => ['keycloak']]);
 
+Route::prefix('v1')->group(function () {
+    Route::get('imap-service/configs', [ImapServiceController::class, 'configs']);
+});
+
 Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::get('me', MeController::class);
 
@@ -68,6 +77,8 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::post('structure/move', [StructureController::class, 'move']);
     Route::post('structure/remove', [StructureController::class, 'remove']);
     Route::post('structure/restore', [StructureController::class, 'restore']);
+    Route::post('structure/teams/restore', [StructureController::class, 'restoreTeam']);
+    Route::post('structure/teams/delete', [StructureController::class, 'deleteRemovedTeamUsersFromDb']);
     Route::post('structure/regenerate-codes', [StructureController::class, 'regenerateCodes']);
     Route::post('admin/keycloak/sync', KeycloakSyncController::class);
     Route::get('admin/keycloak/teams', [KeycloakTeamsController::class, 'index']);
@@ -128,7 +139,20 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::apiResource('crm-dashboard-calculations', CrmDashboardCalculationsController::class)->only(['index', 'store', 'update', 'destroy']);
 
     Route::apiResource('crm-emails', CrmEmailsController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('crm-mail-settings', [CrmMailSettingsController::class, 'show']);
+    Route::put('crm-mail-settings', [CrmMailSettingsController::class, 'update']);
+    Route::get('crm-mailbox/messages', [CrmMailboxController::class, 'index']);
+    Route::get('crm-mailbox/folders', [CrmMailboxController::class, 'folders']);
+    Route::get('crm-mailbox/test', [CrmMailboxController::class, 'test']);
+    Route::post('crm-mailbox/send', [CrmMailboxController::class, 'send']);
+    Route::patch('crm-mailbox/messages/{messageId}', [CrmMailboxController::class, 'mark']);
+    Route::get('admin/imap/health', [ImapAdminController::class, 'health']);
+    Route::get('admin/imap/metrics', [ImapAdminController::class, 'metrics']);
+    Route::get('admin/imap/logs', [ImapAdminController::class, 'logs']);
+    Route::get('admin/imap/jobs', [ImapAdminController::class, 'jobs']);
+    Route::get('admin/imap/stats', [ImapAdminController::class, 'stats']);
     Route::apiResource('crm-knowledge-files', CrmKnowledgeFilesController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+    Route::get('crm-knowledge-files/{crmKnowledgeFile}/download', [CrmKnowledgeFilesController::class, 'download']);
     Route::apiResource('crm-audit-logs', CrmAuditLogsController::class)->only(['index', 'store']);
     Route::apiResource('crm-invoices', CrmInvoicesController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     Route::get('crm-commission-config', [CrmCommissionConfigsController::class, 'show']);
@@ -208,6 +232,9 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
 
     Route::apiResource('consents', ConsentsController::class)
         ->only(['index', 'show'])
+        ->middleware('can:consents.view');
+    Route::get('consents/{consent}/file', [ConsentsController::class, 'file'])
+        ->name('consents.file')
         ->middleware('can:consents.view');
     Route::apiResource('consents', ConsentsController::class)
         ->only(['store'])
@@ -467,6 +494,8 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::apiResource('document-templates', DocumentTemplatesController::class)
         ->only(['destroy'])
         ->middleware('can:documents.delete');
+    Route::get('autenti/status', AutentiStatusController::class)
+        ->middleware('can:documents.view');
     Route::get('document-templates/suggestions', [DocumentTemplatesController::class, 'suggestions'])
         ->middleware('can:documents.view');
     Route::get('document-templates/{documentTemplate}/download', [DocumentTemplatesController::class, 'download'])

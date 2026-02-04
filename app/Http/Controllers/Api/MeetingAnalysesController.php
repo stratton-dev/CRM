@@ -32,6 +32,14 @@ class MeetingAnalysesController extends Controller
             'investments_planned' => 'nullable|boolean',
             'expected_savings' => 'nullable|integer',
             'debt_level' => 'nullable|string|max:255',
+            'benefits' => 'nullable|string|max:255',
+            'project_participation' => 'nullable|string|max:255',
+            'past_savings' => 'nullable|string|max:255',
+            'current_savings' => 'nullable|string|max:255',
+            'planned_investments' => 'nullable|string|max:255',
+            'declared_savings' => 'nullable|string|max:255',
+            'debts' => 'nullable|string|max:255',
+            'vat_model' => 'nullable|string|max:255',
         ]);
         $analysis = MeetingAnalysis::create($data);
         return response()->json($analysis, 201);
@@ -46,6 +54,14 @@ class MeetingAnalysesController extends Controller
             'investments_planned' => 'nullable|boolean',
             'expected_savings' => 'nullable|integer',
             'debt_level' => 'nullable|string|max:255',
+            'benefits' => 'nullable|string|max:255',
+            'project_participation' => 'nullable|string|max:255',
+            'past_savings' => 'nullable|string|max:255',
+            'current_savings' => 'nullable|string|max:255',
+            'planned_investments' => 'nullable|string|max:255',
+            'declared_savings' => 'nullable|string|max:255',
+            'debts' => 'nullable|string|max:255',
+            'vat_model' => 'nullable|string|max:255',
         ]);
         $meetingAnalysis->update($data);
         return $meetingAnalysis;

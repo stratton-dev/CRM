@@ -22,3 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+database/migrations/2026_02_02_120000_create_crm_mail_configs_table.php
+exports/team-GDA001-20260202_233720.json
+exports/team-GDA001-20260203_001610.json
+exports/team-GDA001-20260203_011536.json
+exports/team-GDA001-20260203_015248.json
+exports/team-GDA001-full-20260203_012544.json
+exports/team-GDA001-full-20260203_013305.json
+exports/team-GDA001-full-20260203_014914.json
+exports/team-MH001-20260202_233749.json

@@ -99,6 +99,24 @@ class CrmKnowledgeFilesController extends Controller
         return response()->noContent();
     }
 
+    public function download(CrmKnowledgeFile $crmKnowledgeFile)
+    {
+        $fileUrl = $crmKnowledgeFile->file_url ?? '';
+        if (!$fileUrl) {
+            return response()->json(['message' => 'Brak pliku do pobrania.'], 404);
+        }
+
+        $path = parse_url($fileUrl, PHP_URL_PATH) ?: $fileUrl;
+        $path = preg_replace('#^/storage/#', '', $path);
+
+        if (!Storage::disk('public')->exists($path)) {
+            return response()->json(['message' => 'Plik nie istnieje.'], 404);
+        }
+
+        $filename = $crmKnowledgeFile->name ?: basename($path);
+        return Storage::disk('public')->download($path, $filename);
+    }
+
     private function formatSize(int $bytes): string
     {
         if ($bytes < 1024) {

@@ -103,6 +103,46 @@ class StructureController extends Controller
         return response()->json($response);
     }
 
+    public function restoreTeam(
+        Request $request,
+        TokenContext $context,
+        StructureService $structure
+    ): JsonResponse {
+        if ($context->primaryRole() !== 'ADMIN') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $data = $request->validate([
+            'team_group_path' => ['required', 'string'],
+        ]);
+
+        $result = $structure->restoreTeamUsers($data['team_group_path'], $context);
+
+        return response()->json($result);
+    }
+
+    public function deleteRemovedTeamUsersFromDb(
+        Request $request,
+        TokenContext $context,
+        StructureService $structure
+    ): JsonResponse {
+        if ($context->primaryRole() !== 'ADMIN') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $data = $request->validate([
+            'team_group_path' => ['required', 'string'],
+        ]);
+
+        try {
+            $result = $structure->deleteRemovedTeamUsersFromDb($data['team_group_path']);
+        } catch (\Throwable $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        return response()->json($result);
+    }
+
     public function regenerateCodes(Request $request, TokenContext $context): JsonResponse
     {
         if ($context->primaryRole() !== 'ADMIN') {

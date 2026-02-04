@@ -114,6 +114,11 @@ class User extends Authenticatable
         return $this->hasMany(Metric::class);
     }
 
+    public function crmMailConfig(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CrmMailConfig::class);
+    }
+
     public function resolveRouteBinding($value, $field = null)
     {
         $query = $this->newQuery();

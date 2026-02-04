@@ -16,6 +16,11 @@ class CalculationsController extends Controller
         if ($meetingId = $request->integer('meeting_id')) {
             $q->where('meeting_id', $meetingId);
         }
+        if ($clientId = $request->integer('client_id')) {
+            $q->whereHas('meeting', function ($m) use ($clientId) {
+                $m->where('client_id', $clientId);
+            });
+        }
 
         return $q->latest()->paginate($request->integer('per_page', 25));
     }

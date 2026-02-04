@@ -22,6 +22,14 @@ class MeetingAnalysis extends Model
         'investments_planned',
         'expected_savings',
         'debt_level',
+        'benefits',
+        'project_participation',
+        'past_savings',
+        'current_savings',
+        'planned_investments',
+        'declared_savings',
+        'debts',
+        'vat_model',
     ];
 
     protected $casts = [

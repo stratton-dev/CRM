@@ -23,3 +23,9 @@ This is the Stratton backend API built on Laravel. The sections below point to t
 ### API documentation
 
 - `docs/API.md` - local API reference
+
+### IMAP diagnostics
+
+- Recommended Node: LTS (22). See `.nvmrc`.
+- Enable IMAP debug logs: set `IMAP_DEBUG=1`.
+- Smoke test: `node scripts/imap-smoke-test.mjs` with env vars `IMAP_HOST`, `IMAP_PORT`, `IMAP_SECURE`, `IMAP_USER`, `IMAP_PASS`.

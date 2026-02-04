@@ -70,6 +70,12 @@ class UsersController extends Controller
         if (!isset($data['role_id']) && isset($data['role'])) {
             $role = $this->resolveRole($data['role']);
             $data['role_id'] = $role?->id;
+            $data['role_cached'] = $role?->code;
+        }
+
+        if (!isset($data['role_cached']) && isset($data['role_id'])) {
+            $role = Role::query()->find($data['role_id']);
+            $data['role_cached'] = $role?->code;
         }
 
         unset($data['role']);
@@ -110,6 +116,12 @@ class UsersController extends Controller
         if (!isset($data['role_id']) && isset($data['role'])) {
             $role = $this->resolveRole($data['role']);
             $data['role_id'] = $role?->id;
+            $data['role_cached'] = $role?->code;
+        }
+
+        if (!isset($data['role_cached']) && isset($data['role_id'])) {
+            $role = Role::query()->find($data['role_id']);
+            $data['role_cached'] = $role?->code;
         }
 
         unset($data['role']);

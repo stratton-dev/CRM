@@ -17,11 +17,29 @@ class Consent extends Model
         'title',
         'description',
         'required',
+        'file_path',
+        'file_name',
+        'file_type',
+        'file_size',
     ];
 
     protected $casts = [
         'required' => 'boolean',
     ];
+
+    protected $appends = [
+        'file_url',
+    ];
+
+    public function getFileUrlAttribute(): ?string
+    {
+        if (!$this->file_path) return null;
+        try {
+            return route('consents.file', $this);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 
     public function clientConsents(): HasMany
     {

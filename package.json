@@ -6,6 +6,11 @@
         "build": "vite build",
         "dev": "vite"
     },
+    "dependencies": {
+        "imapflow": "^1.0.175",
+        "mailparser": "^3.7.1",
+        "nodemailer": "^7.0.13"
+    },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.11.0",

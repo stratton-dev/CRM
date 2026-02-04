@@ -316,6 +316,59 @@ class StructureService
         return $removedUser;
     }
 
+    public function restoreTeamUsers(string $teamGroupPath, TokenContext $context): array
+    {
+        $users = User::query()
+            ->where('team_group_path', $teamGroupPath)
+            ->where(function ($query) {
+                $query->where('is_removed_from_structure', true)
+                    ->orWhere('enabled', false)
+                    ->orWhere('active', false);
+            })
+            ->get();
+
+        $restored = 0;
+        $errors = [];
+        foreach ($users as $user) {
+            try {
+                $this->restoreUser($user->keycloak_id, $context);
+                $restored++;
+            } catch (\Throwable $exception) {
+                $errors[] = [
+                    'keycloak_id' => $user->keycloak_id,
+                    'email' => $user->email,
+                    'message' => $exception->getMessage(),
+                ];
+            }
+        }
+
+        return [
+            'total' => $users->count(),
+            'restored' => $restored,
+            'errors' => $errors,
+        ];
+    }
+
+    public function deleteRemovedTeamUsersFromDb(string $teamGroupPath): array
+    {
+        $users = User::query()
+            ->where('team_group_path', $teamGroupPath)
+            ->where('is_removed_from_structure', true)
+            ->get();
+
+        $total = $users->count();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($users): void {
+            foreach ($users as $user) {
+                $user->delete();
+            }
+        });
+
+        return [
+            'deleted' => $total,
+        ];
+    }
+
     private function resolveTeamPath(TokenContext $context, ?User $parent, array $data): string
     {
         if ($parent) {

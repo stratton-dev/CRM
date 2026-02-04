@@ -52,6 +52,14 @@ class StructureAuthorization
             return false;
         }
 
+        if ($actorRole === 'ADMIN') {
+            return true;
+        }
+
+        if ($actorRole === 'DIRECTOR' && $targetRole === 'SALES' && !$newParent) {
+            return true;
+        }
+
         if ($actorRole !== 'ADMIN') {
             $actorTeam = $context->teamGroupPath();
             if (!$actorTeam || $target->team_group_path !== $actorTeam) {
@@ -147,6 +155,9 @@ class StructureAuthorization
         }
 
         if ($targetRole === 'SALES') {
+            if (!$parent) {
+                return (bool) $targetTeamPath;
+            }
             return $parentRole === 'MANAGER' && $parent->team_group_path === $targetTeamPath;
         }
 
