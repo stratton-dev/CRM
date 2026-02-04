@@ -6,6 +6,6 @@ Route::get('/', function () {
     return response()->json([
         "service name" => "Stratton API",
         "status" => "OK",
-        "version" => "1.0.2",
+        "version" => "1.0.3",
     ]);
 });
