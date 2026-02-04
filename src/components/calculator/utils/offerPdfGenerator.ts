@@ -277,7 +277,7 @@ const generateOfferHTML = (
     'Firmy podobne i kontakt',
   ];
 
-  const header = (title: string, pageIndex: number) => `
+  const header = (title: string) => `
     <div class="page-header">
       <div class="header-grid">
         <div>
@@ -565,7 +565,7 @@ const generateOfferHTML = (
       ` : ''}
       ${includeTOC ? `
       <div class="page">
-        ${header('Spis treści', 0)}
+        ${header('Spis treści')}
         <div class="page-body page-pad">
           <div class="section-title">Spis treści</div>
           <div class="toc-list">
@@ -579,7 +579,7 @@ const generateOfferHTML = (
       ` : ''}
 
       <div class="page">
-        ${header('Ilustracja finansowa oszczędności', 1)}
+        ${header('Ilustracja finansowa oszczędności')}
         <div class="page-body page-pad">
           <div class="grid-two">
             <div>
@@ -709,7 +709,7 @@ const generateOfferHTML = (
       </div>
 
       <div class="page">
-        ${header('Wizualizacja opłat i wynagrodzeń', 2)}
+        ${header('Wizualizacja opłat i wynagrodzeń')}
       <div class="page-body page-pad">
             <div class="info-value small"> Niniejsza ilustracja przedstawia potencjał finansowy wynikający z wdrożenia modelu wynagradzania Eliton Prime™ 
             w Państwa firmie. KALKULACJA została przygotowana w oparciu o przekazane dane dotyczące struktury wynagrodzeń 
@@ -837,7 +837,7 @@ const generateOfferHTML = (
       </div>
 
       <div class="page">
-        ${header('Scenariusze rocznych oszczędności', 3)}
+        ${header('Scenariusze rocznych oszczędności')}
       <div class="page-body page-pad">
           <div class="info-card" style="margin-bottom: 12px;">
             <div class="info-label">Oferta Eliton Prime</div>
@@ -907,7 +907,7 @@ const generateOfferHTML = (
       </div>
 
       <div class="page">
-        ${header('Symulacja miesiąc do miesiąca', 4)}
+        ${header('Symulacja miesiąc do miesiąca')}
         <div class="page-body page-pad">
           <div class="muted" style="margin-bottom: 10px;">
             Opłaty na przestrzeni 10 lat
@@ -947,7 +947,7 @@ const generateOfferHTML = (
       </div>
 
       <div class="page">
-        ${header('Tabela listy płac (10 pracowników)', 5)}
+        ${header('Tabela listy płac (10 pracowników)')}
         <div class="page-body page-pad">
           <div class="muted" style="margin-bottom: 10px;">
             Tabela listy płac dla 10 pracowników w modelu Eliton
@@ -983,7 +983,7 @@ const generateOfferHTML = (
       </div>
 
       <div class="page">
-        ${header('Gwarancje / korzyści / konstrukcja prawna', 6)}
+        ${header('Gwarancje / korzyści / konstrukcja prawna')}
         <div class="page-body page-pad">
           <div class="grid-two">
             <div>
@@ -1022,7 +1022,7 @@ const generateOfferHTML = (
       </div>
 
       <div class="page">
-        ${header('Harmonogram wdrożenia i warunki', 7)}
+        ${header('Harmonogram wdrożenia i warunki')}
         <div class="page-body page-pad">
           <div class="section-title">Etapy wdrożenia</div>
           <div class="timeline-container">
@@ -1077,7 +1077,7 @@ const generateOfferHTML = (
       </div>
 
       <div class="page">
-        ${header('Firmy podobne i kontakt', 8)}
+        ${header('Firmy podobne i kontakt')}
         <div class="page-body page-pad">
           <div class="section-title">Firmy podobne i osiągnięcia</div>
           <div class="muted" style="margin-bottom: 18px;">
@@ -1353,24 +1353,6 @@ const generateOfferHTML = (
 
 export const offerPdfGenerator = {
   generateOfferPDF: (item: ZapisanaKalkulacja, meta?: OfferPdfMeta) => {
-    const tempPracownicy = item.dane.pracownicy;
-    const tempFirma = item.dane.firma;
-    const tempConfig = item.dane.config;
-    const tempProwizja = item.dane.prowizjaProc || 28;
-    const standardRate = meta?.standardRate ?? 28;
-    const plusRate = meta?.plusRate ?? 26;
-
-    const details = tempPracownicy.map((p: any) => {
-      const standard = obliczWariantStandard(p, tempFirma.stawkaWypadkowa, tempConfig);
-      const podzial = obliczWariantPodzial(p, tempFirma.stawkaWypadkowa, p.nettoZasadnicza, tempConfig);
-      return { standard, podzial };
-    });
-
-    const base = buildBaseTotals(details);
-    const statsSelected = buildStats(base, tempProwizja);
-    const statsStandard = buildStats(base, standardRate);
-    const statsPlus = buildStats(base, plusRate);
-
     const htmlContent = buildOfferPdfHtml(item, meta);
 
     const printWindow = window.open('', '_blank');

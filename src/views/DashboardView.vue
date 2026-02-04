@@ -37,7 +37,6 @@ const handleAddClientClick = (e: Event) => {
   }
 }
 
-const selectedPeriod = ref('current')
 const viewScope = ref('structure')
 const showTargets = ref(true)
 const isRefreshing = ref(false)

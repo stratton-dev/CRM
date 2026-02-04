@@ -67,10 +67,10 @@ export const excelGenerator = {
   ) => {
     const workbook = new ExcelJS.Workbook();
     const styles = {
-      headerFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } },
+      headerFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } } as ExcelJS.Fill,
       headerFont: { bold: true, size: 10, color: { argb: 'FF334155' } },
       currency: '#,##0.00 "zł"',
-      inputFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF000' } },
+      inputFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF000' } } as ExcelJS.Fill,
     };
 
     const wsSummary = workbook.addWorksheet('Podsumowanie Menadżerskie', { views: [{ showGridLines: false }] });

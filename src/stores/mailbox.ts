@@ -41,6 +41,11 @@ export const useMailboxStore = defineStore('mailbox', () => {
   const refreshIntervalMs = typeof refreshIntervalMsRaw === 'string' ? Number(refreshIntervalMsRaw) : 0
   let refreshTimer: number | null = null
 
+  const notifyError = (message: string) => {
+    const userId = session.currentUser?.id || 'system'
+    notify.add({ userId, type: 'CRITICAL', message })
+  }
+
   const hasMailConfig = computed(() => !!mailSettings.value?.imap_host && !!mailSettings.value?.imap_username && !!mailSettings.value?.smtp_host)
   const mailMode = computed(() => {
     if (!auth.enabled) return 'local'
@@ -111,7 +116,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
         return
       } catch (error: any) {
         const message = error?.response?.data?.message || error?.message || 'Nie udało się połączyć z pocztą.'
-        notify.add({ type: 'ERROR', message })
+        notifyError(message)
         return
       }
     }
@@ -125,7 +130,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
       emails.value = list.map(mapApiEmail)
     } catch (error: any) {
       const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać wiadomości.'
-      notify.add({ type: 'ERROR', message })
+      notifyError(message)
       return
     }
   }
@@ -175,7 +180,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
           attachments: attachments && attachments.length ? attachments : undefined,
         }).then(() => fetchEmails(['INBOX', 'SENT'])).catch((error) => {
           const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
-          notify.add({ type: 'ERROR', message })
+          notifyError(message)
           throw error
         })
       }
@@ -189,7 +194,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
         body,
       }).then(() => fetchEmails(['INBOX', 'SENT'])).catch((error) => {
         const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
-        notify.add({ type: 'ERROR', message })
+        notifyError(message)
         throw error
       })
     }
@@ -230,15 +235,15 @@ export const useMailboxStore = defineStore('mailbox', () => {
   const markAsRead = (emailId: string) => {
     if (auth.enabled) {
       if (hasMailConfig.value) {
-        return api.patch(`/v1/crm-mailbox/messages/${emailId}`, { read: true }).then(fetchEmails).catch((error) => {
+        return api.patch(`/v1/crm-mailbox/messages/${emailId}`, { read: true }).then(() => fetchEmails()).catch((error) => {
           const message = error?.response?.data?.message || error?.message || 'Nie udało się oznaczyć wiadomości.'
-          notify.add({ type: 'ERROR', message })
+          notifyError(message)
           return
         })
       }
-      return api.patch(`/v1/crm-emails/${emailId}`, { read_at: new Date().toISOString() }).then(fetchEmails).catch((error) => {
+      return api.patch(`/v1/crm-emails/${emailId}`, { read_at: new Date().toISOString() }).then(() => fetchEmails()).catch((error) => {
         const message = error?.response?.data?.message || error?.message || 'Nie udało się oznaczyć wiadomości.'
-        notify.add({ type: 'ERROR', message })
+        notifyError(message)
         return
       })
     }

@@ -52,8 +52,6 @@ const canProceed = computed(() => {
 });
 
 const statusOrder = ['NEW', 'IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT', 'SPECIAL_OFFER', 'RESIGNED', 'SIGNED', 'TERMINATED'];
-const eligibleStatuses = new Set(['OFFER_GENERATED', 'CALCULATION_SENT', 'SPECIAL_OFFER', 'SIGNED', 'TERMINATED', 'RESIGNED']);
-
 const eligibleClients = computed(() => {
   const list = Array.isArray(clients.value) ? clients.value : [];
   const term = companySearch.value.trim().toLowerCase();

@@ -7,9 +7,7 @@ import { useStructureStore } from '@/stores/structure'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useNotificationStore } from '@/stores/notification'
-import { api } from '@/api/client'
-import { useRouter, useRoute } from 'vue-router'
-import AppIcon from '@/components/AppIcon.vue'
+import { useRoute } from 'vue-router'
 
 const data = useDataStore()
 const clientStore = useClientStore()
@@ -18,14 +16,20 @@ const auth = useAuthStore()
 const { clients } = storeToRefs(clientStore)
 const session = useSessionStore()
 const notifications = useNotificationStore()
-const router = useRouter()
 const route = useRoute()
 
 const currentDate = ref(new Date())
 const weekDays = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Niedz']
 const showModal = ref(false)
 const selectedDate = ref<Date | null>(null)
-const newEvent = ref({ id: '', clientId: '', type: 'MEETING', time: '10:00', description: '' })
+type ActivityType = 'CALL' | 'MEETING' | 'EMAIL' | 'NOTE'
+const newEvent = ref<{ id: string; clientId: string; type: ActivityType; time: string; description: string }>({
+  id: '',
+  clientId: '',
+  type: 'MEETING',
+  time: '10:00',
+  description: '',
+})
 const selectedDay = ref<{ date: Date; activities: any[] } | null>(null)
 const reminderTimer = ref<number | null>(null)
 const searchQuery = ref('')
@@ -56,9 +60,7 @@ const getMyClients = () => {
   return list.filter((client) => client.ownerId === u.id)
 }
 
-const currentRole = computed(() => session.currentUser?.role || '')
 const baseClients = computed(() => getMyClients())
-const structureUsers = computed(() => structure.users || [])
 
 const daysInMonth = computed(() => {
   const year = currentDate.value.getFullYear()
@@ -144,11 +146,6 @@ const isToday = (date: Date) => {
   return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()
 }
 
-const goToClient = (id: string, event: Event) => {
-  event.stopPropagation()
-  router.push({ path: '/app/clients', query: { expand: id } })
-}
-
 const openAddModal = (date: Date) => {
   if (session.isReadOnly) return
   selectedDate.value = date
@@ -171,7 +168,7 @@ const openEditModal = (act: any, date: Date, event: Event) => {
   newEvent.value = {
     id: act.id,
     clientId: act.clientId,
-    type: act.type,
+    type: act.type as ActivityType,
     time: act.time,
     description: act.description,
   }
@@ -339,7 +336,7 @@ onBeforeUnmount(() => {
           <div v-if="showMonthPicker" class="absolute top-12 right-0 bg-white border border-slate-200 shadow-xl rounded-xl p-4 z-50 w-64 animate-fade-in">
              <div class="flex gap-2 mb-4">
                 <select v-model="pickerMonth" class="flex-1 border border-slate-200 rounded-lg p-2 text-sm">
-                   <option v-for="(m, i) in 12" :key="i" :value="i">{{ new Date(2000, i, 1).toLocaleDateString('pl-PL', { month: 'long' }) }}</option>
+                   <option v-for="i in 12" :key="i" :value="i - 1">{{ new Date(2000, i - 1, 1).toLocaleDateString('pl-PL', { month: 'long' }) }}</option>
                 </select>
                 <input v-model="pickerYear" type="number" class="w-20 border border-slate-200 rounded-lg p-2 text-sm" />
              </div>

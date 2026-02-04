@@ -318,7 +318,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
   ) => {
     let offer: any = null;
     try {
-      offer = await ensureOffer(item);
+      offer = await ensureOffer();
     } catch (error) {
       console.error('ensureOffer failed', error);
     }
@@ -455,7 +455,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
     return Math.min(Math.max(days, 1), 365);
   };
 
-  const ensureOffer = async (item: ZapisanaKalkulacja) => {
+  const ensureOffer = async () => {
     const meetingId = context.value.meetingId;
     const clientId = context.value.clientId;
     const meetingIdNum = meetingId ? Number(meetingId) : null;

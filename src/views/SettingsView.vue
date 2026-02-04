@@ -1339,7 +1339,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
             <div>
               <label class="text-xs font-semibold text-gray-500">Plik (PDF)</label>
-              <input type="file" accept="application/pdf" class="mt-1 w-full border border-gray-300 rounded text-sm" @change="(e) => { const f = (e.target as HTMLInputElement).files?.[0] || null; newConsentFile.value = f }" />
+              <input type="file" accept="application/pdf" class="mt-1 w-full border border-gray-300 rounded text-sm" @change="(e) => { const f = (e.target as HTMLInputElement).files?.[0] || null; newConsentFile = f }" />
             </div>
           </div>
 
@@ -1362,7 +1362,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
                   <input v-model="editingConsent.title" type="text" class="border-gray-300 rounded text-sm" />
                   <input v-model="editingConsent.description" type="text" class="border-gray-300 rounded text-sm col-span-2" />
                   <div class="flex flex-col gap-1">
-                    <input type="file" accept="application/pdf" class="border border-gray-300 rounded text-xs" @change="(e) => { const f = (e.target as HTMLInputElement).files?.[0] || null; editingConsentFile.value = f }" />
+                    <input type="file" accept="application/pdf" class="border border-gray-300 rounded text-xs" @change="(e) => { const f = (e.target as HTMLInputElement).files?.[0] || null; editingConsentFile = f }" />
                     <label class="flex items-center gap-2 text-[10px] text-gray-600">
                       <input v-model="editingConsentRemoveFile" type="checkbox" class="h-3 w-3 rounded border-gray-300" />
                       Usuń plik

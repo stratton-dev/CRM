@@ -90,15 +90,11 @@ export const parseExcelData = (rows: any[], config: Config): ImportRow[] => {
       }
 
       let dataUrodzenia = '1990-01-01';
-      let isAgeInferred = false;
       if (colB_Date) {
         dataUrodzenia = normalizeDate(colB_Date);
         if (!dataUrodzenia || dataUrodzenia.length < 10) {
           dataUrodzenia = '1990-01-01';
-          isAgeInferred = true;
         }
-      } else {
-        isAgeInferred = true;
       }
       const wiek = obliczWiek(dataUrodzenia);
 

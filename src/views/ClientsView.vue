@@ -12,7 +12,6 @@ import { useToastStore } from '@/stores/toast'
 import { useMailboxStore } from '@/stores/mailbox'
 import { api } from '@/api/client'
 import type { Client } from '@/types/models'
-import { excelGenerator } from '@/components/calculator/utils/excelGenerator'
 import AppIcon from '@/components/AppIcon.vue'
 
 type ClientContact = {
@@ -78,7 +77,7 @@ const newContact = ref({
 })
 const isRescheduleOpen = ref(false)
 const rescheduleDateTime = ref('')
-const clientCalculations = ref<Array<{ id: string; meetingId: string; status: string; employeeCount: number; savingsAmount: number; validUntil: string; createdAt?: string | null }>>([])
+const clientCalculations = ref<Array<{ id: string; meetingId: string; status: string; employeeCount: number; savingsAmount: number; validUntil: string; createdAt?: string | null; valueJson?: any | null }>>([])
 const calculationsLoading = ref(false)
 const calculationStatuses = ref<Array<{ key: string; label: string }>>([])
 const calculationsError = ref<string | null>(null)
@@ -339,6 +338,33 @@ const fetchClientCalculations = async (clientId: string) => {
   } finally {
     calculationsLoading.value = false
   }
+}
+
+const downloadCalculationExcel = (calc: { id: string; valueJson?: any | null }) => {
+  const payload = calc.valueJson
+  const base64 =
+    typeof payload === 'string'
+      ? payload
+      : payload?.excelBase64 || payload?.excel_base64 || payload?.excel || null
+
+  if (!base64) {
+    toast.warning('Brak danych do pobrania pliku Excel.')
+    return
+  }
+
+  const fileName =
+    (payload?.excelFileName || payload?.excel_file_name || `Kalkulacja_${calc.id}.xlsx`) as string
+
+  const href = String(base64).startsWith('data:')
+    ? String(base64)
+    : `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64}`
+
+  const link = document.createElement('a')
+  link.href = href
+  link.download = fileName.endsWith('.xlsx') ? fileName : `${fileName}.xlsx`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
 }
 
 const updateCalculationStatus = async (calcId: string, status: string) => {

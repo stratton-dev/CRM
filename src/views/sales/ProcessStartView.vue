@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, reactive, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
-import { api, apiBaseUrl } from '@/api/client'
+import { api } from '@/api/client'
 import ConsentTextModal from '@/components/ConsentTextModal.vue'
 import PresentationModal from '@/components/PresentationModal.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -282,8 +282,12 @@ const previewContainer = ref<HTMLElement | null>(null)
 const previewFile = ref<File | null>(null)
 const previewKey = ref(0)
 
-const categoryOrder: FileCategory[] = ['CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO']
+const categoryOrder: FileCategory[] = ['UMOWY', 'PROCESY', 'PRAWO', 'MARKETING', 'CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO']
 const categoryNames: Record<FileCategory, string> = {
+  UMOWY: 'Umowy',
+  PROCESY: 'Procesy',
+  PRAWO: 'Prawo',
+  MARKETING: 'Marketing',
   CASH_FLOW: 'Analiza Cash Flow',
   LEGAL: 'Kwestie Prawne',
   GRAPHIC: 'Graficzne Przedstawienie',
@@ -316,10 +320,6 @@ const filteredKnowledgeFiles = computed(() => {
     return file.name.toLowerCase().includes(query) || file.description.toLowerCase().includes(query)
   })
 })
-
-const buildKnowledgeDownloadUrl = (file: KnowledgeFile) => {
-  return `${apiBaseUrl}/v1/crm-knowledge-files/${file.id}/download`
-}
 
 const normalizeFileExt = (value?: string | null) => {
   const raw = String(value || '').trim().toLowerCase()
@@ -2095,9 +2095,9 @@ onMounted(() => {
                  <div class="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
                  <div class="relative z-10">
                     <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-6 group-hover:bg-stratton-gold group-hover:text-white transition-colors">
-                      <AppIcon v-if="file.file_type?.includes('pdf')" name="document-text" class="w-7 h-7" />
-                      <AppIcon v-else-if="file.file_type?.includes('video')" name="video-camera" class="w-7 h-7" />
-                      <AppIcon v-else-if="file.file_type?.includes('image')" name="photo" class="w-7 h-7" />
+                      <AppIcon v-if="file.fileType?.includes('pdf')" name="document-text" class="w-7 h-7" />
+                      <AppIcon v-else-if="file.fileType?.includes('video')" name="video-camera" class="w-7 h-7" />
+                      <AppIcon v-else-if="file.fileType?.includes('image')" name="photo" class="w-7 h-7" />
                       <AppIcon v-else name="document" class="w-7 h-7" />
                     </div>
                     <h4 class="font-bold text-xl text-slate-900 group-hover:text-stratton-gold transition-colors line-clamp-2">{{ file.name }}</h4>
@@ -2187,7 +2187,7 @@ onMounted(() => {
                 :title="selectedPresentationTitle"
                 :type="selectedPresentationType"
                 :file-url="selectedPresentationFile?.file_url"
-                :file-type="selectedPresentationFile?.file_type"
+                :file-type="selectedPresentationFile?.fileType"
                 :description="selectedPresentationFile?.description"
                 @close="showPresentationModal = false"
             />
@@ -2237,7 +2237,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex-1 overflow-hidden">
-          <VueFilesPreview :key="previewKey" :file="previewFile" :url="previewUrl" class="w-full h-full" />
+          <VueFilesPreview :key="previewKey" :file="previewFile || undefined" :url="previewUrl" class="w-full h-full" />
         </div>
       </div>
     </div>

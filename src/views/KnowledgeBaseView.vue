@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { useToastStore } from '@/stores/toast'
 import { useSessionStore } from '@/stores/session'
-import { api, apiBaseUrl } from '@/api/client'
+import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
 import type { FileCategory, KnowledgeFile } from '@/types/models'
 
@@ -24,6 +24,10 @@ const uploadLoading = ref(false)
 
 const categoryOrder: FileCategory[] = ['CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO']
 const categoryNames: Record<FileCategory, string> = {
+  UMOWY: 'Umowy',
+  PROCESY: 'Procesy',
+  PRAWO: 'Prawo',
+  MARKETING: 'Marketing',
   CASH_FLOW: 'Analiza Cash Flow',
   LEGAL: 'Kwestie Prawne',
   GRAPHIC: 'Graficzne Przedstawienie',
@@ -39,10 +43,6 @@ const presentationTypes = [
 
 const safeFiles = computed<KnowledgeFile[]>(() => (Array.isArray(knowledgeFiles.value) ? knowledgeFiles.value : []))
 const canDeleteKnowledge = computed(() => session.isRole(['ADMIN']))
-
-const buildKnowledgeDownloadUrl = (file: KnowledgeFile) => {
-  return `${apiBaseUrl}/v1/crm-knowledge-files/${file.id}/download`
-}
 
 const downloadKnowledgeFile = async (file: KnowledgeFile) => {
   try {

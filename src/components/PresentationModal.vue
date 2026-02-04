@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppIcon from '@/components/AppIcon.vue'
 
-const props = defineProps<{
+defineProps<{
   show: boolean
   title: string
   type: string

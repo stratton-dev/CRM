@@ -239,8 +239,8 @@ watch(
 )
 
 const canAddGlobal = computed(() => currentUser.value?.role === 'ADMIN')
-const roleOptions = ['DIRECTOR', 'MANAGER', 'SALES']
-const roleOverrides = ref<Record<string, string>>({})
+const roleOptions: UserRole[] = ['DIRECTOR', 'MANAGER', 'SALES']
+const roleOverrides = ref<Record<string, UserRole>>({})
 
 const isExpanded = (id: string) => expandedNodes.value.has(id)
 
@@ -258,7 +258,7 @@ const toggleDetails = (id: string) => {
 
 const getRoleValue = (node: User) => roleOverrides.value[node.id] || node.role || 'SALES'
 
-const setRoleValue = (node: User, value: string) => {
+const setRoleValue = (node: User, value: UserRole) => {
   roleOverrides.value = { ...roleOverrides.value, [node.id]: value }
 }
 
@@ -1066,7 +1066,7 @@ const addUser = async () => {
                     <select
                       class="border border-gray-200 rounded px-2 py-1 text-xs"
                       :value="getRoleValue(node)"
-                      @change="setRoleValue(node, ($event.target as HTMLSelectElement).value)"
+                      @change="setRoleValue(node, ($event.target as HTMLSelectElement).value as UserRole)"
                     >
                       <option v-for="role in roleOptions" :key="role" :value="role">{{ role }}</option>
                     </select>
