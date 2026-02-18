@@ -75,25 +75,6 @@ const needleRotation = computed(() => {
     return 180 + (pct * 180)
 })
 
-const rangesLabels = computed(() => {
-    // Generate text labels for range boundaries
-    const range = maxValue.value - minValue.value
-    // Just min, mid, max?
-    // User screenshot shows ranges like "20 000 - 30 999" above the arc?
-    // Or just tick values.
-    return [
-        { val: minValue.value, angle: 180, align: 'start' },
-        { val: minValue.value + range * 0.25, angle: 225, align: 'middle' },
-        { val: minValue.value + range * 0.5, angle: 270, align: 'middle' },
-        { val: minValue.value + range * 0.75, angle: 315, align: 'middle' },
-        { val: maxValue.value, angle: 360, align: 'end' }
-    ]
-})
-
-const formatNumber = (val: number) => {
-    if (val >= 1000) return (val / 1000).toFixed(0) + 'k'
-    return val.toString()
-}
 
 const sublabelColor = computed(() => {
     if (props.value >= 100) return '#22c55e' // Green
@@ -154,9 +135,6 @@ const sublabelColor = computed(() => {
         </text>
         
         <!-- Tick Labels (Optional, simple formatting) -->
-        <g v-for="(tick, i) in rangesLabels" :key="`tick-${i}`" v-if="false"> <!-- Hidden for cleaner look as per screenshot 2 which doesn't show ticks on arc -->
-             <!-- Logic for ticks labels if needed -->
-        </g>
     </svg>
   </div>
 </template>

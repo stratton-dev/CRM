@@ -9,7 +9,6 @@ import { useClientStore } from '@/stores/client'
 import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
-import { useNotificationStore } from '@/stores/notification'
 import { useMailboxStore } from '@/stores/mailbox'
 import { api } from '@/api/client'
 import type { Client } from '@/types/models'
@@ -41,7 +40,6 @@ const clientStore = useClientStore()
 const session = useSessionStore()
 const structure = useStructureStore()
 const toast = useToastStore()
-const notify = useNotificationStore()
 const mailboxStore = useMailboxStore()
 const router = useRouter()
 const route = useRoute()
@@ -317,6 +315,12 @@ const getClientOwner = (client: any) => {
     ? (auth.enabled ? structureUsers.value : dataUsers.value)
     : []
   return userList.find((u) => u.id === client.ownerId) || null
+}
+
+const emailClientOwner = (client: any) => {
+  const email = getClientOwner(client)?.email
+  if (!email) return
+  mailboxStore.initiateEmailTo(email)
 }
 
 const closePanel = () => {
@@ -1159,7 +1163,7 @@ if (route.query.expand) {
                         </div>
                         <div>
                             <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Email</span>
-                            <button type="button" class="text-sky-600 hover:text-sky-800 hover:underline flex items-center gap-1 font-medium" @click="mailboxStore.initiateEmailTo(getClientOwner(client)?.email)">
+                            <button type="button" class="text-sky-600 hover:text-sky-800 hover:underline flex items-center gap-1 font-medium" @click="emailClientOwner(client)">
                                 <AppIcon name="envelope" class="w-3 h-3" />
                                 <span>{{ getClientOwner(client)?.email }}</span>
                             </button>
@@ -1177,7 +1181,7 @@ if (route.query.expand) {
                     </div>
                 
                     <div class="flex items-center gap-2">
-                       <button type="button" class="p-2 bg-sky-100 text-sky-800 border border-sky-200 rounded-lg hover:bg-sky-200 hover:shadow-md transition shadow-sm" title="Wyślij wiadomość" @click="notify.openMsgModal(getClientOwner(client))">
+                       <button type="button" class="p-2 bg-sky-100 text-sky-800 border border-sky-200 rounded-lg hover:bg-sky-200 hover:shadow-md transition shadow-sm" title="Wyślij wiadomość" @click="emailClientOwner(client)">
                            <AppIcon name="chat-bubble-left-ellipsis" class="w-5 h-5" />
                        </button>
                     </div>
@@ -1683,7 +1687,7 @@ if (route.query.expand) {
                 <div>
                   <label class="block text-xs font-medium text-gray-700 mb-1">Nazwa Firmy</label>
                   <input
-                    v-model="clientEditForm.name"
+                    v-model="clientEditForm.companyName"
                     type="text"
                     class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                     placeholder="Wpisz nazwę firmy..."
@@ -1713,7 +1717,7 @@ if (route.query.expand) {
                 <div>
                   <label class="block text-xs font-medium text-gray-700 mb-1">Osoba Kontaktowa</label>
                   <input
-                    v-model="clientEditForm.contact_person"
+                    v-model="clientEditForm.contactName"
                     type="text"
                     class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                     placeholder="Imię i nazwisko"
@@ -1722,7 +1726,7 @@ if (route.query.expand) {
                 <div>
                   <label class="block text-xs font-medium text-gray-700 mb-1">Telefon</label>
                   <input
-                    v-model="clientEditForm.phone"
+                    v-model="clientEditForm.contactPhone"
                     type="text"
                     class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                     placeholder="+48..."
@@ -1731,7 +1735,7 @@ if (route.query.expand) {
                 <div class="col-span-2">
                   <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
                   <input
-                    v-model="clientEditForm.email"
+                    v-model="clientEditForm.contactEmail"
                     type="email"
                     class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                     placeholder="adres@email.com"
@@ -1745,7 +1749,7 @@ if (route.query.expand) {
               <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notatki</h4>
               <div>
                 <textarea
-                  v-model="clientEditForm.notes"
+                  v-model="clientEditForm.contactPosition"
                   rows="3"
                   class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
                   placeholder="Dodatkowe informacje..."

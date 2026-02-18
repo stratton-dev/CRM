@@ -324,7 +324,6 @@ const previewContainer = ref<HTMLElement | null>(null)
 const previewFile = ref<File | null>(null)
 const previewKey = ref(0)
 
-const categoryOrder: FileCategory[] = ['UMOWY', 'PROCESY', 'PRAWO', 'MARKETING', 'CASH_FLOW', 'LEGAL', 'GRAPHIC', 'VIDEO']
 const categoryNames: Record<FileCategory, string> = {
   UMOWY: 'Umowy',
   PROCESY: 'Procesy',
@@ -337,21 +336,6 @@ const categoryNames: Record<FileCategory, string> = {
 }
 
 const safeKnowledgeFiles = computed<KnowledgeFile[]>(() => (Array.isArray(knowledgeFiles.value) ? knowledgeFiles.value : []))
-const knowledgeCategories = computed(() => {
-  const categories = new Set<string>()
-  for (const file of safeKnowledgeFiles.value) {
-    if (file.category) {
-      categories.add(String(file.category))
-    }
-  }
-  const ordered: string[] = []
-  categoryOrder.forEach((category) => {
-    if (categories.has(category)) ordered.push(category)
-  })
-  const remaining = Array.from(categories).filter((cat) => !ordered.includes(cat))
-  remaining.sort((a, b) => a.localeCompare(b, 'pl'))
-  return [...ordered, ...remaining]
-})
 const filteredKnowledgeFiles = computed(() => {
   const query = knowledgeSearch.value.trim().toLowerCase()
   const category = selectedKnowledgeCategory.value
@@ -456,29 +440,6 @@ const openKnowledgeFile = async (file: KnowledgeFile, index?: number) => {
   toast.warning('Ten format nie jest obsługiwany w podglądzie. Użyj opcji Zapisz.')
 }
 
-const downloadKnowledgeFile = (file: KnowledgeFile) => {
-  if (!file.fileUrl || file.fileUrl === '#') {
-    toast.warning('Brak podpiętego pliku do pobrania.')
-    return
-  }
-  api.get(`/v1/crm-knowledge-files/${file.id}/download`, { responseType: 'blob' })
-    .then((response) => {
-      const blob = new Blob([response.data], { type: response.data?.type || 'application/octet-stream' })
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank', 'noopener,noreferrer')
-      const link = document.createElement('a')
-      link.href = url
-      link.download = file.name || 'plik'
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
-    })
-    .catch((error) => {
-      console.error(error)
-      toast.error('Nie udało się pobrać pliku.')
-    })
-}
 
 
 const previewNext = (direction: 1 | -1) => {

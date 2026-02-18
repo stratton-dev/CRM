@@ -8,7 +8,6 @@ import { useNewsStore } from '@/stores/news'
 import { useClientStore } from '@/stores/client'
 import { useMailboxStore } from '@/stores/mailbox'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
-import AdminPanelView from '@/views/admin/AdminPanelView.vue'
 import ClientsView from '@/views/ClientsView.vue'
 import MeetingsManagementView from '@/views/MeetingsManagementView.vue'
 import StructureView from '@/views/StructureView.vue'
@@ -26,13 +25,9 @@ const mailboxStore = useMailboxStore()
 const viewPermissions = useViewPermissionsStore()
 const { clients } = storeToRefs(clientStore)
 const { emails: mailboxEmails } = storeToRefs(mailboxStore)
-const props = withDefaults(defineProps<{ showAdminPanel?: boolean }>(), {
-  showAdminPanel: true,
-})
 
 const userRole = ref<UserRole>('SALES')
 const viewMode = ref<'hub' | 'stats'>('hub')
-const isAdmin = computed(() => userRole.value === 'ADMIN')
 const firstName = computed(() => session.currentUser?.name?.split(' ')[0] || 'Użytkowniku')
 
 const roleDisplayName = computed(() => {
@@ -47,7 +42,6 @@ const roleDisplayName = computed(() => {
 })
 
 const canAddClient = computed(() => viewPermissions.isViewAllowed('sales-start', session.currentUser?.role))
-const canViewCalendar = computed(() => viewPermissions.isViewAllowed('calendar', session.currentUser?.role))
 const canViewMeetings = computed(() => {
   if (session.currentUser?.role === 'ADMIN') return true
   return viewPermissions.isViewAllowed('meetings', session.currentUser?.role)
@@ -283,7 +277,6 @@ const kpis = computed(() => dashboard.kpis.map((item) => ({
   missing: item.missing,
 })))
 
-const primaryKpi = computed(() => kpis.value[0] || null)
 const goalScore = computed(() => {
   return 0
 })
@@ -427,11 +420,6 @@ const toggleRole = () => {
   userRole.value = next
 }
 
-const getScoreColor = (score: number) => {
-  if (score >= 90) return 'border-green-500'
-  if (score >= 70) return 'border-stratton-gold'
-  return 'border-red-400'
-}
 
 onMounted(() => {
   const now = new Date()

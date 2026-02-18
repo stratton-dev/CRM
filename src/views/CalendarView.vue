@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useDataStore } from '@/stores/data'
 import { useClientStore } from '@/stores/client'
-import { useStructureStore } from '@/stores/structure'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useNotificationStore } from '@/stores/notification'
@@ -12,7 +11,6 @@ import AppIcon from '@/components/AppIcon.vue'
 
 const data = useDataStore()
 const clientStore = useClientStore()
-const structure = useStructureStore()
 const auth = useAuthStore()
 const { clients } = storeToRefs(clientStore)
 const session = useSessionStore()
@@ -66,7 +64,7 @@ const onDragStart = (e: DragEvent, act: any) => {
   }
 }
 
-const onDrop = async (e: DragEvent, date: Date) => {
+const onDrop = async (_e: DragEvent, date: Date) => {
   const act = draggedEvent.value
   draggedEvent.value = null
   
@@ -94,7 +92,7 @@ const onDrop = async (e: DragEvent, date: Date) => {
          
          notifications.add({
            userId: u.id,
-           type: 'SUCCESS',
+           type: 'INFO',
            message: 'Przeniesiono wydarzenie.'
          })
          
@@ -108,7 +106,7 @@ const onDrop = async (e: DragEvent, date: Date) => {
      console.error(err)
      notifications.add({
        userId: u.id, 
-       type: 'ERROR',
+       type: 'WARNING',
        message: 'Błąd podczas przenoszenia wydarzenia.'
      })
   }
@@ -139,7 +137,7 @@ const getMyClients = () => {
   if (!u) return []
   const list = Array.isArray(clients.value) ? clients.value : []
   // If list is empty, try to load from local storage or wait for fetch
-  if (list.length === 0 && !data.loading) {
+  if (list.length === 0) {
      // console.warn('Clients list is empty')
   }
 

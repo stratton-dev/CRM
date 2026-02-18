@@ -16,19 +16,6 @@ const handleSelectPrime = () => {
   store.prowizjaProc = store.comparisonState.customPrimeRate;
 };
 
-const handleChangeStandardRate = (value: number) => {
-  store.comparisonState.customStandardRate = value;
-  if (store.comparisonState.activeCard === 'STANDARD') {
-    store.prowizjaProc = value;
-  }
-};
-
-const handleChangePrimeRate = (value: number) => {
-  store.comparisonState.customPrimeRate = value;
-  if (store.comparisonState.activeCard === 'PRIME') {
-    store.prowizjaProc = value;
-  }
-};
 
 const syncRates = () => {
   if (store.comparisonState.activeCard === 'STANDARD' && store.prowizjaProc !== store.comparisonState.customStandardRate) {
@@ -92,10 +79,6 @@ const profitPrimeCalc = computed(() => {
   return stats.value.baseSavings - stats.value.benefitBase * (store.comparisonState.customPrimeRate / 100);
 });
 
-const raiseAmountDisplay = computed(() => {
-  if (!stats.value) return 0;
-  return stats.value.benefitBase * 0.04;
-});
 
 const topSavers = computed(() => {
   if (!store.wyniki) return [];
@@ -105,8 +88,6 @@ const topSavers = computed(() => {
     .slice(0, 5);
 });
 
-const isCustomStandard = computed(() => store.comparisonState.customStandardRate !== 28);
-const isCustomPrime = computed(() => store.comparisonState.customPrimeRate !== 26);
 const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD');
 </script>
 

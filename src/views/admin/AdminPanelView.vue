@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
@@ -17,14 +17,6 @@ const notifStore = useNotificationStore()
 const ui = useUiStore()
 const { currentUser } = storeToRefs(session)
 const { notifications } = storeToRefs(notifStore)
-
-const activeTab = ref<'GENERAL'>('GENERAL')
-
-const switchTab = (tab: 'GENERAL') => {
-  activeTab.value = tab
-}
-
-const getInitials = (name: string) => name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
 
 const myNotifications = computed(() => {
   const user = currentUser.value

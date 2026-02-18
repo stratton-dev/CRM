@@ -218,7 +218,7 @@ export interface KnowledgeFile {
   size: string
 }
 
-export type AutentiStatus = 'SENT' | 'VIEWED' | 'SIGNED' | 'REJECTED'
+export type AutentiStatus = 'DRAFT' | 'SENT' | 'VIEWED' | 'SIGNED' | 'REJECTED'
 
 export interface AutentiDocument {
   id: string

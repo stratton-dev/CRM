@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.cdnfonts.com/css/tex-gyre-thermes');
+@import "tailwindcss";
 
 @theme {
   --font-sans: "TeX Gyre Thermes", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";

@@ -3,19 +3,17 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useClientStore } from '@/stores/client'
-import { useSessionStore } from '@/stores/session'
 import { useToastStore } from '@/stores/toast'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
-import type { Client, ClientActivity } from '@/types/models'
+import type { Client } from '@/types/models'
 
-const props = defineProps<{
+defineProps<{
   embedded?: boolean
 }>()
 
 const router = useRouter()
 const clientStore = useClientStore()
-const session = useSessionStore()
 const toast = useToastStore()
 const { prospects: clients } = storeToRefs(clientStore)
 
@@ -401,7 +399,7 @@ const exportToCsv = () => {
     `"${(r.contactPosition || '').replace(/"/g, '""')}"`,
     `"${(r.industry || '').replace(/"/g, '""')}"`,
     `"${(r.source || '').replace(/"/g, '""')}"`,
-    `"${(r.owner?.name || '').replace(/"/g, '""')}"`,
+    `"${(r.ownerId || '').replace(/"/g, '""')}"`,
     getLastActivityDate(r),
   ].join(','))
 
@@ -558,8 +556,8 @@ const exportToCsv = () => {
                 </td>
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
                   <div class="w-fit rounded-lg border border-dashed border-gray-200 px-3 py-1.5 bg-white/60">
-                    <div class="text-xs font-semibold text-gray-800">{{ client.owner?.name || 'Nieprzypisany' }}</div>
-                    <div class="text-[11px] text-gray-500 font-mono">ID: {{ client.owner?.hierarchicalId || 'Brak' }}</div>
+                    <div class="text-xs font-semibold text-gray-800">{{ client.ownerId || 'Nieprzypisany' }}</div>
+                    <div class="text-[11px] text-gray-500 font-mono">ID: {{ client.ownerId || 'Brak' }}</div>
                   </div>
                 </td>
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600">

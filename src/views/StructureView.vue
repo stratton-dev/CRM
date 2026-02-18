@@ -15,7 +15,7 @@ import type { EntityType, User, UserRole } from '@/types/models'
 
 type TreeNode = User & { level: number; hasChildren: boolean; isLast: boolean; parentChain: boolean[]; isTeamNode?: boolean }
 
-const props = defineProps<{
+defineProps<{
   embedded?: boolean
 }>()
 

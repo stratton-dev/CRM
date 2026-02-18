@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRecruitmentStore, type Candidate, type CandidateDocument } from '@/stores/recruitment'
 import AppIcon from '@/components/AppIcon.vue'
 import { useToastStore } from '@/stores/toast'
 
 const store = useRecruitmentStore()
-const router = useRouter()
 const toast = useToastStore()
 
 onMounted(() => {
@@ -17,6 +15,7 @@ onMounted(() => {
 const showWizard = ref(false)
 const step = ref(1)
 const isSubmitting = ref(false)
+const editingId = ref<number | null>(null)
 // const editingId = ref<number | null>(null) // REMOVED: Using panel for edits
 const errors = reactive<Record<string, boolean>>({})
 
@@ -167,7 +166,15 @@ const openCandidatePanel = (c: Candidate) => {
     editForm.pesel = c.pesel || ''
     editForm.email = c.email
     editForm.phone = c.phone
-    editForm.address = c.address_json ? { ...c.address_json } : { street: '', house_number: '', apartment_number: '', postal_code: '', city: '' }
+    editForm.address = c.address_json
+      ? {
+          street: c.address_json.street || '',
+          house_number: c.address_json.house_number || '',
+          apartment_number: c.address_json.apartment_number || '',
+          postal_code: c.address_json.postal_code || '',
+          city: c.address_json.city || '',
+        }
+      : { street: '', house_number: '', apartment_number: '', postal_code: '', city: '' }
     panelDocumentSelection.value = (c.documents || []).map(d => d.type)
 }
 

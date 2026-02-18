@@ -1,41 +1,51 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
-import { OrgChart } from 'd3-org-chart';
-import type { User } from '@/types/models';
+import { onMounted, ref, watch } from 'vue'
+import { OrgChart } from 'd3-org-chart'
+import type { User } from '@/types/models'
 
 const props = defineProps<{
-  users: User[];
-}>();
+  users: User[]
+}>()
 
-const chartContainer = ref<HTMLDivElement | null>(null);
-let chart: OrgChart<any> | null = null;
+const chartContainer = ref<HTMLDivElement | null>(null)
+let chart: OrgChart<any> | null = null
 
-const data = ref<any[]>([]);
+type OrgNode = User & {
+  parentId?: string | null
+  name: string
+  _expanded?: boolean
+}
 
-watch(() => props.users, (newUsers) => {
-  if (newUsers.length > 0) {
-    data.value = newUsers.map(u => ({
-      ...u,
-      id: u.id,
-      parentId: u.id_parent,
-      name: `${u.first_name} ${u.last_name}`,
-    }));
-    renderChart();
-  }
-}, { immediate: true, deep: true });
+const data = ref<OrgNode[]>([])
+
+watch(
+  () => props.users,
+  (newUsers) => {
+    if (newUsers.length > 0) {
+      data.value = newUsers.map((u) => ({
+        ...u,
+        id: u.id,
+        parentId: u.parentId ?? (u as any).id_parent ?? null,
+        name: `${u.firstName ?? (u as any).first_name ?? ''} ${u.lastName ?? (u as any).last_name ?? ''}`.trim() || u.name,
+      }))
+      renderChart()
+    }
+  },
+  { immediate: true, deep: true }
+)
 
 function renderChart() {
   if (chartContainer.value && data.value.length > 0) {
     if (!chart) {
-      chart = new OrgChart();
+      chart = new OrgChart()
     }
 
     chart
       .container(chartContainer.value as any)
       .data(data.value)
-      .nodeId(d => d.id)
-      .parentNodeId(d => d.parentId)
-      .nodeContent(d => {
+      .nodeId((d: any) => d.id)
+      .parentNodeId((d: any) => d.parentId)
+      .nodeContent((d: any) => {
         if (d.data._expanded) {
           return `
             <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200" style="width: 300px;">
@@ -57,31 +67,31 @@ function renderChart() {
                 <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-md text-sm">Zobacz profil</button>
               </div>
             </div>
-          `;
+          `
         }
         return `
           <div class="px-6 py-3 bg-gray-800 text-white rounded-lg shadow-lg">
             <div class="font-semibold text-center">${d.data.id_hier}</div>
           </div>
-        `;
+        `
       })
-      .onNodeClick((d) => {
+      .onNodeClick((d: any) => {
         // In d3-org-chart, you might need to manually trigger a re-render
         // by slightly modifying the data or calling the render method again.
-        const node = data.value.find(n => n.id === d);
+        const clickedId = typeof d === 'object' ? d?.id ?? d?.data?.id : d
+        const node = data.value.find((n) => n.id === clickedId)
         if (node) {
-          node._expanded = !node._expanded;
-          chart?.render();
+          node._expanded = !node._expanded
+          chart?.render()
         }
       })
-      .render();
+      .render()
   }
 }
 
 onMounted(() => {
-  renderChart();
-});
-
+  renderChart()
+})
 </script>
 
 <template>
@@ -91,27 +101,27 @@ onMounted(() => {
 <style>
 .chart-container {
   width: 100%;
-  height: calc(100vh - 200px); /* Adjust height as needed */
+  height: calc(100vh - 200px);
 }
 
 .bg-dots {
-    background-image: radial-gradient(circle, #d1d5db 1px, rgba(0, 0, 0, 0) 1px);
-    background-size: 20px 20px;
+  background-image: radial-gradient(circle, #d1d5db 1px, rgba(0, 0, 0, 0) 1px);
+  background-size: 20px 20px;
 }
 
 .org-chart-node-content {
-    background-color: transparent !important;
-    border: none !important;
+  background-color: transparent !important;
+  border: none !important;
 }
 
 .org-chart-node-content .node {
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .link {
-    stroke: #6b7280;
-    stroke-width: 2px;
+  stroke: #6b7280;
+  stroke-width: 2px;
 }
 </style>

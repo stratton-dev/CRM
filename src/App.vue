@@ -35,7 +35,6 @@ const { clients } = storeToRefs(clientStore)
 const { notifications } = storeToRefs(notifStore)
 const { users: structureUsers } = storeToRefs(structure)
 const shouldShowSidebar = computed(() => true)
-const isDashboard = computed(() => route.path.includes('/app/dashboard'))
 const showShell = computed(() => route.path.startsWith('/app'))
 const authRole = computed(() => {
   const roles = auth.user?.roles || []
@@ -50,54 +49,6 @@ const sidebarUser = computed(() => {
     role: authRole.value,
     crmNumber: undefined,
   }
-})
-const topbarUser = computed(() => {
-  const baseUser = currentUser.value
-  const list = auth.enabled ? structureUsers.value : dataUsers.value
-  if (baseUser?.hierarchicalId || baseUser?.hierarchicalCode || baseUser?.crmNumber) return baseUser
-  if (!Array.isArray(list) || list.length === 0) return baseUser || null
-
-  if (baseUser?.id) {
-    const byId = list.find((user) => user.id === baseUser.id)
-    if (byId) return byId
-  }
-
-  const authEmail = auth.user?.email || auth.user?.username
-  const baseEmail = baseUser?.email || authEmail
-  if (baseEmail) {
-    const byEmail = list.find((user) => user.email === baseEmail)
-    if (byEmail) return byEmail
-  }
-
-  const baseName = baseUser?.name || auth.fullName
-  if (baseName) {
-    const normalized = baseName.trim().toLowerCase()
-    const byName = list.find((user) => user.name?.trim().toLowerCase() === normalized)
-    if (byName) return byName
-  }
-
-  return baseUser || null
-})
-const topbarId = computed(() => {
-  const user = topbarUser.value
-  if (user?.hierarchicalId) return user.hierarchicalId
-  if (user?.hierarchicalCode) return user.hierarchicalCode
-  if (user?.crmNumber) return user.crmNumber
-  if (user?.id) return user.id
-  return auth.user?.hierarchicalId || auth.user?.crmNumber || auth.user?.id || ''
-})
-const topbarRole = computed(() => {
-  const roleName = (topbarUser.value as { role_name?: string; roleName?: string } | null)?.role_name || (topbarUser.value as { roleName?: string } | null)?.roleName
-  if (roleName) return roleName
-  const role = topbarUser.value?.role || authRole.value || ''
-  const roleLabels: Record<string, string> = {
-    ADMIN: 'Super Admin',
-    DIRECTOR: 'Dyrektor',
-    MANAGER: 'Manager',
-    SALES: 'Handlowiec',
-    CLIENT_HR: 'Kadry',
-  }
-  return roleLabels[role] || role
 })
 const sidebarInitials = computed(() => {
   const name = sidebarUser.value.name?.trim() || ''
@@ -165,7 +116,7 @@ const navLinks = computed(() => {
     links.push({ label: 'Aktualności', path: '/app/news-management', icon: 'document-text', viewKey: 'news-management' })
   }
 
-  return links.filter((link) => {
+  const filteredLinks = links.filter((link) => {
     // Force show for newly added permissions if viewPermissions might be lagging or configured strangely
     if (['user-management', 'admin-analytics', 'admin-logs'].includes(link.viewKey) && role === 'ADMIN') return true
 
@@ -175,8 +126,8 @@ const navLinks = computed(() => {
     return viewPermissions.isViewAllowed(link.viewKey, role)
   })
 
-  const dashboardLink = links.find(link => link.viewKey === 'dashboard')
-  const otherLinks = links.filter(link => link.viewKey !== 'dashboard').sort((a, b) => {
+  const dashboardLink = filteredLinks.find((link) => link.viewKey === 'dashboard')
+  const otherLinks = filteredLinks.filter((link) => link.viewKey !== 'dashboard').sort((a, b) => {
     return a.label.localeCompare(b.label, 'pl')
   })
 
@@ -205,11 +156,11 @@ const predefinedActions = [
 const commandResults = computed(() => {
   const query = commandQuery.value.toLowerCase()
   if (!query) return { actions: [], clients: [], users: [] }
+  const user = currentUser.value
 
   const actions = predefinedActions
     .filter((action) => action.label.toLowerCase().includes(query))
     .filter((action) => action.label !== 'Ustawienia' || viewPermissions.isSettingsAllowed(user?.role))
-  const user = currentUser.value
 
   let visibleClients = clients.value
   if (user?.role === 'SALES') visibleClients = visibleClients.filter((client) => client.ownerId === user.id)
@@ -223,16 +174,6 @@ const commandResults = computed(() => {
   return { actions, clients: matchedClients, users: matchedUsers }
 })
 
-const getPageTitle = () => {
-  const path = route.path
-  if (path.includes('dashboard')) return 'Centrum Zarządzania'
-  if (path.includes('clients')) return 'Baza Klientów'
-  if (path.includes('structure')) return 'Struktura Organizacyjna'
-  if (path.includes('settings')) return 'Ustawienia Systemu'
-  if (path.includes('analytics')) return 'Analityka i Raporty'
-  if (path.includes('calendar')) return ''
-  return 'Stratton CRM'
-}
 
 const toggleCommandPalette = () => {
   ui.toggleCommandPalette()
@@ -465,7 +406,7 @@ onBeforeUnmount(() => {
           v-for="notif in myNotifications"
           :key="notif.id"
           class="px-5 py-4 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition group"
-          :class="{ 'bg-blue-50': !notif.read && notif.read !== true }"
+          :class="{ 'bg-blue-50': !notif.read }"
           @click="markAsRead(notif.id)"
         >
           <p class="text-stratton-blue font-bold text-xs mb-1 group-hover:underline">

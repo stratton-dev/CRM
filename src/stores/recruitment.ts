@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { api } from '@/api/client'
 
 export interface CandidateAddress {
@@ -102,6 +102,7 @@ export const useRecruitmentStore = defineStore('recruitment', () => {
     gusLoading,
     fetchCandidates,
     addCandidate,
+    updateCandidate,
     deleteCandidate,
     fetchGusData
   }

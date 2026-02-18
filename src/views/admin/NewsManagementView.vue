@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useNewsStore } from '@/stores/news'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import AppIcon from '@/components/AppIcon.vue'

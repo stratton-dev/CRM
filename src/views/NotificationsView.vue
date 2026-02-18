@@ -6,7 +6,7 @@ import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import AppIcon from '@/components/AppIcon.vue'
 import { getNotificationTone } from '@/utils/uiColors'
-import type { User, Notification } from '@/types/models'
+import type { Notification } from '@/types/models'
 
 const notifStore = useNotificationStore()
 const session = useSessionStore()
@@ -190,7 +190,7 @@ const getTypeLabel = (type: string) => {
             </button>
         </div>
       <ul class="divide-y divide-gray-200">
-        <li v-for="notif in inboxList" :key="notif.id" class="p-6 hover:bg-gray-50 transition" :class="{ 'bg-blue-50': !notif.read && notif.read !== true }">
+        <li v-for="notif in inboxList" :key="notif.id" class="p-6 hover:bg-gray-50 transition" :class="{ 'bg-blue-50': !notif.read }">
           <div class="flex items-center space-x-4">
             <div class="flex-shrink-0">
               <AppIcon :name="getNotificationTone(notif.type).icon" class="w-6 h-6" :class="getNotificationTone(notif.type).className" />

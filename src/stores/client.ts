@@ -184,7 +184,7 @@ export const useClientStore = defineStore('client', () => {
         avgWageUop: profile.avg_wage_uop ?? 0,
         avgWageUz: profile.avg_wage_uz ?? 0,
         source: profile.source || '',
-        industry: profile.industry || client.industry || '',
+        industry: profile.industry || (client as any).industry || '',
         companySize: profile.company_size || '',
         contactPosition: profile.contact_position || '',
         isDecisionMaker: !!profile.is_decision_maker,
@@ -525,7 +525,7 @@ export const useClientStore = defineStore('client', () => {
         await fetchActivities()
         await fetchMeetings()
         toast.success('Dodano aktywność')
-      } catch(e) { 
+      } catch(e: any) { 
         // Fallback: gdy klient ma już otwarte spotkanie (HTTP 409), zapisz jako zwykłą aktywność MEETING
         const status = e?.response?.status
         const msg = e?.response?.data?.message as string | undefined

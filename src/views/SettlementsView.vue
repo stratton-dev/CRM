@@ -390,7 +390,7 @@ const signedContractsWithDetails = computed(() => {
                 {{ client.city || '—' }}
               </td>
               <td class="px-8 py-5 whitespace-nowrap text-sm text-slate-400 font-medium">
-                {{ client.signed_at || '—' }}
+                {{ client.contractSignedDate || '—' }}
               </td>
             </tr>
             <tr v-if="signedContractsWithDetails.length === 0">
