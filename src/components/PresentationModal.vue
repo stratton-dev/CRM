@@ -146,7 +146,7 @@ const isImage = (type: string) => type === 'image' || type?.startsWith('image/')
                   <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">
                      <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-3">3</div>
                      <h5 class="font-bold text-slate-900 text-sm">Oszczędności</h5>
-                     <p class="text-xs text-slate-500 mt-1">Comiesięczny zysk</p>
+                     <p class="text-xs text-slate-500 mt-1">Comiesięczna oszczędność</p>
                   </div>
                </div>
             </div>

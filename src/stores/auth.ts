@@ -70,6 +70,9 @@ export const useAuthStore = defineStore('auth', () => {
   async function init() {
     if (!config.enabled) return
     if (initializing.value) return
+    // Already initialized? Just return. login() will use existing instance.
+    if (keycloak.value && initAttempted.value) return
+
     initializing.value = true
     error.value = null
     try {
@@ -78,37 +81,53 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = `Konfiguracja logowania niepełna: ${cfgErr}`
         return
       }
-      const kc = new Keycloak({ url: config.url!, realm: config.realm!, clientId: config.clientId! })
+      const kc = new Keycloak({
+        url: config.url!,
+        realm: config.realm!,
+        clientId: config.clientId!
+      })
       keycloak.value = markRaw(kc)
 
-      const initOptions = {
-        onLoad: 'login-required',
+            const initOptions = {
+        onLoad: 'check-sso',
         pkceMethod: 'S256',
         checkLoginIframe: false,
-      } as const
-
-      const authenticated = await kc.init(initOptions)
-      dbg('kc.init authenticated =', authenticated)
-      isAuthenticated.value = authenticated
-      saveToken(kc.token)
-      if (authenticated) {
-        user.value = kc.tokenParsed as any
-        // Ustaw automatyczne odświeżanie tokenu
-        setTokenRefresh()
+        enableLogging: true
       }
-      kc.onTokenExpired = async () => {
-        try {
-          await kc.updateToken(30)
-          saveToken(kc.token)
-        } catch (e) {
-          dbg('Token refresh failed, logging out', e)
-          await logout()
+      
+      console.log('[AUTH] Starting Keycloak init with options:', initOptions)
+
+      try {
+        const authenticated = await kc.init(initOptions as any)
+        dbg('kc.init authenticated =', authenticated)
+        isAuthenticated.value = authenticated
+        saveToken(kc.token)
+        if (authenticated) {
+            user.value = kc.tokenParsed as any
+            setTokenRefresh()
         }
+        kc.onTokenExpired = async () => {
+             try {
+                await kc.updateToken(30)
+                saveToken(kc.token)
+             } catch (e) {
+                dbg('Token refresh failed, logging out', e)
+                await logout()
+             }
+         }
+      } catch (innerError) {
+          console.error('[AUTH] INIT FAILED:', innerError)
+          throw innerError
       }
     } catch (e: any) {
       console.error(e)
       error.value = e?.message || 'Nie udało się zainicjalizować logowania'
+      // Ensure keycloak is reset if init failed so retry is possible
+      keycloak.value = null
+      initializing.value = false
     } finally {
+      // Don't set initializing to false here if we want to allow retry,
+      // but initAttempted should be true only if success? No, it means we tried.
       initializing.value = false
       initAttempted.value = true
     }
@@ -125,6 +144,7 @@ export const useAuthStore = defineStore('auth', () => {
         if (refreshed) saveToken(kc.token)
       } catch (e) {
         dbg('Periodic token refresh failed', e)
+        await logout()
       }
     }, 20000)
   }

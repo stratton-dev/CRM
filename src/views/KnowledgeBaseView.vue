@@ -35,7 +35,7 @@ const categoryNames: Record<FileCategory, string> = {
 }
 
 const presentationTypes = [
-  { id: 'CASH_FLOW', title: 'Dokumenty do pobrania', desc: 'Analiza finansowa', icon: 'chart-pie', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'hover:border-emerald-500' },
+  { id: 'CASH_FLOW', title: 'Dokumenty do pobrania', desc: 'wzory dokumentów i inne', icon: 'chart-pie', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'hover:border-emerald-500' },
   { id: 'LEGAL', title: 'Podstawa prawna', desc: 'Bezpieczeństwo i przepisy', icon: 'scale', color: 'text-blue-600', bg: 'bg-blue-50', border: 'hover:border-blue-500' },
   { id: 'GRAPHIC', title: 'Schemat działania usługi', desc: 'Wizualizacja modelu', icon: 'presentation-chart-line', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'hover:border-indigo-500' },
   { id: 'VIDEO', title: 'Materiały wideo', desc: 'Materiał multimedialny', icon: 'video-camera', color: 'text-red-600', bg: 'bg-red-50', border: 'hover:border-red-500' },
@@ -182,29 +182,35 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="mb-4">
-      <RouterLink to="/app/dashboard" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm group">
-        <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-        <span class="text-xs font-bold uppercase tracking-widest">Powrót</span>
-      </RouterLink>
-    </div>
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">Baza Wiedzy</h1>
-        <p class="text-sm text-gray-500">Centralne repozytorium plików i dokumentów.</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <div v-if="activeCategory" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-semibold">
-          <span>{{ categoryNames[activeCategory] }}</span>
-          <button type="button" class="text-sky-500 hover:text-sky-700" @click="activeCategory = null">✕</button>
+    <div class="bg-stratton-900 rounded-3xl p-8 mb-4 shadow-2xl relative overflow-hidden group">
+      <!-- Decor -->
+      <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+      <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex items-center gap-6">
+          <RouterLink to="/app/dashboard" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
+            <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+          </RouterLink>
+
+          <div>
+            <h1 class="text-4xl font-serif font-bold text-white tracking-wide leading-tight">Baza Wiedzy</h1>
+            <p class="text-slate-400 max-w-xl text-lg mt-1 tracking-tight">Pliki i dokumenty</p>
+          </div>
         </div>
-        <div class="relative w-full max-w-sm">
-          <input v-model="searchQuery" type="text" placeholder="Szukaj w plikach..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-sky-500 focus:border-sky-500" />
-          <AppIcon name="search" class="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+
+        <div class="flex items-center gap-4">
+          <div v-if="activeCategory" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50 text-stratton-gold text-xs font-semibold backdrop-blur-sm">
+            <span>{{ categoryNames[activeCategory] }}</span>
+            <button type="button" class="text-slate-400 hover:text-white" @click="activeCategory = null">✕</button>
+          </div>
+          <div class="relative w-full max-w-sm">
+            <input v-model="searchQuery" type="text" placeholder="Szukaj w plikach..." class="w-full pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 backdrop-blur-sm transition-all text-lg font-medium" />
+            <AppIcon name="search" class="absolute left-3 top-4 h-4 w-4 text-slate-400" />
+          </div>
+          <button type="button" class="px-6 py-3 bg-stratton-gold hover:bg-white text-stratton-900 rounded-xl font-bold transition-all shadow-lg shadow-stratton-gold/10" @click="openUpload">
+            Dodaj plik
+          </button>
         </div>
-        <button type="button" class="px-4 py-2 bg-sky-600 text-white rounded-md text-sm font-semibold shadow hover:bg-sky-700" @click="openUpload">
-          Dodaj plik
-        </button>
       </div>
     </div>
 

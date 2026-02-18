@@ -17,6 +17,11 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/invoice-preview/:invoiceId', name: 'invoice-preview', component: () => import('@/views/hr/InvoicePreviewView.vue'), meta: { requiresAuth: true } },
   { path: '/app/structure', name: 'structure', component: () => import('@/views/StructureView.vue'), meta: { requiresAuth: true } },
   { path: '/app/hr-panel', name: 'hr-panel', component: () => import('@/views/hr/HrPanelView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/recruitment', name: 'recruitment', component: () => import('@/views/RecruitmentView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/news-management', name: 'news-management', component: () => import('@/views/admin/NewsManagementView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/users', name: 'user-management', component: () => import('@/views/admin/UsersManagementView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/admin-analytics', name: 'admin-analytics', component: () => import('@/views/admin/AdminAnalyticsView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/admin-logs', name: 'admin-logs', component: () => import('@/views/admin/SystemLogsView.vue'), meta: { requiresAuth: true } },
   { path: '/app/admin', name: 'admin', component: () => import('@/views/admin/AdminPanelView.vue'), meta: { requiresAuth: true } },
   { path: '/app/admin-invoices', name: 'admin-invoices', component: () => import('@/views/admin/AdminInvoicesView.vue'), meta: { requiresAuth: true } },
   { path: '/app/autenti-panel', name: 'autenti-panel', component: () => import('@/views/admin/AutentiPanelView.vue'), meta: { requiresAuth: true } },
@@ -30,6 +35,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/calculator', name: 'calculator', component: () => import('@/views/CalculatorView.vue'), meta: { requiresAuth: true } },
   { path: '/app/leaderboard', name: 'leaderboard', component: () => import('@/views/LeaderboardView.vue'), meta: { requiresAuth: true } },
   { path: '/app/settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/meetings', name: 'meetings', component: () => import('@/views/MeetingsManagementView.vue'), meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({
@@ -53,6 +59,11 @@ router.beforeEach(async (to) => {
   }
   await viewPermissions.ensureLoaded()
   const role = session.currentUser?.role || auth.user?.roles?.find((r) => typeof r === 'string')
+  
+  if (to.name === 'meetings') {
+    console.log(`Router: checking access to meetings for role: ${role}`)
+  }
+
   if (String(to.name || '') === 'settings') {
     if (!viewPermissions.isSettingsAllowed(role)) {
       return { path: '/app/dashboard' }

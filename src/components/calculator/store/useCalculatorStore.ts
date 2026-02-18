@@ -126,9 +126,9 @@ export const useCalculatorStore = defineStore('calculator', () => {
     return saved ? JSON.parse(saved) : [];
   })());
 
-  const prowizjaProc = ref(26);
+  const prowizjaProc = ref(28);
   const comparisonState = ref<ComparisonState>({
-    activeCard: 'PRIME',
+    activeCard: 'STANDARD',
     customStandardRate: 28,
     customPrimeRate: 26,
   });
@@ -153,8 +153,9 @@ export const useCalculatorStore = defineStore('calculator', () => {
     const sumaKosztStandard = szczegoly.reduce((acc, w) => acc + w.standard.kosztPracodawcy, 0);
     const sumaKosztPodzial = szczegoly.reduce((acc, w) => acc + w.podzial.kosztPracodawcy, 0);
     const sumaBruttoSwiadczen = szczegoly.reduce((acc, w) => acc + w.podzial.swiadczenie.brutto, 0);
+    const sumaNettoSwiadczen = szczegoly.reduce((acc, w) => acc + w.podzial.swiadczenie.netto, 0);
     const oszczednoscBrutto = sumaKosztStandard - sumaKosztPodzial;
-    const prowizja = sumaBruttoSwiadczen * (prowizjaProc.value / 100);
+    const prowizja = sumaNettoSwiadczen * (prowizjaProc.value / 100);
     const oszczednoscNetto = oszczednoscBrutto - prowizja;
 
     return {

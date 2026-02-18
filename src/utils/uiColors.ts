@@ -9,6 +9,10 @@ export const notificationTones: Record<string, NotificationTone> = {
   WARNING: { icon: 'bolt', className: 'text-amber-500' },
   TASK: { icon: 'list', className: 'text-indigo-600' },
   NOTE: { icon: 'document-text', className: 'text-gray-500' },
+  REMINDER: { icon: 'clock', className: 'text-blue-500' },
+  CONTACT: { icon: 'phone', className: 'text-indigo-500' },
+  ATTENTION: { icon: 'exclamation-circle', className: 'text-amber-600 font-bold' },
+  REPRIMAND: { icon: 'x-circle', className: 'text-red-600 font-bold' },
 }
 
 export const getNotificationTone = (type?: string): NotificationTone => {

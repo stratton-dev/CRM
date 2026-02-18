@@ -175,15 +175,15 @@ watch(
         <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
           <div class="md:col-span-2">
             <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Imię i nazwisko</label>
-            <input v-model="newContact.name" type="text" class="mt-2 w-full border border-slate-200 rounded-lg px-4 py-3" />
+            <input v-model="newContact.name" type="text" autocomplete="new-password" name="sp_contact_name" class="mt-2 w-full border border-slate-200 rounded-lg px-4 py-3" />
           </div>
           <div>
             <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Email</label>
-            <input v-model="newContact.email" type="email" class="mt-2 w-full border border-slate-200 rounded-lg px-4 py-3" />
+            <input v-model="newContact.email" type="email" autocomplete="new-password" name="sp_contact_email" class="mt-2 w-full border border-slate-200 rounded-lg px-4 py-3" />
           </div>
           <div>
             <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">Telefon</label>
-            <input v-model="newContact.phone" type="text" class="mt-2 w-full border border-slate-200 rounded-lg px-4 py-3" />
+            <input v-model="newContact.phone" type="text" autocomplete="new-password" name="sp_contact_phone" class="mt-2 w-full border border-slate-200 rounded-lg px-4 py-3" />
           </div>
           <div>
             <button type="button" class="w-full bg-slate-900 text-white px-4 py-3 rounded-lg text-xs font-bold" @click="addContact">

@@ -56,7 +56,11 @@ import {
   ScaleIcon,
   VideoCameraIcon,
   PresentationChartLineIcon,
-  PlayIcon
+  PlayIcon,
+  TrashIcon,
+  PlusIcon,
+  PaperAirplaneIcon,
+  CheckIcon
 } from '@heroicons/vue/24/outline'
 
 const props = withDefaults(
@@ -95,6 +99,7 @@ const iconMap: Record<string, any> = {
   dollar: CurrencyDollarIcon,
   calendar: CalendarDaysIcon,
   envelope: EnvelopeIcon,
+  'paper-airplane': PaperAirplaneIcon,
   'book-open': BookOpenIcon,
   search: MagnifyingGlassIcon,
   bell: BellIcon,
@@ -111,6 +116,7 @@ const iconMap: Record<string, any> = {
   'shield-check': ShieldCheckIcon,
   'graduation-cap': AcademicCapIcon,
   'user-plus': UserPlusIcon,
+  plus: PlusIcon,
   stopwatch: ClockIcon,
   'file-invoice-dollar': DocumentTextIcon,
   'document-text': DocumentTextIcon,
@@ -125,12 +131,15 @@ const iconMap: Record<string, any> = {
   xmark: XMarkIcon,
   'x-circle': XCircleIcon,
   'check-circle': CheckCircleIcon,
+  check: CheckIcon,
   'exclamation-triangle': ExclamationTriangleIcon,
   'lock-closed': LockClosedIcon,
   building: BuildingOffice2Icon,
   phone: PhoneIcon,
   printer: PrinterIcon,
   'pencil-square': PencilSquareIcon,
+  edit: PencilSquareIcon,
+  trash: TrashIcon,
   'scale': ScaleIcon,
   'video-camera': VideoCameraIcon,
   'presentation-chart-line': PresentationChartLineIcon,

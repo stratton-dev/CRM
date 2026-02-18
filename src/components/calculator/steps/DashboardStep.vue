@@ -64,7 +64,7 @@ const closeNewCalcModal = () => {
         </div>
         <div>
           <div class="text-xs uppercase tracking-widest text-slate-300">Stratton Prime</div>
-          <h2 class="text-2xl font-bold">Kalkulator Optymalizacji Wynagrodzeń</h2>
+          <h2 class="text-2xl font-bold">Kalkulator symulacji oszczędności</h2>
         </div>
       </div>
       <p class="text-sm text-slate-300 max-w-2xl">

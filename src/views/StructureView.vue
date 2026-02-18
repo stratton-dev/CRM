@@ -10,9 +10,14 @@ import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import StructureChartView from '@/components/StructureChartView.vue'
 import type { EntityType, User, UserRole } from '@/types/models'
 
 type TreeNode = User & { level: number; hasChildren: boolean; isLast: boolean; parentChain: boolean[]; isTeamNode?: boolean }
+
+const props = defineProps<{
+  embedded?: boolean
+}>()
 
 const router = useRouter()
 const structure = useStructureStore()
@@ -22,6 +27,7 @@ const mailbox = useMailboxStore()
 const toast = useToastStore()
 const auth = useAuthStore()
 
+const viewMode = ref<'list' | 'chart'>('list')
 const searchQuery = ref('')
 const selectedNodeId = ref<string | null>(null)
 const draggedNode = ref<User | null>(null)
@@ -860,12 +866,15 @@ const addUser = async () => {
 <template>
   <div class="space-y-6">
     <div class="flex justify-between items-center">
-      <div>
+      <div v-if="!embedded">
         <h1 class="text-2xl font-bold text-gray-900">Struktura Organizacji</h1>
         <p class="text-sm text-gray-500">
           <span v-if="currentUser?.role === 'ADMIN'">Widok globalny (Super Admin) - Zarządzaj całą organizacją</span>
           <span v-else>Zarządzaj swoim zespołem i monitoruj strukturę.</span>
         </p>
+      </div>
+      <div v-else>
+         <!-- Spacer if header is hidden -->
       </div>
       <div class="flex space-x-3 items-center">
         <button
@@ -876,6 +885,26 @@ const addUser = async () => {
         >
           Dodaj zespół
         </button>
+
+        <div class="flex items-center bg-slate-200 rounded-lg p-1">
+          <button 
+            @click="viewMode = 'list'" 
+            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all"
+            :class="viewMode === 'list' ? 'bg-white text-slate-800 shadow' : 'bg-transparent text-slate-500 hover:bg-slate-300/50'"
+          >
+            <AppIcon name="list" class="h-4 w-4 inline-block mr-1.5 align-middle" />
+            Lista
+          </button>
+          <button 
+            @click="viewMode = 'chart'" 
+            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all"
+            :class="viewMode === 'chart' ? 'bg-white text-slate-800 shadow' : 'bg-transparent text-slate-500 hover:bg-slate-300/50'"
+          >
+            <AppIcon name="chart-network" class="h-4 w-4 inline-block mr-1.5 align-middle" />
+            Schemat
+          </button>
+        </div>
+
         <div class="relative">
           <input
             v-model="searchQuery"
@@ -899,7 +928,7 @@ const addUser = async () => {
         <button
           v-if="currentUser?.role === 'ADMIN'"
           type="button"
-          class="px-4 py-2 text-xs font-bold rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition disabled:opacity-60"
+          class="px-4 py-2 text-xs font-bold rounded-md border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition disabled:opacity-60"
           :disabled="isSyncing"
           @click="syncKeycloak"
         >
@@ -930,7 +959,7 @@ const addUser = async () => {
         </div>
       </div>
 
-      <div class="divide-y divide-gray-100">
+      <div v-if="viewMode === 'list'" class="divide-y divide-gray-100">
         <div
           v-for="node in visibleNodes"
           :key="node.id"
@@ -1188,6 +1217,9 @@ const addUser = async () => {
           <p class="text-lg font-medium">Struktura jest pusta</p>
           <p class="text-sm mt-1">Rozpocznij od dodania pierwszego Dyrektora Handlowego.</p>
         </div>
+      </div>
+      <div v-if="viewMode === 'chart'">
+        <StructureChartView :users="users" />
       </div>
     </div>
 

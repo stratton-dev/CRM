@@ -48,6 +48,7 @@ type BaseTotals = {
   sumaKosztStandard: number;
   sumaKosztPodzial: number;
   sumaBruttoSwiadczen: number;
+  sumaNettoSwiadczen: number;
   standard: {
     kosztPracodawcy: number;
     zusPracodawca: number;
@@ -139,6 +140,7 @@ const buildBaseTotals = (details: any[]): BaseTotals => {
     sumaKosztStandard: details.reduce((acc: number, w: any) => acc + w.standard.kosztPracodawcy, 0),
     sumaKosztPodzial: details.reduce((acc: number, w: any) => acc + w.podzial.kosztPracodawcy, 0),
     sumaBruttoSwiadczen: details.reduce((acc: number, w: any) => acc + w.podzial.swiadczenie.brutto, 0),
+    sumaNettoSwiadczen: details.reduce((acc: number, w: any) => acc + w.podzial.swiadczenie.netto, 0),
     standard: {
       kosztPracodawcy: details.reduce((acc: number, w: any) => acc + w.standard.kosztPracodawcy, 0),
       zusPracodawca: details.reduce((acc: number, w: any) => acc + w.standard.zusPracodawca.suma, 0),
@@ -159,7 +161,7 @@ const buildBaseTotals = (details: any[]): BaseTotals => {
 };
 
 const buildStats = (base: BaseTotals, prowizjaRate: number): OfferStats => {
-  const prowizja = base.sumaBruttoSwiadczen * (prowizjaRate / 100);
+  const prowizja = base.sumaNettoSwiadczen * (prowizjaRate / 100);
   const oszczednoscBrutto = base.sumaKosztStandard - base.sumaKosztPodzial;
   const oszczednoscNetto = oszczednoscBrutto - prowizja;
   const totalCostModel = base.sumaKosztPodzial + prowizja;
@@ -551,7 +553,7 @@ const generateOfferHTML = (
           <img class="cover-watermark" src="/logo.svg" alt="" />
           <div>
             <div class="cover-title">STRATTON PRIME</div>
-            <div class="cover-sub">Oferta Eliton Prime™</div>
+            <div class="cover-sub">Oferta Eliton Prime<sup>TM</sup></div>
           </div>
           <div>
             <div style="font-size: 12px; text-transform: uppercase; opacity: 0.7;">Przygotowano dla:</div>
@@ -583,7 +585,7 @@ const generateOfferHTML = (
         <div class="page-body page-pad">
           <div class="grid-two">
             <div>
-              <div class="section-title">Kalkulacja przewidywalnych oszczędności Eliton Prime</div>
+              <div class="section-title">Kalkulacja przewidywalnych oszczędności Eliton Prime<sup>TM</sup></div>
               <div class="info-card" style="margin-bottom: 12px;">
                 <div class="info-label">Numer kalkulacji</div>
                 <div class="info-value">${offerNumber}</div>
@@ -593,7 +595,7 @@ const generateOfferHTML = (
                 <div class="info-value">${safeText(firma.osobaKontaktowa)}</div>
                 <div class="info-value small" style="margin-top: 8px;">Kalkulacje wykonane za zgodą Firmy: ${safeText(firma.nazwa)} na podstawie danych podanych na spotkaniu.</div>
               </div>
-              <div class="section-title">Oferta Eliton Prime</div>
+              <div class="section-title">Oferta Eliton Prime<sup>TM</sup></div>
               <div class="grid-two">
                 <div class="kpi-card highlight">
                   <div class="kpi-label">Prognozowana oszczędność roczna</div>
@@ -621,11 +623,11 @@ const generateOfferHTML = (
                 <span class="badge-blue">Model ${isPlus ? 'WIN-WIN' : 'STANDARD'}</span>
               </div>
               <div class="info-value small">
-              Oferta Eliton	Prime i Eliton Prime PLUS
+              Oferta Eliton Prime<sup>TM</sup> i Eliton Prime<sup>TM</sup> PLUS
               <ul>
                 <li> dane do kalkulacji zakładają wysokości wynagrodzeń przeszłych pokazując możliwości przyszłych o szczędności.</li>
                 <li> umowa główna jest	umową otwartą opartą na comiesięcznych nowych kalkulacjach adekwatnych do wysokości prognozowanych wypłat.</li>
-                <li> opcja PLUS gwarantuje podwyżki w wysokości +5% wynagrodzenia netto dla każdego pracownika korzystającego z modelu Eliton Prime FINANSOWANE PRZEZ STRATTONPRIME.</li>
+                <li> opcja PLUS gwarantuje podwyżki w wysokości +5% wynagrodzenia netto dla każdego pracownika korzystającego z modelu Eliton Prime<sup>TM</sup> FINANSOWANE PRZEZ STRATTONPRIME.</li>
               </div>
            </div>
             <div>
@@ -711,13 +713,13 @@ const generateOfferHTML = (
       <div class="page">
         ${header('Wizualizacja opłat i wynagrodzeń')}
       <div class="page-body page-pad">
-            <div class="info-value small"> Niniejsza ilustracja przedstawia potencjał finansowy wynikający z wdrożenia modelu wynagradzania Eliton Prime™ 
+            <div class="info-value small"> Niniejsza ilustracja przedstawia potencjał finansowy wynikający z wdrożenia modelu wynagradzania Eliton Prime<sup>TM</sup> 
             w Państwa firmie. KALKULACJA została przygotowana w oparciu o przekazane dane dotyczące struktury wynagrodzeń 
             oraz obowiązujące przepisy prawa pracy i podatkowego.
             </div>
          <div class="grid-two" style="margin-bottom:16px;">
             <div style="font-size:9px;">
-            Model Eliton Prime™ pozwala na:
+            Model Eliton Prime<sup>TM</sup> pozwala na:
             <ul>
               <li>redukcję pozapłacowych kosztów zatrudnienia,</li>
               <li>zachowanie lub zwiększenie wynagrodzeń netto pracowników,</li>
@@ -731,14 +733,14 @@ const generateOfferHTML = (
               <div class="info-value">${formatPLN(monthlyFeesAfterWages)}</div>
             </div>
           </div>
-          <div class="section-title">Wizualizacja opłat i wynagrodzeń po wdrożeniu Eliton Prime</div>
+          <div class="section-title">Wizualizacja opłat i wynagrodzeń po wdrożeniu Eliton Prime<sup>TM</sup></div>
           <table class="compare-table">
             <thead>
               <tr>
                 <th>Pozycja</th>
                 <th>Tak aktualnie rozlicza się Państwa firma</th>
-                <th>Eliton Prime Standard</th>
-                <th>Rekomendujemy Eliton Prime Plus</th>
+                <th>Eliton Prime<sup>TM</sup> Standard</th>
+                <th>Rekomendujemy Eliton Prime<sup>TM</sup> Plus</th>
               </tr>
             </thead>
             <tbody>
@@ -773,7 +775,7 @@ const generateOfferHTML = (
                 <td>${formatPLN(modelBaseCost)}</td>
               </tr>
               <tr>
-                <td>Wdrożenie Eliton Prime w Państwa firmie</td>
+                <td>Wdrożenie Eliton Prime<sup>TM</sup> w Państwa firmie</td>
                 <td>—</td>
                 <td>0 zł</td>
                 <td>0 zł</td>
@@ -809,7 +811,7 @@ const generateOfferHTML = (
                 <td>${formatPLN(plusSplit.fee)}</td>
               </tr>
               <tr class="row-total">
-                <td>Całkowity koszt pracodawcy (wynagrodzenie + składki + podatek + Eliton Prime)</td>
+                <td>Całkowity koszt pracodawcy (wynagrodzenie + składki + podatek + Eliton Prime<sup>TM</sup>)</td>
                 <td>${formatPLN(currentTotalCost)}</td>
                 <td>${formatPLN(statsStandard.totalCostModel)}</td>
                 <td>${formatPLN(statsPlus.totalCostModel)}</td>
@@ -818,9 +820,9 @@ const generateOfferHTML = (
           </table>
           <div class="info-card" style="margin-top: 12px;">
             <div class="info-value small" style="margin-top: 0;">
-              <strong>Oferta Eliton Prime i Eliton Prime PLUS</strong><br/>
+              <strong>Oferta Eliton Prime<sup>TM</sup> i Eliton Prime<sup>TM</sup> PLUS</strong><br/>
               Patrząc na powyższe zestawienie widzimy możliwość wygenerowania dla Państwa firmy oszczędności na poziomie
-              <strong>${formatPLN(statsStandard.oszczednoscMiesieczna)}</strong> miesięcznie. Przy wyborze Eliton Prime Plus
+              <strong>${formatPLN(statsStandard.oszczednoscMiesieczna)}</strong> miesięcznie. Przy wyborze Eliton Prime<sup>TM</sup> Plus
               gwarantujemy podwyżki dla wszystkich pracowników na poziomie <strong>${formatPLN(plusSplit.raise)}</strong> oraz
               za wsparcie działu administracji dodatkowy bonus w wysokości <strong>${formatPLN(plusSplit.admin)}</strong>.
               Biorąc pod uwagę aktualny model rozliczania, podejmując z nami współpracę oszczędzają Państwo kapitał na inwestycję,
@@ -840,14 +842,14 @@ const generateOfferHTML = (
         ${header('Scenariusze rocznych oszczędności')}
       <div class="page-body page-pad">
           <div class="info-card" style="margin-bottom: 12px;">
-            <div class="info-label">Oferta Eliton Prime</div>
+            <div class="info-label">Oferta Eliton Prime<sup>TM</sup></div>
             <div class="info-value small" style="margin-top: 6px;">
-              Wysokość prezentowanych oszczędności oraz efektów finansowych wynikających z wdrożenia modelu Eliton Prime™ ma charakter orientacyjny i została obliczona na podstawie danych przekazanych przez Klienta, obowiązujących przepisów
+              Wysokość prezentowanych oszczędności oraz efektów finansowych wynikających z wdrożenia modelu Eliton Prime<sup>TM</sup> ma charakter orientacyjny i została obliczona na podstawie danych przekazanych przez Klienta, obowiązujących przepisów
               prawa oraz założeń przyjętych na dzień sporządzenia niniejszej ilustracji.<br/>
               W przypadku zmiany parametrów wejściowych, w szczególności: struktury zatrudnienia, rodzaju umów, wysokości
               wynagrodzeń, liczby pracowników objętych modelem, przepisów prawa pracy, podatkowego lub ubezpieczeniowego,
               wartości prezentowanych oszczędności mogą ulec zmianie.<br/>
-              Całkowity koszt zatrudnienia po wdrożeniu modelu Eliton Prime™ nie będzie wyższy niż koszt zatrudnienia w&nbspaktualnym systemie, przy zachowaniu zgodności z&nbsp§2 ust. 1 pkt 26 Rozporządzenia MPiPS oraz obowiązkiem wykazania przychodu w PIT-11 z zaliczką 12% podatku dochodowego.<br/>
+              Całkowity koszt zatrudnienia po wdrożeniu modelu Eliton Prime<sup>TM</sup> nie będzie wyższy niż koszt zatrudnienia w&nbspaktualnym systemie, przy zachowaniu zgodności z&nbsp§2 ust. 1 pkt 26 Rozporządzenia MPiPS oraz obowiązkiem wykazania przychodu w PIT-11 z zaliczką 12% podatku dochodowego.<br/>
               Analiza została przygotowana przy założeniu: zachowania obecnych wynagrodzeń netto pracowników, pełnej zgodności
               wdrożenia z dokumentacją opracowaną przez Stratton Prime, standardowego profilu ryzyka podatkowego i&nbsp
               ubezpieczeniowego, wdrożenia modelu zgodnie z rekomendacjami doradczymi.
@@ -867,11 +869,11 @@ const generateOfferHTML = (
                 <td>0 zł</td>
               </tr>
               <tr>
-                <td>Eliton Prime Standard</td>
+                <td>Eliton Prime<sup>TM</sup> Standard</td>
                 <td>${formatPLN(statsStandard.oszczednoscRoczna)}</td>
               </tr>
               <tr>
-                <td>Eliton Prime Plus</td>
+                <td>Eliton Prime<sup>TM</sup> Plus</td>
                 <td>${formatPLN(statsPlus.oszczednoscRoczna)}</td>
               </tr>
             </tbody>
@@ -923,10 +925,10 @@ const generateOfferHTML = (
               <tr>
                 <th>Miesiąc</th>
                 <th>Koszt bez modelu narastająco</th>
-                <th>Koszt Eliton Prime narastająco</th>
-                <th>Koszt Eliton Prime Plus narastająco</th>
-                <th>Oszczędność Eliton Prime narastająco</th>
-                <th>Oszczędność Eliton Prime Plus narastająco</th>
+                <th>Koszt Eliton Prime<sup>TM</sup> narastająco</th>
+                <th>Koszt Eliton Prime<sup>TM</sup> Plus narastająco</th>
+                <th>Oszczędność Eliton Prime<sup>TM</sup> narastająco</th>
+                <th>Oszczędność Eliton Prime<sup>TM</sup> Plus narastająco</th>
               </tr>
             </thead>
             <tbody>
@@ -1323,15 +1325,15 @@ const generateOfferHTML = (
         const comparisonCanvas = document.getElementById('tenYearComparison');
         if (comparisonCanvas) drawCostComparison(comparisonCanvas, [
           { label: 'Koszty zatrudnienia', value: tenYearCurrentCost, color: '#EF4444' },
-          { label: 'Suma opłat Eliton Prime', value: tenYearStandardCost, color: '#64748B' },
-          { label: 'Suma opłat Eliton Prime Plus', value: tenYearPlusCost, color: '#16A34A' },
+          { label: 'Suma opłat Eliton Prime™', value: tenYearStandardCost, color: '#64748B' },
+          { label: 'Suma opłat Eliton Prime Plus™', value: tenYearPlusCost, color: '#16A34A' },
         ]);
 
         const comparisonMonthCanvas = document.getElementById('tenYearComparisonMonth');
         if (comparisonMonthCanvas) drawCostComparison(comparisonMonthCanvas, [
           { label: 'Koszty zatrudnienia', value: tenYearCurrentCost, color: '#EF4444' },
-          { label: 'Suma opłat Eliton Prime', value: tenYearStandardCost, color: '#64748B' },
-          { label: 'Suma opłat Eliton Prime Plus', value: tenYearPlusCost, color: '#16A34A' },
+          { label: 'Suma opłat Eliton Prime™', value: tenYearStandardCost, color: '#64748B' },
+          { label: 'Suma opłat Eliton Prime Plus™', value: tenYearPlusCost, color: '#16A34A' },
         ]);
 
         const yearByYearCanvas = document.getElementById('yearByYearChart');

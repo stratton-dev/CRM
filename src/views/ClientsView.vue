@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -9,6 +9,7 @@ import { useClientStore } from '@/stores/client'
 import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
+import { useNotificationStore } from '@/stores/notification'
 import { useMailboxStore } from '@/stores/mailbox'
 import { api } from '@/api/client'
 import type { Client } from '@/types/models'
@@ -25,6 +26,14 @@ type ClientContact = {
   updated_at?: string | null
 }
 
+const emit = defineEmits(['select'])
+
+const props = defineProps<{
+  embedded?: boolean
+  dateFrom?: string
+  dateTo?: string
+}>()
+
 const auth = useAuthStore()
 const finance = useFinanceStore()
 const data = useDataStore()
@@ -32,11 +41,12 @@ const clientStore = useClientStore()
 const session = useSessionStore()
 const structure = useStructureStore()
 const toast = useToastStore()
+const notify = useNotificationStore()
 const mailboxStore = useMailboxStore()
 const router = useRouter()
 const route = useRoute()
 
-const { clients, clientPagination } = storeToRefs(clientStore)
+const { customers: clients } = storeToRefs(clientStore)
 const { invoices } = storeToRefs(finance)
 const { users: dataUsers } = storeToRefs(structure)
 const { users: structureUsers } = storeToRefs(structure)
@@ -51,6 +61,7 @@ const sortField = ref<keyof Client | 'opiekunDisplay' | ''>('lastActionDate')
 const sortDir = ref<'asc' | 'desc'>('desc')
 
 const draggedClientId = ref<string | null>(null)
+const expandedClientId = ref<string | null>(null)
 const selectedActivityType = ref('CALL')
 const activityDescription = ref('')
 const consentCatalog = ref<Array<{ id: string; code: string; title: string; description: string; required: boolean; updated_at?: string | null; file_url?: string | null; file_name?: string | null }>>([])
@@ -83,14 +94,8 @@ const calculationStatuses = ref<Array<{ key: string; label: string }>>([])
 const calculationsError = ref<string | null>(null)
 
 const kanbanStages: Array<{ status: Client['status']; title: string }> = [
-  { status: 'NEW', title: 'Nowy' },
-  { status: 'IN_TALKS', title: 'W Rozmowach' },
-  { status: 'OFFER_PREPARING', title: 'Przygotowanie Oferty' },
-  { status: 'OFFER_GENERATED', title: 'Oferta Wygenerowana' },
-  { status: 'CALCULATION_SENT', title: 'Wysłano Ofertę' },
-  { status: 'SIGNED', title: 'Podpisany' },
+  { status: 'SIGNED', title: 'Klienci Stratton Prime' },
   { status: 'TERMINATED', title: 'Umowa Rozwiązana' },
-  { status: 'RESIGNED', title: 'Rezygnacja' },
 ]
 
 const filteredContacts = computed(() => {
@@ -139,10 +144,20 @@ const displayedClients = computed(() => {
   const sField = sortField.value
   const sDir = sortDir.value
 
+  const roleMap: Record<string, string> = {
+    'SALES': 'DORADCA BIZNESOWY',
+    'ADMIN': 'ADMINISTRATOR',
+    'MANAGER': 'MANAGER',
+    'DIRECTOR': 'DYREKTOR',
+  }
+
   let list = clients.map((client) => {
     const owner = userList.find((user) => user.id === client.ownerId)
-    const opiekunDisplay = owner ? `${owner.name} (${owner.hierarchicalId || 'Brak ID'})` : 'Nieprzypisany'
-    return { ...client, opiekunDisplay }
+    const opiekunRole = owner ? (roleMap[owner.role] || owner.role) : ''
+    const opiekunName = owner ? owner.name : 'Nieprzypisany'
+    const opiekunHierarchy = owner?.hierarchicalId || 'Brak'
+    const opiekunDisplay = owner ? `${opiekunRole} ${opiekunName} (${opiekunHierarchy})` : 'Nieprzypisany'
+    return { ...client, opiekunDisplay, opiekunName, opiekunHierarchy, opiekunRole }
   })
 
   if (term) {
@@ -153,6 +168,30 @@ const displayedClients = computed(() => {
       client.contactName.toLowerCase().includes(term) ||
       (client.opiekunDisplay || '').toLowerCase().includes(term)
     )
+  }
+
+  if (props.embedded && (props.dateFrom || props.dateTo)) {
+    list = list.filter((client) => {
+      const activeDate = client.lastActionDate ? new Date(client.lastActionDate) : null
+      if (!activeDate) return false
+      
+      // Reset filtering time to compare only dates
+      activeDate.setHours(0, 0, 0, 0)
+      
+      if (props.dateFrom) {
+        const from = new Date(props.dateFrom)
+        from.setHours(0, 0, 0, 0)
+        if (activeDate < from) return false
+      }
+
+      if (props.dateTo) {
+        const to = new Date(props.dateTo)
+        to.setHours(0, 0, 0, 0)
+        if (activeDate > to) return false
+      }
+
+      return true
+    })
   }
 
   if (sField) {
@@ -167,6 +206,32 @@ const displayedClients = computed(() => {
 
   return list
 })
+
+const clientsPerPage = 10
+const clientsPage = ref(1)
+const totalClientPages = computed(() => Math.max(1, Math.ceil(displayedClients.value.length / clientsPerPage)))
+const paginatedClients = computed(() => {
+  const start = (clientsPage.value - 1) * clientsPerPage
+  return displayedClients.value.slice(start, start + clientsPerPage)
+})
+
+watch(displayedClients, () => {
+  clientsPage.value = 1
+})
+
+watch(totalClientPages, (newTotal) => {
+  if (clientsPage.value > newTotal) {
+    clientsPage.value = newTotal || 1
+  }
+})
+
+const nextClientsPage = () => {
+  if (clientsPage.value < totalClientPages.value) clientsPage.value += 1
+}
+
+const prevClientsPage = () => {
+  if (clientsPage.value > 1) clientsPage.value -= 1
+}
 
 const kanbanData = computed(() =>
   kanbanStages.map((stage) => ({
@@ -224,12 +289,6 @@ onMounted(() => {
   }
 })
 
-const goToPage = async (page: number) => {
-  if (!auth.enabled) return
-  if (page < 1 || page > clientPagination.value.lastPage) return
-  await clientStore.fetchClients({ page })
-}
-
 const setViewMode = (mode: 'list' | 'kanban') => {
   viewMode.value = mode
 }
@@ -242,6 +301,22 @@ const selectClient = (client: Client) => {
     void fetchClientContacts(client.id)
     void fetchClientCalculations(client.id)
   }
+}
+
+const toggleOwnerDetails = (clientId: string) => {
+  if (expandedClientId.value === clientId) {
+    expandedClientId.value = null
+  } else {
+    expandedClientId.value = clientId
+  }
+}
+
+const getClientOwner = (client: any) => {
+  if (!client.ownerId) return null
+  const userList = Array.isArray(auth.enabled ? structureUsers.value : dataUsers.value)
+    ? (auth.enabled ? structureUsers.value : dataUsers.value)
+    : []
+  return userList.find((u) => u.id === client.ownerId) || null
 }
 
 const closePanel = () => {
@@ -268,6 +343,167 @@ const getRemainingReservationDays = (client: Client) => {
 const formatReservationDate = (client: Client) => {
   if (!client.reservationEndDate) return ''
   return new Date(client.reservationEndDate).toLocaleDateString()
+}
+
+const isClientEditOpen = ref(false)
+const isSubmitting = ref(false)
+const clientEditForm = ref({
+  id: '',
+  contactName: '',
+  contactPosition: '',
+  contactPhone: '',
+  contactEmail: '',
+  isDecisionMaker: false,
+  companyName: '',
+  nip: '',
+  address: '',
+  industry: '',
+  companySize: '',
+})
+
+const industries = [
+  "Uprawy rolne, chów i hodowla zwierząt, łowiectwo, włączając działalność usługową",
+  "Leśnictwo i pozyskiwanie drewna",
+  "Rybactwo",
+  "Wydobywanie węgla kamiennego i węgla brunatnego (lignitu)",
+  "Górnictwo ropy naftowej i gazu ziemnego",
+  "Górnictwo rud metali",
+  "Pozostałe górnictwo i wydobywanie",
+  "Usługi wspomagające górnictwo i wydobywanie",
+  "Produkcja art. spożywczych",
+  "Produkcja napojów",
+  "Produkcja wyrobów tytoniowych",
+  "Produkcja wyrobów tekstylnych",
+  "Produkcja odzieży",
+  "Produkcja skór i wyrobów ze skór wyprawionych",
+  "Produkcja wyrobów z drewna oraz korka, z wyłączeniem mebli; Produkcja wyrobów ze słomy i materiałów używanych do wyplatania",
+  "Produkcja papieru i wyrobów z papieru",
+  "Poligrafia i reprodukcja zapisanych nośników informacji",
+  "Wytwarzanie i przetwarzanie koksu i produktów rafinacji ropy naftowej",
+  "Produkcja chemikaliów i wyrobów chemicznych",
+  "Produkcja podstawowych substancji farmaceutycznych oraz leków i pozostałych wyrobów farmaceutycznych",
+  "Produkcja wyrobów z gumy i tworzyw sztucznych",
+  "Produkcja wyrobów z pozostałych mineralnych surowców niemetalicznych",
+  "Produkcja metali",
+  "Produkcja metalowych wyrobów gotowych, z wyłączeniem maszyn i urządzeń",
+  "Produkcja komputerów, wyrobów elektronicznych i optycznych",
+  "Produkcja urządzeń elektrycznych",
+  "Produkcja maszyn i urządzeń, gdzie indziej niesklasyfikowana",
+  "Produkcja pojazdów samochodowych, przyczep i naczep, z wyłączeniem motocykli",
+  "Produkcja pozostałego sprzętu transportowego",
+  "Produkcja mebli",
+  "Pozostała produkcja wyrobów",
+  "Naprawa, konserwacja i instalowanie maszyn i urządzeń",
+  "Wytwarzanie i zaopatrywanie w energię elektryczną, gaz, parę wodną, gorącą wodę i powietrze do układów klimatyzacyjnych",
+  "Pobór, uzdatnianie i dostarczanie wody",
+  "Odprowadzanie i oczyszczanie ścieków",
+  "Zbieranie, przetwarzanie i unieszkodliwianie odpadów oraz odzysk surowców",
+  "Rekultywacją i pozostałe usługi związane z gospodarką odpadami",
+  "Roboty budowlane związane ze wznoszeniem budynków",
+  "Roboty związane z budową obiektów inżynierii lądowej i wodnej",
+  "Roboty budowlane specjalistyczne",
+  "Handel hurtowy i detaliczny pojazdami samochodowymi; Naprawa pojazdów samochodowych",
+  "Handel hurtowy (bez pojazdów samochodowych)",
+  "Handel detaliczny (bez pojazdów samochodowych)",
+  "Transport lądowy oraz rurociągowy",
+  "Transport wodny",
+  "Transport lotniczy",
+  "Magazynowanie i usługi wspomagające transport",
+  "Działalność pocztowa i kurierska",
+  "Zakwaterowanie",
+  "Wyżywienie",
+  "Działalność wydawnicza",
+  "Działalność filmowa, telewizyjna, dźwiękowa i muzyczna",
+  "Nadawanie programów telewizyjnych i radiowych",
+  "Telekomunikacja",
+  "Oprogramowanie i doradztwo w zakresie informatyki",
+  "Zarządzanie stronami WWW, przetwarzanie danych i hosting",
+  "Usługi finansowe z wyłączeniem ubezpieczeń i funduszów emerytalnych",
+  "Ubezpieczenia, reasekuracja i fundusze emerytalne, z wyłączeniem obowiązkowego ubezpieczenia społecznego",
+  "Usługi objęte pośrednictwem finansowym",
+  "Obsługa rynku nieruchomości",
+  "Usługi prawnicze, rachunkowo-księgowe i doradztwo podatkowe",
+  "Działalność firm centralnych i doradztwo związane z zarządzaniem",
+  "Architektura, inżynieria, badania i analizy techniczne",
+  "Badania naukowe i prace rozwojowe",
+  "Reklama, badanie rynku i opinii publicznej",
+  "Projektowanie, fotografia, tłumaczenia, działalność profesjonalna",
+  "Weterynaria",
+  "Wynajem i dzierżawa",
+  "Zatrudnienie",
+  "Turystyka",
+  "Usługi detektywistyczne i ochroniarskie",
+  "Sprzątanie budynków i gospodarowanie terenami zieleni",
+  "Administracja biurowa i wspomaganie prowadzenia działalności gospodarczej",
+  "Administracja publiczna, obrona narodowa i obowiązkowe zabezpieczenia społeczne",
+  "Edukacja",
+  "Opieka zdrowotna",
+  "Pomoc społeczna (z zakwaterowaniem)",
+  "Pomoc społeczna (bez zakwaterowania)",
+  "Kultura i rozrywka",
+  "Biblioteki, archiwa, muzea, zoo oraz inne obiekty kulturalne",
+  "Gry losowe i zakłady wzajemne",
+  "Sport, rozrywka i rekreacja",
+  "Działalność organizacji członkowskich",
+  "Naprawa komputerów i artykułów osobistych oraz domowych",
+  "Pozostała indywidualna działalność usługowa"
+]
+
+const openClientEditModal = (client: Client) => {
+  clientEditForm.value = {
+    id: client.id,
+    contactName: client.contactName || '',
+    contactPosition: client.contactPosition || '',
+    contactPhone: client.contactPhone || '',
+    contactEmail: client.contactEmail || '',
+    isDecisionMaker: client.isDecisionMaker || false,
+    companyName: client.name || '',
+    nip: client.nip || '',
+    address: `${client.street || ''} ${client.buildingNr || ''}, ${client.zip || ''} ${client.city || ''}`.trim(),
+    industry: client.industry || '',
+    companySize: client.companySize || '',
+  }
+  isClientEditOpen.value = true
+}
+
+const handleUpdateClient = async () => {
+    if (!clientEditForm.value.id) return
+    isSubmitting.value = true
+    try {
+        await api.patch(`/v1/clients/${clientEditForm.value.id}`, {
+            name: clientEditForm.value.companyName,
+            nip: clientEditForm.value.nip,
+            contact_name: clientEditForm.value.contactName,
+            contact_phone: clientEditForm.value.contactPhone,
+            contact_email: clientEditForm.value.contactEmail,
+            contact_position: clientEditForm.value.contactPosition,
+            is_decision_maker: clientEditForm.value.isDecisionMaker,
+            address: clientEditForm.value.address,
+            industry: clientEditForm.value.industry,
+            company_size: clientEditForm.value.companySize,
+        })
+        await clientStore.refreshApiData()
+        toast.success('Dane klienta zaktualizowane')
+        isClientEditOpen.value = false
+    } catch (error: any) {
+        toast.error('Błąd aktualizacji: ' + (error.response?.data?.message || error.message))
+    } finally {
+        isSubmitting.value = false
+    }
+}
+
+const handleDeleteClient = async (client: Client) => {
+    if (!confirm(`Czy na pewno chcesz usunąć klienta ${client.name} oraz powiązane z nim dane?`)) {
+        return
+    }
+
+    try {
+        await api.delete(`/v1/clients/${client.id}`)
+        await clientStore.refreshApiData()
+        toast.success('Klient został usunięty')
+    } catch (error: any) {
+        toast.error('Błąd podczas usuwania: ' + (error.response?.data?.message || error.message))
+    }
 }
 
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString() : '—')
@@ -751,8 +987,6 @@ const onDrop = (event: DragEvent, newStatus: Client['status']) => {
 
   if (client.status === 'SIGNED') {
     toast.warning('Zmiana statusu podpisanego klienta wymaga weryfikacji.')
-  } else if (newStatus === 'SIGNED' && ['OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status)) {
-    router.push(`/app/contract-preview/${clientId}`)
   } else if (['RESIGNED', 'TERMINATED'].includes(client.status)) {
     toast.warning(`Nie można przenieść klienta ze statusu '${client.status}'.`)
   } else {
@@ -775,74 +1009,98 @@ if (route.query.expand) {
 </script>
 
 <template>
-  <div class="flex flex-col h-[calc(100vh-112px)]">
-    <div class="bg-gray-50 border-b border-gray-200 p-2 flex items-center space-x-2 shadow-sm flex-shrink-0">
-      <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="router.push('/app/sales/start')">
-        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-        <span>Nowy</span>
-      </button>
-      <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="exportToCsv">
-        <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-        <span>Eksportuj</span>
-      </button>
-      <div class="h-5 w-px bg-gray-300 mx-2"></div>
-      <div class="flex items-center bg-gray-200 rounded p-0.5">
-        <button type="button" class="px-2 py-1 rounded text-sm flex items-center" :class="viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'" @click="setViewMode('list')">
-          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-          Lista
-        </button>
-        <button type="button" class="px-2 py-1 rounded text-sm flex items-center" :class="viewMode === 'kanban' ? 'bg-white shadow-sm' : 'text-gray-500'" @click="setViewMode('kanban')">
-          <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
-          Kanban
-        </button>
-      </div>
+  <div class="flex flex-col" :class="embedded ? 'h-auto min-h-[600px]' : 'h-[calc(100vh-112px)]'">
 
-      <div class="flex-1 max-w-xs relative ml-4">
-        <input v-model="filterText" type="text" placeholder="Filtruj listę..." class="w-full border-gray-300 rounded text-sm pl-8 py-1.5 focus:ring-brand-main focus:border-brand-main bg-white text-gray-900" />
-        <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    <div class="px-6 pt-6 pb-2" v-if="!embedded">
+       <div class="bg-slate-900 text-white rounded-3xl p-8 shadow-xl flex justify-between items-center relative overflow-hidden border border-slate-800">
+          <div class="relative z-10 flex items-center gap-6">
+              <RouterLink to="/app/sales/start" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
+                  <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+              </RouterLink>
+              <div>
+                  <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Klienci</h1>
+                  <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Twoja baza kontaktów</p>
+              </div>
+          </div>
+          <div class="relative z-10 flex items-center gap-4">
+              <!-- Actions -->
+          </div>
+       </div>
+    </div>
+    
+    <div class="bg-gray-50 border-b border-gray-200 p-2 flex items-center shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-xl' : ''">
+      <div class="flex items-center gap-3 ml-4">
+        <AppIcon name="users" class="w-5 h-5 text-brand-main" />
+        <h3 class="font-black text-slate-900 text-xl tracking-tight">Klienci w obsłudze</h3>
       </div>
-      <div class="flex-1"></div>
-      <span class="text-xs text-gray-500 px-4">Liczba: {{ displayedClients.length }}</span>
+      
+      <div class="flex-1 flex items-center justify-end px-4 gap-4">
+        <div class="flex items-center space-x-2">
+          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="router.push('/app/sales/start')">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>Nowy</span>
+          </button>
+          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="exportToCsv">
+            <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Eksportuj</span>
+          </button>
+          <div class="h-5 w-px bg-gray-300 mx-2"></div>
+          <div class="flex items-center bg-gray-200 rounded p-0.5">
+            <button type="button" class="px-2 py-1 rounded text-sm flex items-center" :class="viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'" @click="setViewMode('list')">
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+              Lista
+            </button>
+            <button type="button" class="px-2 py-1 rounded text-sm flex items-center" :class="viewMode === 'kanban' ? 'bg-white shadow-sm' : 'text-gray-500'" @click="setViewMode('kanban')">
+              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+              Kanban
+            </button>
+          </div>
+        </div>
+
+        <div class="w-96 relative">
+          <input v-model="filterText" type="text" placeholder="Szukaj klienta, firmy lub NIP..." class="w-full border-gray-300 rounded-lg text-sm pl-10 py-2 focus:ring-brand-main focus:border-brand-main bg-white text-gray-900 shadow-sm" />
+          <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+      </div>
     </div>
 
-    <div v-if="viewMode === 'list'" class="flex-1 relative overflow-hidden bg-white">
-      <div class="h-full overflow-y-auto">
-        <table class="min-w-full divide-y divide-gray-200">
+    <div v-if="viewMode === 'list'" class="flex-1 relative overflow-hidden bg-white flex flex-col">
+      <div class="flex-1 overflow-auto min-h-0">
+        <table class="min-w-full divide-y divide-gray-200" style="min-width: 1200px;">
           <thead class="bg-gray-50 sticky top-0 z-10">
             <tr>
-              <th class="px-4 py-2 w-10"></th>
               <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('name')">Nazwa Klienta</th>
               <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('opiekunDisplay')">Opiekun</th>
               <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('status')">Status</th>
               <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('lastActionDate')">Ostatnia Aktywność</th>
-              <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('city')">Miasto</th>
               <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rezerwacja</th>
+              <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider pr-6">Akcje</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 bg-white">
+            <template v-for="client in paginatedClients" :key="client.id">
             <tr
-              v-for="client in displayedClients"
-              :key="client.id"
               :id="`client-${client.id}`"
               class="hover:bg-sky-50 cursor-pointer transition-colors"
               :class="selectedClient?.id === client.id ? 'bg-sky-100' : ''"
               @click="selectClient(client)"
             >
-              <td class="px-4 py-2 text-center">
-                <input type="checkbox" class="h-4 w-4 text-brand-main border-gray-300 rounded focus:ring-brand-main" @click.stop />
-              </td>
-              <td class="px-4 py-2 whitespace-nowrap relative">
+              <td class="px-4 py-1.5 whitespace-nowrap relative">
                 <div>
-                  <div class="text-sm font-semibold text-brand-main truncate max-w-[260px]" :title="client.name">{{ client.name }}</div>
-                  <div class="text-xs text-gray-500 font-mono">{{ client.nip }}</div>
+                  <div class="text-[13px] font-semibold text-brand-main truncate max-w-[260px]" :title="client.name">{{ client.name }}</div>
+                  <div class="text-[10px] text-gray-500 font-mono">{{ client.nip }}</div>
                 </div>
               </td>
-              <td class="px-4 py-2 whitespace-nowrap">
-                <div class="text-sm text-gray-800">{{ client.opiekunDisplay }}</div>
+              <td class="px-4 py-1.5 whitespace-nowrap" @click.stop="toggleOwnerDetails(client.id)">
+                <div class="w-fit rounded-lg border border-dashed border-gray-200 px-3 py-1 bg-gray-50 hover:bg-white hover:border-sky-300 transition-colors">
+                  <div v-if="client.opiekunRole" class="text-[8px] font-black text-brand-main uppercase tracking-tighter leading-none mb-1">{{ client.opiekunRole }}</div>
+                  <div class="text-xs font-semibold text-gray-800 leading-tight">{{ client.opiekunName }}</div>
+                  <div class="text-[10px] text-gray-400 font-mono tracking-wide">ID: {{ client.opiekunHierarchy }}</div>
+                </div>
               </td>
-              <td class="px-4 py-2 whitespace-nowrap">
+              <td class="px-4 py-1.5 whitespace-nowrap">
                 <span
-                  class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full"
+                  class="px-2 py-0.5 inline-flex text-[11px] leading-4 font-semibold rounded-full"
                   :class="{
                     'bg-green-100 text-green-800': client.status === 'IN_TALKS',
                     'bg-yellow-100 text-yellow-800': client.status === 'NEW',
@@ -858,48 +1116,111 @@ if (route.query.expand) {
                   {{ statusLabel(client.status) }}
                 </span>
               </td>
-              <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
+              <td class="px-4 py-1.5 whitespace-nowrap text-[11px] text-gray-600">
                 <div class="flex items-center">
-                  <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2.5 h-2.5 rounded-full bg-red-500 mr-2 flex-shrink-0" title="Brak kontaktu od ponad 3 dni!"></span>
+                  <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2 h-2 rounded-full bg-red-500 mr-2 flex-shrink-0" title="Brak kontaktu od ponad 3 dni!"></span>
                   <span>{{ new Date(client.lastActionDate).toLocaleDateString() }}</span>
                 </div>
               </td>
-              <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600">{{ client.city }}</td>
-              <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-600">
-                <span v-if="getRemainingReservationDays(client) !== null && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status) && (getRemainingReservationDays(client) || 0) > 0" class="inline-flex flex-col items-start rounded bg-sky-100 text-sky-700 font-semibold px-2 py-1 leading-tight">
+              <td class="px-4 py-1.5 whitespace-nowrap text-[10px] text-gray-600">
+                <span v-if="getRemainingReservationDays(client) !== null && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status) && (getRemainingReservationDays(client) || 0) > 0" class="inline-flex flex-col items-start rounded bg-sky-100 text-sky-700 font-semibold px-2 py-0.5 leading-tight">
                   <span>rezerwacja do</span>
                   <span>{{ formatReservationDate(client) }}</span>
                 </span>
                 <span v-else class="text-gray-300">—</span>
               </td>
+              <td class="px-4 py-1.5 whitespace-nowrap text-right">
+                <div class="flex items-center justify-end gap-2 text-right">
+                  <button
+                    @click.stop="openClientEditModal(client)"
+                    class="p-1 px-2 rounded-lg border border-transparent text-slate-400 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-50 transition"
+                    title="Edytuj"
+                  >
+                    <AppIcon name="pencil-square" class="w-4 h-4" />
+                  </button>
+                  <button
+                    @click.stop="handleDeleteClient(client)"
+                    class="p-1 px-2 rounded-lg border border-transparent text-slate-400 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition"
+                    title="Usuń"
+                  >
+                    <AppIcon name="trash" class="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
             </tr>
+            <tr v-if="expandedClientId === client.id" class="bg-gray-50 border-y border-gray-200 shadow-inner animate-fade-in">
+              <td colspan="5" class="p-0 cursor-default" @click.stop>
+                <div class="p-4 flex justify-between items-center">
+                <div v-if="getClientOwner(client)" class="flex justify-between items-center w-full">
+                    <div class="flex items-center gap-8 text-xs text-gray-600">
+                        <div>
+                            <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Telefon</span>
+                            <span class="font-medium text-gray-800">{{ getClientOwner(client)?.phone || 'Brak' }}</span>
+                        </div>
+                        <div>
+                            <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Email</span>
+                            <button type="button" class="text-sky-600 hover:text-sky-800 hover:underline flex items-center gap-1 font-medium" @click="mailboxStore.initiateEmailTo(getClientOwner(client)?.email)">
+                                <AppIcon name="envelope" class="w-3 h-3" />
+                                <span>{{ getClientOwner(client)?.email }}</span>
+                            </button>
+                        </div>
+                        <div>
+                            <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Rola</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-white text-gray-600 border border-gray-200 shadow-sm">
+                                {{ getClientOwner(client)?.role || 'Brak' }}
+                            </span>
+                        </div>
+                        <div>
+                             <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Kod Struktury</span>
+                             <span class="font-mono bg-white px-2 py-0.5 rounded border border-gray-200 text-gray-600 shadow-sm">{{ getClientOwner(client)?.hierarchicalId || 'Brak' }}</span>
+                        </div>
+                    </div>
+                
+                    <div class="flex items-center gap-2">
+                       <button type="button" class="p-2 bg-sky-100 text-sky-800 border border-sky-200 rounded-lg hover:bg-sky-200 hover:shadow-md transition shadow-sm" title="Wyślij wiadomość" @click="notify.openMsgModal(getClientOwner(client))">
+                           <AppIcon name="chat-bubble-left-ellipsis" class="w-5 h-5" />
+                       </button>
+                    </div>
+                </div>
+                <div v-else class="text-center text-xs text-gray-500 py-2 w-full">
+                    Brak danych szczegółowych opiekuna w strukturze.
+                </div>
+                </div>
+              </td>
+            </tr>
+            </template>
             <tr v-if="displayedClients.length === 0">
-              <td colspan="8" class="p-8 text-center text-gray-500 text-sm">Brak rekordów spełniających kryteria.</td>
+              <td colspan="5" class="p-8 text-center text-gray-500 text-sm">Brak rekordów spełniających kryteria.</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div v-if="auth.enabled && clientPagination.total > 0" class="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-600">
-        <div>
-          Strona {{ clientPagination.currentPage }} z {{ clientPagination.lastPage }}
-          <span class="ml-2 text-gray-400">({{ clientPagination.total }} rekordów)</span>
+      <div 
+        class="bg-slate-50 border-t border-slate-100 flex justify-between items-center shrink-0"
+        :class="embedded ? 'px-4 py-2' : 'px-6 py-4'"
+      >
+        <div class="uppercase tracking-widest text-[10px] text-slate-400 font-medium">
+          Strona {{ clientsPage }} z {{ totalClientPages }}
+          <span class="ml-2 text-slate-400">({{ displayedClients.length }} rekordów)</span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex gap-2">
           <button
             type="button"
-            class="px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="clientPagination.currentPage <= 1"
-            @click="goToPage(clientPagination.currentPage - 1)"
+            @click="prevClientsPage"
+            :disabled="clientsPage === 1"
+            class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
+            <AppIcon name="chevron-left" class="w-3.5 h-3.5" />
             Poprzednia
           </button>
           <button
             type="button"
-            class="px-2 py-1 rounded border border-gray-300 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            :disabled="clientPagination.currentPage >= clientPagination.lastPage"
-            @click="goToPage(clientPagination.currentPage + 1)"
+            @click="nextClientsPage"
+            :disabled="clientsPage >= totalClientPages"
+            class="px-4 py-2 bg-stratton-gold text-slate-900 rounded-xl text-xs font-bold hover:bg-stratton-gold/90 transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             Następna
+            <AppIcon name="chevron-right" class="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -930,7 +1251,9 @@ if (route.query.expand) {
               <p class="text-[11px] text-gray-400 font-mono mt-1">{{ client.nip }}</p>
               <div class="mt-2 pt-2 border-t border-gray-100">
                 <p class="text-[10px] text-gray-400">Opiekun:</p>
-                <p class="text-xs text-gray-600 font-medium">{{ client.opiekunDisplay }}</p>
+                <div v-if="client.opiekunRole" class="text-[8px] font-black text-brand-main uppercase">{{ client.opiekunRole }}</div>
+                <p class="text-xs text-gray-800 font-bold leading-tight">{{ client.opiekunName }}</p>
+                <p class="text-[10px] text-gray-500 font-mono">ID: {{ client.opiekunHierarchy }}</p>
               </div>
               <div class="text-xs text-gray-400 mt-3 flex justify-between items-center">
                 <span>{{ client.city }}</span>
@@ -1324,6 +1647,131 @@ if (route.query.expand) {
               Zapisz
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client Edit Modal -->
+    <div
+      v-if="isClientEditOpen"
+      class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px]"
+      @click.self="isClientEditOpen = false"
+    >
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Edycja danych klienta</h3>
+            <p class="text-xs text-gray-500 mt-0.5">Zaktualizuj informacje kontaktowe i branżowe</p>
+          </div>
+          <button
+            @click="isClientEditOpen = false"
+            class="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <AppIcon name="x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+
+        <!-- Form Content -->
+        <div class="p-6 overflow-y-auto custom-scrollbar">
+          <div class="grid grid-cols-2 gap-6">
+            <!-- Basic Info -->
+            <div class="col-span-2 space-y-4">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Dane Postawowe</h4>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Nazwa Firmy</label>
+                  <input
+                    v-model="clientEditForm.name"
+                    type="text"
+                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    placeholder="Wpisz nazwę firmy..."
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Branża</label>
+                  <div class="relative">
+                    <select
+                      v-model="clientEditForm.industry"
+                      class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pr-8"
+                    >
+                      <option value="" disabled>Wybierz branżę...</option>
+                      <option v-for="ind in industries" :key="ind" :value="ind">{{ ind }}</option>
+                    </select>
+                    <AppIcon name="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="col-span-2 space-y-4 pt-4 border-t border-gray-100">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Kontakt</h4>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Osoba Kontaktowa</label>
+                  <input
+                    v-model="clientEditForm.contact_person"
+                    type="text"
+                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    placeholder="Imię i nazwisko"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Telefon</label>
+                  <input
+                    v-model="clientEditForm.phone"
+                    type="text"
+                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    placeholder="+48..."
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    v-model="clientEditForm.email"
+                    type="email"
+                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                    placeholder="adres@email.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="col-span-2 space-y-4 pt-4 border-t border-gray-100">
+              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notatki</h4>
+              <div>
+                <textarea
+                  v-model="clientEditForm.notes"
+                  rows="3"
+                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
+                  placeholder="Dodatkowe informacje..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+          <button
+            @click="isClientEditOpen = false"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all"
+            :disabled="isSubmitting"
+          >
+            Anuluj
+          </button>
+          <button
+            @click="handleUpdateClient"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            :disabled="isSubmitting"
+          >
+            <AppIcon v-if="isSubmitting" name="arrow-path" class="w-4 h-4 animate-spin" />
+            <span>{{ isSubmitting ? 'Zapisywanie...' : 'Zapisz zmiany' }}</span>
+          </button>
         </div>
       </div>
     </div>

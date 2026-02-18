@@ -67,7 +67,7 @@ W nawiązaniu do naszego dzisiejszego spotkania i przeprowadzonej analizy sytuac
 Kluczowe wnioski:
 1. Zidentyfikowaliśmy potencjał optymalizacji kosztów ZUS na poziomie ${monthly} PLN miesięcznie.
 2. W skali roku daje to oszczędność rzędu ${annual} PLN.
-3. Wdrożenie rozwiązania Eliton Prime pozwoli nie tylko na oszczędności, ale również na zwiększenie realnego wynagrodzenia pracowników.
+3. Wdrożenie rozwiązania Eliton Prime™ pozwoli nie tylko na oszczędności, ale również na zwiększenie realnego wynagrodzenia pracowników.
 
 W załączeniu przesyłam szczegółową ofertę oraz kalkulację w formacie PDF.
 
@@ -232,10 +232,17 @@ const updateClientProfileStatus = async (status: string) => {
     const { data } = await api.get('/v1/crm-client-profiles', { params: { client_id: resolvedClientId.value, per_page: 1 } })
     const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
     const profile = list.length ? list[0] : null
+
+    // Ustawiamy datę końca rezerwacji na +30 dni od teraz
+    const reservationEndDate = new Date()
+    reservationEndDate.setDate(reservationEndDate.getDate() + 30)
+    const reservationEndDateStr = reservationEndDate.toISOString().split('T')[0]
+
     const payload: Record<string, any> = {
       client_id: resolvedClientId.value,
       owner_user_id: session.currentUser?.id || null,
       status,
+      reservation_end_date: reservationEndDateStr,
     }
     if (profile?.id) {
       await api.patch(`/v1/crm-client-profiles/${profile.id}`, payload)
