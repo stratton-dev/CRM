@@ -33,6 +33,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::before(function (User $user, string $ability) {
+            // Admin and Director role bypass for all permissions
+            // Including check for common admin email and cached role
+            $roleCode = $user->role_cached ?? $user->role?->code;
+            if (in_array($roleCode, ['ADMIN', 'DIRECTOR', 'director', 'admin'], true) || $user->email === 'admin@stratton.pl') {
+                return true;
+            }
+        });
+
         Gate::policy(Client::class, ClientPolicy::class);
         Gate::policy(Meeting::class, MeetingPolicy::class);
         Gate::policy(Calculation::class, CalculationPolicy::class);

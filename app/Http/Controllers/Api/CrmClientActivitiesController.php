@@ -32,6 +32,7 @@ class CrmClientActivitiesController extends Controller
             'type' => 'required|in:CALL,MEETING,EMAIL,NOTE',
             'description' => 'required|string',
             'occurred_at' => 'required|date',
+            'is_completed' => 'nullable|boolean',
         ]);
 
         $userId = $this->resolveUserId($data['user_id']);
@@ -45,9 +46,29 @@ class CrmClientActivitiesController extends Controller
             'type' => $data['type'],
             'description' => $data['description'],
             'occurred_at' => $data['occurred_at'],
+            'is_completed' => $data['is_completed'] ?? false,
         ]);
 
         return response()->json($activity->load(['client:id,name', 'user:id,name,keycloak_id']), 201);
+    }
+
+    public function update(Request $request, CrmClientActivity $activity)
+    {
+        $data = $request->validate([
+            'description' => 'nullable|string',
+            'occurred_at' => 'nullable|date',
+            'is_completed' => 'nullable|boolean',
+        ]);
+
+        $activity->update($data);
+        return $activity->refresh()->load(['client:id,name', 'user:id,name,keycloak_id']);
+    }
+
+    private function resolveUserId($userId)
+    {
+        if (!$userId) {
+            return null;
+        }
     }
 
     public function update(Request $request, CrmClientActivity $crmClientActivity)

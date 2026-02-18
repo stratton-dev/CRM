@@ -12,11 +12,13 @@ class CrmClientActivity extends Model
         'user_id',
         'type',
         'description',
+        'is_completed',
         'occurred_at',
     ];
 
     protected $casts = [
         'occurred_at' => 'datetime',
+        'is_completed' => 'boolean',
     ];
 
     public function client(): BelongsTo

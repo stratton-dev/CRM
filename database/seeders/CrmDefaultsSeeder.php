@@ -133,5 +133,21 @@ class CrmDefaultsSeeder extends Seeder
                 ]);
             }
         }
+
+        $viewPermissions = [
+            'meetings' => ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
+        ];
+
+        foreach ($viewPermissions as $key => $roles) {
+            $exists = DB::table('crm_view_permissions')->where('view_key', $key)->exists();
+            if (!$exists) {
+                DB::table('crm_view_permissions')->insert([
+                    'view_key' => $key,
+                    'roles' => json_encode($roles),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+        }
     }
 }

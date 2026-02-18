@@ -60,6 +60,7 @@ use App\Http\Controllers\Api\Admin\KeycloakTeamsController;
 use App\Http\Controllers\Api\StructureController;
 use App\Http\Controllers\Api\StructureUsersController;
 use App\Http\Controllers\Api\UsersController;
+use App\Http\Controllers\Api\CandidatesController;
 
 Route::get('offers/{token}', PublicOffersController::class);
 Route::post('autenti/webhook', AutentiWebhookController::class);
@@ -87,6 +88,7 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
 
     Route::post('users', [StructureUsersController::class, 'store']);
     Route::get('gus', [GusController::class, 'byNip']);
+    Route::post('meetings/prospect', [MeetingsController::class, 'storeProspect']);
     Route::apiResource('users', UsersController::class)
         ->only(['index', 'show', 'update']);
 
@@ -167,6 +169,9 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::apiResource('crm-events', CrmEventsController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('crm-event-logs', CrmEventLogsController::class)->only(['index', 'store']);
     Route::apiResource('crm-broadcasts', CrmBroadcastsController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Candidates
+    Route::apiResource('candidates', CandidatesController::class);
 
     // Companies and Employees
     Route::apiResource('companies', CompaniesController::class)
@@ -460,11 +465,15 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::apiResource('notifications', NotificationsController::class)
         ->only(['store'])
         ->middleware('can:notifications.create');
-    Route::apiResource('notifications', NotificationsController::class)
-        ->only(['update'])
+    Route::match(['put', 'patch'], 'notifications/{notification}', [NotificationsController::class, 'update'])
         ->middleware('can:notifications.update');
     Route::post('notifications/mark-all-read', [NotificationsController::class, 'markAllRead'])
         ->middleware('can:notifications.update');
+    Route::post('notifications/batch', [NotificationsController::class, 'batchStore'])
+        ->middleware('can:notifications.create');
+    Route::get('notifications/sent', [NotificationsController::class, 'sent'])
+        ->middleware('can:notifications.view');
+
     Route::apiResource('notifications', NotificationsController::class)
         ->only(['destroy'])
         ->middleware('can:notifications.delete');
@@ -519,4 +528,11 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::apiResource('metrics', MetricsController::class)
         ->only(['destroy'])
         ->middleware('can:metrics.delete');
+
+    // Announcements
+    Route::get('announcements', [\App\Http\Controllers\AnnouncementController::class, 'index']);
+    Route::get('announcements/manage', [\App\Http\Controllers\AnnouncementController::class, 'manage']);
+    Route::post('announcements', [\App\Http\Controllers\AnnouncementController::class, 'store']);
+    Route::put('announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'update']);
+    Route::delete('announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'destroy']);
 });

@@ -17,14 +17,37 @@ class CrmDashboardController extends Controller
     public function __invoke(Request $request)
     {
         $userId = $this->resolveUserId($request->input('user_id'));
+        $viewScope = $request->input('view_scope', 'mine');
+        $currentUser = $request->user();
+
         $now = now();
         $fromDate = $request->date('from_date')?->startOfDay() ?? $now->copy()->startOfMonth();
         $toDate = $request->date('to_date')?->endOfDay() ?? $now->copy()->endOfMonth();
 
+        // Scope filter helper
+        $applyScope = function ($query, $userField = 'user_id') use ($userId, $viewScope, $currentUser) {
+            if ($viewScope === 'all' && ($currentUser?->role_cached === 'ADMIN' || $currentUser?->role?->code === 'ADMIN')) {
+                return $query;
+            }
+
+            if (str_starts_with($viewScope ?? '', 'role:')) {
+                $roleCode = substr($viewScope, 5);
+                $relation = ($userField === 'owner_user_id') ? 'owner' : 'user';
+                return $query->whereHas($relation, fn($q) => $q->where('role_cached', $roleCode)->orWhereHas('role', fn($r) => $r->where('code', $roleCode)));
+            }
+
+            if ($viewScope === 'mine' || !$viewScope) {
+                return $userId ? $query->where($userField, $userId) : $query;
+            }
+
+            return $userId ? $query->where($userField, $userId) : $query;
+        };
+
         $meetingsQuery = Meeting::query()
             ->with('client:id,name,nip')
-            ->when($userId, fn ($q) => $q->where('user_id', $userId))
             ->where('status', 'open');
+
+        $meetingsQuery = $applyScope($meetingsQuery, 'user_id');
 
         $events = $meetingsQuery
             ->orderByRaw('COALESCE(resume_at, updated_at, created_at) asc')
@@ -45,8 +68,16 @@ class CrmDashboardController extends Controller
             ->get();
 
         $calculationsQuery = Calculation::query()
-            ->with('meeting.client:id,name,nip')
-            ->when($userId, fn ($q) => $q->whereHas('meeting', fn ($m) => $m->where('user_id', $userId)));
+            ->with('meeting.client:id,name,nip');
+
+        if ($viewScope === 'all' && ($currentUser?->role_cached === 'ADMIN' || $currentUser?->role?->code === 'ADMIN')) {
+            // No filter
+        } else if (str_starts_with($viewScope ?? '', 'role:')) {
+            $roleCode = substr($viewScope, 5);
+            $calculationsQuery->whereHas('meeting.user', fn($q) => $q->where('role_cached', $roleCode)->orWhereHas('role', fn($r) => $r->where('code', $roleCode)));
+        } else {
+            $calculationsQuery->when($userId, fn ($q) => $q->whereHas('meeting', fn ($m) => $m->where('user_id', $userId)));
+        }
 
         $periodCalculations = (clone $calculationsQuery)->whereBetween('created_at', [$fromDate, $toDate]);
         $totalSavings = (int) $periodCalculations->sum('savings_amount');
@@ -55,10 +86,11 @@ class CrmDashboardController extends Controller
             fn ($q) => $q->whereIn('status', ['READY', 'SENT']),
             fn ($q) => $q
         )->count();
-        $newLeads = CrmClientProfile::query()
-            ->when($userId, fn ($q) => $q->where('owner_user_id', $userId))
-            ->where('status', 'NEW')
-            ->count();
+
+        $newLeadsQuery = CrmClientProfile::query()
+            ->where('status', 'NEW');
+        $newLeadsQuery = $applyScope($newLeadsQuery, 'owner_user_id');
+        $newLeads = $newLeadsQuery->count();
 
         $targetSavings = 100000;
         $targetReady = 20;
@@ -67,16 +99,16 @@ class CrmDashboardController extends Controller
         $kpis = [
             [
                 'id' => 1,
-                'title' => 'Oszczędność (miesiąc)',
-                'value' => $this->formatCurrency($totalSavings),
+                'title' => 'Jednostki rozliczeniowe',
+                'value' => number_format($totalSavings, 0, '.', ' '),
                 'score' => $this->scoreForTarget($totalSavings, $targetSavings),
-                'min_target' => $this->formatCurrency($targetSavings),
+                'min_target' => number_format($targetSavings, 0, '.', ' '),
                 'subtitle' => 'Kalkulacje z bieżącego miesiąca',
-                'missing' => $this->formatCurrency(max(0, $targetSavings - $totalSavings)),
+                'missing' => number_format(max(0, $targetSavings - $totalSavings), 0, '.', ' '),
             ],
             [
                 'id' => 2,
-                'title' => 'Kalkulacje gotowe',
+                'title' => 'Kalkulacje wysłane',
                 'value' => (string) $readyCount,
                 'score' => $this->scoreForTarget($readyCount, $targetReady),
                 'min_target' => (string) $targetReady,
@@ -85,7 +117,7 @@ class CrmDashboardController extends Controller
             ],
             [
                 'id' => 3,
-                'title' => 'Nowe leady',
+                'title' => 'Nowe spotkania',
                 'value' => (string) $newLeads,
                 'score' => $this->scoreForTarget($newLeads, $targetLeads),
                 'min_target' => (string) $targetLeads,

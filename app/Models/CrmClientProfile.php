@@ -24,6 +24,11 @@ class CrmClientProfile extends Model
         'contract_signed_date',
         'reservation_end_date',
         'analysis_json',
+        'source',
+        'industry',
+        'company_size',
+        'contact_position',
+        'is_decision_maker',
     ];
 
     protected $casts = [
@@ -31,6 +36,7 @@ class CrmClientProfile extends Model
         'contract_signed_date' => 'date',
         'reservation_end_date' => 'date',
         'analysis_json' => 'array',
+        'is_decision_maker' => 'boolean',
     ];
 
     public function client(): BelongsTo

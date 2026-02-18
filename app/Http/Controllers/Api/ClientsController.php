@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\CrmClientActivity;
+use App\Models\User;
 use App\Services\Auth\TokenContext;
 use App\Services\Structure\StructureService;
 use Illuminate\Http\Request;
@@ -13,6 +15,7 @@ class ClientsController extends Controller
     public function index(Request $request, TokenContext $context, StructureService $structure)
     {
         $q = Client::query()->with(['crmProfile', 'crmProfile.owner:id,keycloak_id']);
+        /*
         $role = $context->primaryRole();
         if ($role !== 'ADMIN') {
             $userIds = $structure->listUsers($context)->pluck('id')->all();
@@ -24,6 +27,7 @@ class ClientsController extends Controller
                 });
             }
         }
+        */
         if ($organizationId = $request->integer('organization_id')) {
             $q->where('organization_id', $organizationId);
         }
@@ -83,7 +87,7 @@ class ClientsController extends Controller
         return $client->load(['crmProfile', 'crmProfile.owner:id,keycloak_id'])->loadCount(['contacts', 'meetings', 'payrolls']);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, TokenContext $context)
     {
         $data = $request->validate([
             'organization_id' => 'nullable|exists:organizations,id',
@@ -105,10 +109,23 @@ class ClientsController extends Controller
             'benefits_enabled' => 'nullable|boolean',
         ]);
         $client = Client::create($data);
+
+        // Auto-register activity
+        $userId = $this->resolveUserId($context->actorKeycloakId());
+        if ($userId) {
+            CrmClientActivity::create([
+                'client_id' => $client->id,
+                'user_id' => $userId,
+                'type' => 'NOTE',
+                'description' => 'Utworzono rekord klienta',
+                'occurred_at' => now(),
+            ]);
+        }
+
         return response()->json($client, 201);
     }
 
-    public function update(Request $request, Client $client)
+    public function update(Request $request, Client $client, TokenContext $context)
     {
         $data = $request->validate([
             'organization_id' => 'sometimes|nullable|exists:organizations,id',
@@ -128,14 +145,57 @@ class ClientsController extends Controller
             'vat_type' => 'nullable|string|max:255',
             'employee_count' => 'nullable|integer|min:0',
             'benefits_enabled' => 'nullable|boolean',
+            // Prospecting fields for profile
+            'contact_name' => 'nullable|string|max:255',
+            'contact_phone' => 'nullable|string|max:64',
+            'contact_email' => 'nullable|email|max:255',
+            'contact_position' => 'nullable|string|max:255',
+            'is_decision_maker' => 'nullable|boolean',
+            'source' => 'nullable|string|max:255',
+            'company_size' => 'nullable|string|max:50',
         ]);
         $client->update($data);
-        return $client;
+
+        // Update profile if any profile fields are present
+        $profileData = array_intersect_key($data, array_flip([
+            'contact_name', 'contact_phone', 'contact_email', 'contact_position',
+            'is_decision_maker', 'source', 'company_size', 'industry'
+        ]));
+
+        if (!empty($profileData)) {
+            $client->crmProfile()->updateOrCreate([], $profileData);
+        }
+
+        // Auto-register activity
+        $userId = $this->resolveUserId($context->actorKeycloakId());
+        if ($userId) {
+            CrmClientActivity::create([
+                'client_id' => $client->id,
+                'user_id' => $userId,
+                'type' => 'NOTE',
+                'description' => 'Zaktualizowano informacje o kliencie',
+                'occurred_at' => now(),
+            ]);
+        }
+
+        return $client->load('crmProfile');
     }
 
     public function destroy(Client $client)
     {
         $client->delete();
         return response()->noContent();
+    }
+
+    private function resolveUserId($value): ?int
+    {
+        if (!$value) return null;
+        $query = User::query();
+        if (is_numeric($value)) {
+            $query->where('id', (int) $value)->orWhere('keycloak_id', (string) $value);
+        } else {
+            $query->where('keycloak_id', (string) $value);
+        }
+        return $query->first()?->id;
     }
 }

@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CrmClientProfile;
+use App\Models\CrmClientActivity;
 use App\Models\User;
+use App\Services\Auth\TokenContext;
 use Illuminate\Http\Request;
 
 class CrmClientProfilesController extends Controller
@@ -30,10 +32,29 @@ class CrmClientProfilesController extends Controller
         return response()->json($profile, 201);
     }
 
-    public function update(Request $request, CrmClientProfile $crmClientProfile)
+    public function update(Request $request, CrmClientProfile $crmClientProfile, TokenContext $context)
     {
+        $oldStatus = $crmClientProfile->status;
         $data = $this->validatedData($request, true);
         $crmClientProfile->update($data);
+
+        // Auto-register activity if status changed or general update
+        $userId = $this->resolveUserId($context->actorKeycloakId());
+        if ($userId) {
+            $description = 'Zaktualizowano profil klienta';
+            if (isset($data['status']) && $data['status'] !== $oldStatus) {
+                $description = "Zmieniono status na: " . $data['status'];
+            }
+
+            CrmClientActivity::create([
+                'client_id' => $crmClientProfile->client_id,
+                'user_id' => $userId,
+                'type' => 'NOTE',
+                'description' => $description,
+                'occurred_at' => now(),
+            ]);
+        }
+
         return $crmClientProfile;
     }
 

@@ -38,4 +38,9 @@ class Client extends Company
     {
         return $this->hasOne(CrmClientProfile::class, 'client_id');
     }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(CrmClientActivity::class, 'client_id');
+    }
 }
