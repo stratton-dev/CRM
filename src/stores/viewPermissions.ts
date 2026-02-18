@@ -16,6 +16,9 @@ export type CrmViewKey =
   | 'invoice-preview'
   | 'structure'
   | 'hr-panel'
+  | 'user-management'
+  | 'admin-analytics'
+  | 'admin-logs'
   | 'admin'
   | 'admin-invoices'
   | 'autenti-panel'
@@ -25,9 +28,11 @@ export type CrmViewKey =
   | 'calendar'
   | 'mailbox'
   | 'knowledge-base'
+  | 'recruitment'
   | 'quick-calculator'
   | 'calculator'
   | 'leaderboard'
+  | 'meetings'
   | 'settings'
   | 'settings-backend'
   | 'settings-auth'
@@ -37,6 +42,7 @@ export type CrmViewKey =
   | 'settings-calculator'
   | 'settings-statuses'
   | 'settings-broadcasts'
+  | 'news-management'
 
 export type ViewPermissionEntry = {
   view_key: CrmViewKey
@@ -46,7 +52,7 @@ export type ViewPermissionEntry = {
 const ALL_ROLES: UserRole[] = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
 
 const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
-  { key: 'dashboard', label: 'Kokpit' },
+  { key: 'dashboard', label: 'Centrum Zarządzania' },
   { key: 'sales-start', label: 'Proces Sprzedaży (Start)' },
   { key: 'sales-email-compose', label: 'Email (Composer)' },
   { key: 'analytics', label: 'Analityka' },
@@ -58,6 +64,9 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'structure', label: 'Struktura' },
   { key: 'hr-panel', label: 'HR / Kadry' },
   { key: 'admin', label: 'Panel Admina' },
+  { key: 'user-management', label: 'Użytkownicy' },
+  { key: 'admin-analytics', label: 'Analityka Finansowa' },
+  { key: 'admin-logs', label: 'Logi Systemowe' },
   { key: 'admin-invoices', label: 'Faktury (Admin)' },
   { key: 'autenti-panel', label: 'Autenti' },
   { key: 'commission-thresholds', label: 'Progi Prowizyjne' },
@@ -66,9 +75,11 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'calendar', label: 'Kalendarz' },
   { key: 'mailbox', label: 'Poczta' },
   { key: 'knowledge-base', label: 'Baza Wiedzy' },
+  { key: 'recruitment', label: 'Rekrutacja' },
   { key: 'quick-calculator', label: 'Szybka Oferta' },
   { key: 'calculator', label: 'Kalkulator' },
   { key: 'leaderboard', label: 'Rankingi' },
+  { key: 'meetings', label: 'Zarządzanie Spotkaniami' },
   { key: 'settings', label: 'Ustawienia' },
   { key: 'settings-backend', label: 'Ustawienia: Backend API' },
   { key: 'settings-auth', label: 'Ustawienia: Auth' },
@@ -78,6 +89,7 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'settings-calculator', label: 'Ustawienia: Kalkulator' },
   { key: 'settings-statuses', label: 'Ustawienia: Statusy' },
   { key: 'settings-broadcasts', label: 'Ustawienia: Broadcasty' },
+  { key: 'news-management', label: 'Zarządzanie Aktualnościami' },
 ]
 
 const SETTINGS_TAB_KEYS: CrmViewKey[] = [
@@ -107,13 +119,18 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'admin-invoices': ['ADMIN'],
   'autenti-panel': ['ADMIN'],
   'commission-thresholds': ['ADMIN'],
+  'user-management': ['ADMIN'],
+  'admin-analytics': ['ADMIN'],
+  'admin-logs': ['ADMIN'],
   settlements: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   notifications: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   calendar: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   mailbox: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'knowledge-base': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
+  recruitment: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'quick-calculator': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   calculator: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
+  meetings: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   leaderboard: ['ADMIN'],
   settings: ['ADMIN'],
   'settings-backend': ['ADMIN'],
@@ -124,6 +141,7 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'settings-calculator': ['ADMIN'],
   'settings-statuses': ['ADMIN'],
   'settings-broadcasts': ['ADMIN'],
+  'news-management': ['ADMIN'],
 }
 
 const toMap = (entries: ViewPermissionEntry[]) => {
@@ -202,8 +220,18 @@ export const useViewPermissionsStore = defineStore('view-permissions', () => {
   const isViewAllowed = (viewKey: string | undefined, role?: string | null) => {
     if (!viewKey) return true
     if (!role) return true
+    
+    const normalizedRole = String(role).toUpperCase()
+    if (normalizedRole === 'ADMIN') return true
+    
+    // Safety fallback for new 'meetings' view during deployment transition
+    if (viewKey === 'meetings') {
+      const baseRoles = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
+      if (baseRoles.includes(normalizedRole)) return true
+    }
+
     const roles = resolvedPermissions.value[viewKey] || []
-    return roles.includes(role as UserRole)
+    return roles.some(r => String(r).toUpperCase() === normalizedRole)
   }
 
   const isSettingsAllowed = (role?: string | null) => {

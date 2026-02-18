@@ -87,6 +87,7 @@ export interface ClientActivity {
   date: string
   authorId: string
   resumeAt?: string | null
+  isCompleted?: boolean
 }
 
 export interface Client {
@@ -102,6 +103,11 @@ export interface Client {
   contactName: string
   contactPhone: string
   contactEmail: string
+  contactPosition?: string
+  isDecisionMaker?: boolean
+  source?: string
+  industry?: string
+  companySize?: string
   street: string
   buildingNr: string
   localeNr?: string
@@ -164,7 +170,7 @@ export interface CommissionConfig {
 export interface Notification {
   id: string
   userId: string
-  type: 'INFO' | 'WARNING' | 'CRITICAL' | 'TASK' | 'NOTE'
+  type: 'INFO' | 'WARNING' | 'CRITICAL' | 'TASK' | 'NOTE' | 'REMINDER' | 'CONTACT' | 'ATTENTION' | 'REPRIMAND'
   message: string
   date: string
   read: boolean

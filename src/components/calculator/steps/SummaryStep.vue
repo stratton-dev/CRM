@@ -21,6 +21,32 @@ const offerAction = ref<'generate' | 'preview'>('generate');
 
 const summary = computed(() => store.wyniki?.podsumowanie || null);
 const isOfferLocked = computed(() => offerStatus.value === 'generated' || offerStatus.value === 'sent');
+
+const chartData = computed(() => {
+  if (!summary.value) return [];
+  const monthly = summary.value.oszczednoscNetto;
+  return Array.from({ length: 12 }, (_, i) => ({
+    label: i + 1,
+    value: monthly * (i + 1)
+  }));
+});
+
+const maxChartValue = computed(() => {
+  if (chartData.value.length === 0) return 1;
+  const actualMax = chartData.value[chartData.value.length - 1].value;
+  // Round up to nearest 50k for cleaner axis
+  return Math.ceil(actualMax / 50000) * 50000;
+});
+
+const yAxisTicks = computed(() => {
+  const ticks = [];
+  const step = 50000;
+  for (let val = 0; val <= maxChartValue.value; val += step) {
+    ticks.push(val);
+  }
+  return ticks.reverse();
+});
+
 const offerButtonLabel = computed(() => (isOfferLocked.value ? 'Oferta gotowa' : 'Generuj ofertę'));
 
 const buildSnapshot = (): ZapisanaKalkulacja | null => {
@@ -149,7 +175,7 @@ onMounted(async () => {
 
       <div v-if="summary" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-        <div class="text-xs uppercase tracking-widest text-slate-400">Oszczędność netto</div>
+        <div class="text-xs uppercase tracking-widest text-slate-400">OSZCZĘDNOŚĆ MIESIĘCZNA</div>
           <div class="text-xl font-bold text-emerald-600">{{ formatPLN(summary.oszczednoscNetto) }}</div>
         </div>
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
@@ -157,11 +183,64 @@ onMounted(async () => {
           <div class="text-xl font-bold text-slate-900">{{ formatPLN(summary.oszczednoscRoczna) }}</div>
         </div>
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
-          <div class="text-xs uppercase tracking-widest text-slate-400">Prowizja</div>
+          <div class="text-xs uppercase tracking-widest text-slate-400">OPŁATA SERWISOWA</div>
           <div class="text-xl font-bold text-slate-900">{{ formatPLN(summary.prowizja) }}</div>
         </div>
       </div>
       <div v-else class="text-sm text-slate-400">Brak danych do podsumowania.</div>
+
+      <div v-if="summary" class="mt-12 pt-10 border-t border-slate-100">
+        <h3 class="text-xl font-bold text-slate-900 mb-12">Narastające oszczędności w czasie</h3>
+        
+        <div class="relative h-80 mt-16 mb-16 ml-16 mr-8">
+          <!-- Y Axis Grid and Labels -->
+          <div class="absolute inset-x-0 inset-y-0 flex flex-col justify-between pointer-events-none">
+            <div v-for="tick in yAxisTicks" :key="tick" class="relative w-full border-b border-slate-100 flex items-center h-0">
+              <span class="absolute -left-16 text-[11px] font-bold text-slate-400 w-14 text-right pr-2">
+                {{ tick >= 1000 ? (tick/1000).toFixed(0) + 'k' : tick }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Vertical Axis Line -->
+          <div class="absolute left-0 bottom-0 top-0 w-1 bg-slate-200 rounded-full">
+            <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white px-2">PLN</div>
+          </div>
+
+          <!-- Horizontal Axis Line -->
+          <div class="absolute left-0 bottom-0 right-0 h-1 bg-slate-200 rounded-full">
+            <div class="absolute -right-4 top-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-white px-2">Miesiace</div>
+          </div>
+
+          <!-- Chart Bars -->
+          <div class="absolute inset-0 flex items-end justify-around px-8 gap-4 overflow-visible">
+            <div 
+              v-for="item in chartData" 
+              :key="item.label"
+              class="relative group flex-1 flex flex-col items-center justify-end h-full"
+            >
+              <!-- Bar -->
+              <div 
+                class="w-full max-w-[24px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t-lg transition-all duration-300 group-hover:scale-x-110 group-hover:brightness-110 cursor-pointer shadow-lg shadow-emerald-500/10"
+                :style="{ height: `${(item.value / maxChartValue) * 100}%` }"
+              >
+                <!-- Tooltip Overlay -->
+                <div class="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1.5 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 whitespace-nowrap z-30 pointer-events-none shadow-2xl border border-white/10">
+                  <div class="font-bold text-emerald-400 mb-0.5">Miesiąc {{ item.label }}</div>
+                  <div class="text-[12px]">{{ formatPLN(item.value) }}</div>
+                  <!-- Little Arrow -->
+                  <div class="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900"></div>
+                </div>
+              </div>
+
+              <!-- Month Label -->
+              <div class="absolute top-full mt-4 text-[12px] font-extrabold text-slate-500 group-hover:text-emerald-600 transition-colors">
+                {{ item.label }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="flex flex-wrap gap-3">

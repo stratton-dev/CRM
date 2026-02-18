@@ -41,8 +41,9 @@ const doLogin = async () => {
       if (match) session.setCurrentUser(match.id)
       await goAfterLogin()
     }
-  } catch (error) {
-    // error handled in store
+  } catch (err: any) {
+    console.error('Login error:', err)
+    alert('Błąd logowania: ' + (err.message || String(err)))
   } finally {
     loading.value = false
   }

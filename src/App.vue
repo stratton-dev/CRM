@@ -9,6 +9,7 @@ import { useClientStore } from '@/stores/client'
 import { useNotificationStore } from '@/stores/notification'
 import { useStructureStore } from '@/stores/structure'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
+import { useUiStore } from '@/stores/ui'
 import ToastContainer from '@/components/ToastContainer.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import logoUrl from '@/assets/logo.svg'
@@ -22,11 +23,10 @@ const clientStore = useClientStore()
 const notifStore = useNotificationStore()
 const structure = useStructureStore()
 const viewPermissions = useViewPermissionsStore()
+const ui = useUiStore()
 
 const isSidebarOpen = ref(true)
-const showNotifications = ref(false)
-const showCommandPalette = ref(false)
-const commandQuery = ref('')
+const { showNotifications, showCommandPalette, commandQuery } = storeToRefs(ui)
 const commandInput = ref<HTMLInputElement | null>(null)
 
 const { currentUser } = storeToRefs(session)
@@ -34,7 +34,8 @@ const { users: dataUsers } = storeToRefs(data)
 const { clients } = storeToRefs(clientStore)
 const { notifications } = storeToRefs(notifStore)
 const { users: structureUsers } = storeToRefs(structure)
-const shouldShowSidebar = computed(() => !route.path.includes('/sales/start'))
+const shouldShowSidebar = computed(() => true)
+const isDashboard = computed(() => route.path.includes('/app/dashboard'))
 const showShell = computed(() => route.path.startsWith('/app'))
 const authRole = computed(() => {
   const roles = auth.user?.roles || []
@@ -111,14 +112,16 @@ const navLinks = computed(() => {
   const role = currentUser.value?.role || authRole.value || fallbackRole
   const links: Array<{ label: string; path: string; icon: string; viewKey: string }> = []
 
-  links.push({ label: 'Kokpit', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
+  links.push({ label: 'Centrum Zarządzania', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
 
   if (role === 'ADMIN') {
     links.push(
-      { label: 'Analityka', path: '/app/analytics', icon: 'chart-line', viewKey: 'analytics' },
+      { label: 'Użytkownicy', path: '/app/users', icon: 'user-tie', viewKey: 'user-management' },
+      { label: 'Analityka Finansowa', path: '/app/admin-analytics', icon: 'presentation-chart-line', viewKey: 'admin-analytics' },
+      { label: 'Logi Systemowe', path: '/app/admin-logs', icon: 'shield-check', viewKey: 'admin-logs' },
+      { label: 'Analityka (Sprzedaż)', path: '/app/analytics', icon: 'chart-line', viewKey: 'analytics' },
       { label: 'Klienci', path: '/app/clients', icon: 'users', viewKey: 'clients' },
       { label: 'Struktura', path: '/app/structure', icon: 'sitemap', viewKey: 'structure' },
-      { label: 'HR / Kadry', path: '/app/hr-panel', icon: 'briefcase', viewKey: 'hr-panel' },
       { label: 'Rozliczenia', path: '/app/settlements', icon: 'invoice', viewKey: 'settlements' },
       { label: 'Faktury', path: '/app/admin-invoices', icon: 'file-invoice-dollar', viewKey: 'admin-invoices' },
       { label: 'Progi Prowizyjne', path: '/app/commission-thresholds', icon: 'sliders', viewKey: 'commission-thresholds' },
@@ -143,6 +146,7 @@ const navLinks = computed(() => {
     )
   } else if (role === 'SALES') {
     links.push(
+      { label: 'Spotkania', path: '/app/meetings', icon: 'calendar', viewKey: 'meetings' },
       { label: 'Moi Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
       { label: 'Szybka Oferta', path: '/app/quick-calculator', icon: 'calculator', viewKey: 'quick-calculator' },
       { label: 'Moje Prowizje', path: '/app/settlements', icon: 'hand-holding-dollar', viewKey: 'settlements' },
@@ -152,16 +156,31 @@ const navLinks = computed(() => {
 
   links.push(
     { label: 'Kalendarz', path: '/app/calendar', icon: 'calendar', viewKey: 'calendar' },
+    { label: 'Powiadomienia', path: '/app/notifications', icon: 'bell', viewKey: 'notifications' },
     { label: 'Poczta', path: '/app/mailbox', icon: 'envelope', viewKey: 'mailbox' },
     { label: 'Baza Wiedzy', path: '/app/knowledge-base', icon: 'book-open', viewKey: 'knowledge-base' }
   )
 
+  if (role === 'ADMIN') {
+    links.push({ label: 'Aktualności', path: '/app/news-management', icon: 'document-text', viewKey: 'news-management' })
+  }
+
   return links.filter((link) => {
+    // Force show for newly added permissions if viewPermissions might be lagging or configured strangely
+    if (['user-management', 'admin-analytics', 'admin-logs'].includes(link.viewKey) && role === 'ADMIN') return true
+
     if (link.viewKey === 'settings') {
       return viewPermissions.isSettingsAllowed(role)
     }
     return viewPermissions.isViewAllowed(link.viewKey, role)
   })
+
+  const dashboardLink = links.find(link => link.viewKey === 'dashboard')
+  const otherLinks = links.filter(link => link.viewKey !== 'dashboard').sort((a, b) => {
+    return a.label.localeCompare(b.label, 'pl')
+  })
+
+  return dashboardLink ? [dashboardLink, ...otherLinks] : otherLinks
 })
 
 const myNotifications = computed(() => {
@@ -206,7 +225,7 @@ const commandResults = computed(() => {
 
 const getPageTitle = () => {
   const path = route.path
-  if (path.includes('dashboard')) return 'Kokpit'
+  if (path.includes('dashboard')) return 'Centrum Zarządzania'
   if (path.includes('clients')) return 'Baza Klientów'
   if (path.includes('structure')) return 'Struktura Organizacyjna'
   if (path.includes('settings')) return 'Ustawienia Systemu'
@@ -216,8 +235,7 @@ const getPageTitle = () => {
 }
 
 const toggleCommandPalette = () => {
-  showCommandPalette.value = !showCommandPalette.value
-  if (!showCommandPalette.value) commandQuery.value = ''
+  ui.toggleCommandPalette()
 }
 
 const executeCommand = (item: any, type: 'action' | 'client' | 'user') => {
@@ -236,7 +254,7 @@ const toggleSidebar = () => {
 }
 
 const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value
+  ui.toggleNotifications()
 }
 
 const markAsRead = (id: string) => {
@@ -288,20 +306,24 @@ onBeforeUnmount(() => {
       class="flex-shrink-0 flex flex-col transition-all duration-300 bg-slate-900 border-r border-slate-800"
       :class="isSidebarOpen ? 'w-72' : 'w-20'"
     >
-      <div class="h-20 flex items-center justify-center border-b border-slate-800 transition-colors hover:bg-slate-800/50 cursor-pointer" @click="router.push('/app/dashboard')">
-        <div v-if="isSidebarOpen" class="flex items-center space-x-3 text-stratton-gold font-serif font-bold text-xl tracking-widest animate-fade-in">
-          <img :src="logoUrl" alt="Stratton logo" class="w-9 h-9 rounded bg-stratton-gold p-1 ring-1 ring-white/20" />
-          <span>STRATTON</span>
+      <div class="h-20 flex items-center justify-center border-b border-slate-800 transition-colors hover:bg-slate-800/50 cursor-pointer px-4" @click="router.push('/app/dashboard')">
+        <div v-if="isSidebarOpen" class="text-center animate-fade-in">
+          <span class="text-stratton-gold font-bold text-xl uppercase tracking-wider block leading-tight">
+            PRIME CRM
+          </span>
+          <span class="text-stratton-gold font-medium text-[10px] uppercase tracking-widest block leading-tight mt-0.5">
+            System Zarządzania Zasobami Klienta
+          </span>
         </div>
-        <img v-else :src="logoUrl" alt="Stratton logo" class="w-10 h-10 rounded-lg bg-stratton-gold p-1 ring-1 ring-white/20" />
+        <span v-else class="text-stratton-gold font-bold text-xl">P</span>
       </div>
 
-      <nav class="flex-1 overflow-y-auto py-6 space-y-1 px-3">
+      <nav class="flex-1 overflow-y-auto py-4 space-y-1 px-3">
         <RouterLink
           v-for="link in navLinks"
           :key="link.path"
           :to="link.path"
-          class="group flex items-center px-3 py-3 rounded-xl transition-all duration-200 mb-1"
+          class="group flex items-center px-3 py-2 rounded-xl transition-all duration-200"
           :class="route.path.startsWith(link.path) ? 'bg-stratton-gold text-slate-900 shadow-md font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
           :title="link.label"
         >
@@ -339,60 +361,75 @@ onBeforeUnmount(() => {
     </aside>
 
     <div class="flex-1 flex flex-col min-w-0 relative bg-slate-50">
-      <header v-if="shouldShowSidebar" class="bg-white h-20 border-b border-slate-200 sticky top-0 z-40 px-8 flex items-center justify-between shadow-sm">
-        <div class="flex items-center">
-          <h1 class="text-xl font-bold text-slate-800 hidden sm:block">{{ getPageTitle() }}</h1>
-        </div>
-        <div class="hidden md:block flex-1 max-w-xl mx-8 relative">
-          <div
-            class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 flex items-center cursor-text transition group shadow-sm hover:shadow"
-            @click="toggleCommandPalette"
-          >
-            <AppIcon name="search" class="w-5 h-5 text-slate-400 mr-3 group-hover:text-stratton-gold transition" />
-            <span class="text-slate-500 text-sm font-medium">Szukaj (Ctrl + K)</span>
+      <header v-if="shouldShowSidebar" class="relative w-full overflow-hidden pb-0 bg-slate-50 shrink-0 border-b border-gray-200">
+        <div class="flex items-center justify-between w-full px-4 h-16">
+          
+          <!-- Left Wing -->
+          <div class="flex-1 flex flex-col items-end relative h-full justify-center">
+             <!-- Search Bar (Compact) -->
+             <div 
+               class="absolute left-0 bottom-1.5 bg-white/90 hover:bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center cursor-text transition group shadow-sm z-30 w-40 sm:w-56 backdrop-blur-md overflow-hidden h-9"
+               @click="toggleCommandPalette"
+             >
+               <AppIcon name="search" class="w-4 h-4 text-slate-400 mr-2 group-hover:text-stratton-gold transition shrink-0" />
+               <span class="text-slate-500 text-xs font-bold truncate uppercase tracking-wider">Szukaj (Ctrl+F)</span>
+             </div>
+
+             <!-- Lines -->
+             <div class="absolute right-0 top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
+               <div class="h-px bg-[#0f172a] w-full"></div>
+               <div class="h-[2px] bg-[#0f172a] w-full"></div>
+             </div>
+             
+             <!-- Text -->
+             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-serif">
+              STRATTON
+             </span>
           </div>
-        </div>
-        <div class="flex items-center space-x-4">
-          <div class="relative cursor-pointer group" @click="toggleNotifications">
-            <div class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-full transition">
-              <AppIcon name="bell" class="w-5 h-5 text-slate-400 group-hover:text-stratton-gold transition" />
-              <span v-if="unreadCount > 0" class="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 border border-white"></span>
-            </div>
+
+          <!-- Center Logo -->
+          <div class="px-2 relative z-20 shrink-0">
+            <img :src="logoUrl" class="h-16 w-auto filter drop-shadow-md" alt="Stratton Prime" />
           </div>
-          <button type="button" class="flex items-center gap-2 text-slate-400 hover:text-slate-800 transition text-xs font-bold uppercase tracking-wide group" @click="logout">
-            <span class="group-hover:underline">Wyloguj</span>
-            <AppIcon name="logout" class="w-4 h-4" />
-          </button>
+
+          <!-- Right Wing -->
+          <div class="flex-1 flex flex-col items-start relative h-full justify-center">
+             <!-- Controls -->
+             <div class="absolute right-0 bottom-1.5 flex items-center space-x-2 z-30 bg-white/90 backdrop-blur-md px-3 rounded-lg border border-slate-100 shadow-sm h-9">
+               <div class="relative cursor-pointer group" @click="toggleNotifications">
+                  <div 
+                    class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition"
+                    :class="{ 'animate-bell': unreadCount > 0 }"
+                  >
+                    <AppIcon 
+                      name="bell" 
+                      class="w-5 h-5 text-slate-400 group-hover:text-stratton-gold transition"
+                    />
+                    <span v-if="unreadCount > 0" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 border border-white z-10"></span>
+                  </div>
+               </div>
+               <div class="h-4 w-px bg-slate-200 mx-1"></div>
+               <button type="button" class="flex items-center gap-1.5 text-slate-400 hover:text-slate-800 transition text-[11px] font-bold uppercase tracking-wide group" @click="logout">
+                 <span class="group-hover:underline">Wyloguj</span>
+                 <AppIcon name="logout" class="w-4 h-4" />
+               </button>
+             </div>
+
+             <!-- Lines -->
+             <div class="absolute left-0 top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
+               <div class="h-px bg-[#0f172a] w-full"></div>
+               <div class="h-[2px] bg-[#0f172a] w-full"></div>
+             </div>
+             
+             <!-- Text -->
+             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-serif">
+              PRIME
+             </span>
+          </div>
+          
         </div>
       </header>
-      <header v-else class="bg-white h-20 border-b border-slate-100 sticky top-0 z-40 px-8 flex items-center justify-between shadow-sm">
-        <div class="flex items-center gap-6">
-          <div class="flex items-center space-x-3 text-slate-900 font-serif font-bold text-xl tracking-widest cursor-pointer" @click="router.push('/app/dashboard')">
-            <img :src="logoUrl" alt="Stratton logo" class="w-9 h-9 rounded bg-stratton-gold p-1 ring-1 ring-slate-200" />
-            <span>STRATTON</span>
-          </div>
-          <div class="h-8 w-px bg-slate-200"></div>
-          <div class="border border-slate-200 rounded px-2 py-1 text-[10px] font-mono font-bold text-slate-500 bg-slate-50">
-            {{ topbarId || 'BRAK ID' }}
-          </div>
-          <div class="flex flex-col justify-center">
-            <span class="text-xs font-bold text-slate-900 leading-tight">{{ sidebarUser.name }}</span>
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-tight">{{ topbarRole || '---' }}</span>
-          </div>
-        </div>
-        <div class="flex items-center space-x-6">
-          <div class="relative cursor-pointer group" @click="toggleNotifications">
-            <div class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-50 rounded-full transition">
-              <AppIcon name="bell" class="w-5 h-5 text-slate-400 group-hover:text-stratton-gold transition" />
-              <span v-if="unreadCount > 0" class="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500 border border-white"></span>
-            </div>
-          </div>
-          <button type="button" class="flex items-center gap-2 text-slate-400 hover:text-slate-800 transition text-xs font-bold uppercase tracking-wide group" @click="logout">
-            <span class="group-hover:underline">Wyloguj</span>
-            <AppIcon name="logout" class="w-4 h-4" />
-          </button>
-        </div>
-      </header>
+      <!-- Secondary Header Removed (Merged into main) -->
 
       <div v-if="session.isImpersonating" class="bg-amber-400 text-amber-900 text-sm py-2 px-4 text-center font-bold flex justify-center items-center shadow-md z-30 animate-pulse">
         <AppIcon name="mask" class="w-4 h-4 mr-2" />
@@ -402,14 +439,16 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 scroll-smooth crm-form">
+      <main 
+        class="flex-1 overflow-y-auto scroll-smooth crm-form transition-all duration-300 p-2 sm:p-4 lg:p-4"
+      >
         <RouterView v-slot="{ Component }">
           <Transition name="route" mode="out-in" appear>
             <component :is="Component" v-if="Component" />
           </Transition>
         </RouterView>
         <footer class="mt-12 border-t border-slate-200 py-8 text-center">
-          <p class="text-xs text-slate-400 font-medium">&copy; 2026 Stratton Financial Services. System Version 3.1</p>
+          <p class="text-xs text-slate-400 font-medium">&copy; 2026 CRM - System Zarządzania Zasobami Klienta. System Version 2.8</p>
         </footer>
       </main>
     </div>
@@ -426,7 +465,7 @@ onBeforeUnmount(() => {
           v-for="notif in myNotifications"
           :key="notif.id"
           class="px-5 py-4 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition group"
-          :class="!notif.read ? 'bg-blue-50' : ''"
+          :class="{ 'bg-blue-50': !notif.read && notif.read !== true }"
           @click="markAsRead(notif.id)"
         >
           <p class="text-stratton-blue font-bold text-xs mb-1 group-hover:underline">
@@ -460,9 +499,12 @@ onBeforeUnmount(() => {
           v-model="commandQuery"
           type="text"
           placeholder="Wpisz komendę, klienta lub pracownika..."
-          class="w-full text-lg bg-transparent border-none focus:ring-0 !p-1 !shadow-none text-slate-800 placeholder-slate-400 font-medium"
+          class="w-full text-2xl bg-transparent border-none focus:ring-0 !p-1 !shadow-none text-slate-800 placeholder-slate-400 font-bold"
         />
-        <span class="text-xs text-slate-400 border border-slate-200 rounded px-2 py-1 bg-white">ESC</span>
+        <span class="text-xs text-slate-400 border border-slate-200 rounded px-2 py-1 bg-white mr-3">ESC</span>
+        <button type="button" @click.stop="toggleCommandPalette" class="text-slate-400 hover:text-red-500 transition-colors p-1 hover:bg-slate-200 rounded-full">
+           <AppIcon name="xmark" class="w-6 h-6" />
+        </button>
       </div>
       <div class="overflow-y-auto">
         <div v-if="commandQuery && commandResults.actions.length === 0 && commandResults.clients.length === 0 && commandResults.users.length === 0" class="text-center py-16">
@@ -541,5 +583,21 @@ onBeforeUnmount(() => {
 .route-enter-active,
 .route-leave-active {
   transition: opacity 220ms ease, transform 220ms ease;
+}
+
+@keyframes bell-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+}
+
+@keyframes bell-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+}
+
+.animate-bell {
+  animation: bell-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>

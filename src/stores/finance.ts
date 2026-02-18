@@ -376,6 +376,52 @@ export const useFinanceStore = defineStore('finance', () => {
     return finalRows.sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
   }
 
+  const getStructureTotalCommission = (userId: string, role: string): number => {
+    const allInvoices = invoices.value
+    const allClients = clients.value
+    const allUsers = users.value
+    const cfg = commissionConfig.value
+
+    let relevantUserIds: string[] = []
+
+    if (role === 'ADMIN') {
+      relevantUserIds = allUsers.map((u) => u.id)
+    } else if (role === 'DIRECTOR' || role === 'MANAGER') {
+      const subtree = structure.getSubtreeUserIds(userId)
+      relevantUserIds = [userId, ...subtree]
+    } else {
+      relevantUserIds = [userId]
+    }
+
+    const relevantUserIdSet = new Set(relevantUserIds)
+    let total = 0
+
+    allInvoices.forEach((inv) => {
+      const client = allClients.find((c) => c.id === inv.clientId)
+      if (!client || !relevantUserIdSet.has(client.ownerId)) return
+
+      const owner = allUsers.find((u) => u.id === client.ownerId)
+      if (!owner) return
+
+      const clientInvoices = allInvoices
+        .filter((i) => i.clientId === client.id)
+        .sort((a, b) => new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime())
+      const isFirstMonth = clientInvoices.length > 0 && clientInvoices[0].id === inv.id
+
+      let rate = 0
+      if (isFirstMonth) {
+        const daysDiff = getDaysDiff(client.offerSentDate, client.contractSignedDate)
+        rate = daysDiff !== null && daysDiff <= 14 ? cfg.salesCommissionFirstMonthLt14 : cfg.salesCommissionFirstMonthGt14
+      } else {
+        rate = owner.renewalCommissionRate ?? cfg.salesCommissionRenewal
+      }
+
+      total += inv.serviceFeeNet * rate
+    })
+
+    return total
+  }
+
   const getDaysDiff = (start?: string, end?: string) => {
     if (!start || !end) return null
     const startTime = new Date(start).getTime()
@@ -445,5 +491,6 @@ export const useFinanceStore = defineStore('finance', () => {
     updateCommissionConfig,
     fetchApiClients,
     fetchApiMeetings,
+    getStructureTotalCommission,
   }
 })

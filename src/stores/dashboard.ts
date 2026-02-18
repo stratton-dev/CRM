@@ -34,7 +34,9 @@ const fallbackNews: DashboardNews[] = [
   { id: 1, tag: 'PRODUKT', title: 'Nowa oferta "Eliton Secure+"', description: 'Dostępna od 1 lutego. Zobacz webinar szkoleniowy w sekcji Edukacja.' },
 ]
 const fallbackKpis: DashboardKpi[] = [
-  { id: 1, title: 'Prowizja (Bieżący m-c)', value: '4 500 PLN', score: 45, min_target: '10 000 PLN', subtitle: 'Początek miesiąca', missing: '5 500' },
+  { id: 1, title: 'Jednostki rozliczeniowe', value: '4 500', score: 45, min_target: '10 000', subtitle: 'Początek miesiąca', missing: '5 500' },
+  { id: 2, title: 'Kalkulacje wysłane', value: '12', score: 60, min_target: '20', subtitle: 'Status READY / SENT', missing: '8' },
+  { id: 3, title: 'Nowe spotkania', value: '15', score: 50, min_target: '30', subtitle: 'Status NEW', missing: '15' },
 ]
 const fallbackCalculations: DashboardCalculation[] = [
   { id: 1, company: 'MegaBud S.A.', nip: '555-666-77-88', meeting_id: 'M-2044/01', calculation_date: new Date().toISOString(), valid_until: new Date().toISOString(), status: 'OFERTA' },
@@ -59,7 +61,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     overdueInvoices.value = [...fallbackOverdue]
   }
 
-  const fetchDashboard = async (userId?: string | null, params?: { from_date?: string; to_date?: string }) => {
+  const fetchDashboard = async (userId?: string | null, params?: { from_date?: string; to_date?: string; view_scope?: string }) => {
     if (!auth.enabled) {
       hydrateFallback()
       return

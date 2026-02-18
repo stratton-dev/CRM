@@ -94,6 +94,7 @@ export const useClientStore = defineStore('client', () => {
     description: activity.description,
     date: activity.occurred_at || activity.created_at || new Date().toISOString(),
     authorId: activity.user?.keycloak_id ? String(activity.user.keycloak_id) : String(activity.user_id || ''),
+    isCompleted: !!activity.is_completed,
   })
 
   const mapMeetingToStatus = (meeting?: ApiMeeting): Client['status'] => {
@@ -182,6 +183,11 @@ export const useClientStore = defineStore('client', () => {
         employeesUz: profile.employees_uz ?? 0,
         avgWageUop: profile.avg_wage_uop ?? 0,
         avgWageUz: profile.avg_wage_uz ?? 0,
+        source: profile.source || '',
+        industry: profile.industry || client.industry || '',
+        companySize: profile.company_size || '',
+        contactPosition: profile.contact_position || '',
+        isDecisionMaker: !!profile.is_decision_maker,
         lastActionDate,
         serviceFeePercent: profile.service_fee_percent ?? 0,
         offerSentDate: profile.offer_sent_date || undefined,
@@ -196,49 +202,90 @@ export const useClientStore = defineStore('client', () => {
 
   const clients = computed<Client[]>(() => (auth.enabled ? buildApiClients() : dataClients.value))
 
+  const prospects = computed(() => {
+    return clients.value.filter(c => c.status !== 'SIGNED' && c.status !== 'TERMINATED')
+  })
+
+  const customers = computed(() => {
+    return clients.value.filter(c => c.status === 'SIGNED' || c.status === 'TERMINATED')
+  })
+
   const fetchClients = async (options?: { perPage?: number; page?: number }) => {
     if (!auth.enabled) return
-    const perPage = options?.perPage || clientPagination.value.perPage
-    const page = options?.page || clientPage.value
-    const { data } = await api.get('/v1/clients', { params: { per_page: perPage, page } })
-    apiClients.value = extractApiList(data) as ApiClient[]
-    clientPage.value = data?.current_page || page
-    clientPagination.value = {
-      currentPage: data?.current_page || page,
-      lastPage: data?.last_page || 1,
-      total: data?.total || apiClients.value.length,
-      perPage: data?.per_page || perPage,
+    if (!auth.isAuthenticated) return // Ensure we are authenticated
+
+    try {
+      const perPage = options?.perPage || clientPagination.value.perPage
+      const page = options?.page || clientPage.value
+      const { data } = await api.get('/v1/clients', { params: { per_page: perPage, page } })
+      apiClients.value = extractApiList(data) as ApiClient[]
+      clientPage.value = data?.current_page || page
+      clientPagination.value = {
+        currentPage: data?.current_page || page,
+        lastPage: data?.last_page || 1,
+        total: data?.total || apiClients.value.length,
+        perPage: data?.per_page || perPage,
+      }
+    } catch(e) {
+      console.error('Failed to fetch clients', e)
     }
   }
 
   const fetchMeetings = async (options?: { perPage?: number }) => {
     if (!auth.enabled) return
-    const { data } = await api.get('/v1/meetings', { params: { per_page: options?.perPage || 500 } })
-    apiMeetings.value = extractApiList(data) as ApiMeeting[]
+    if (!auth.isAuthenticated) return
+    try {
+      const { data } = await api.get('/v1/meetings', { params: { per_page: options?.perPage || 500 } })
+      apiMeetings.value = extractApiList(data) as ApiMeeting[]
+    } catch(e) { console.error('Failed to fetch meetings', e) }
   }
 
   const fetchActivities = async (options?: { perPage?: number }) => {
     if (!auth.enabled) return
-    const { data } = await api.get('/v1/crm-client-activities', { params: { per_page: options?.perPage || 500 } })
-    apiActivities.value = extractApiList(data)
+    if (!auth.isAuthenticated) return
+    try {
+      const { data } = await api.get('/v1/crm-client-activities', { params: { per_page: options?.perPage || 500 } })
+      apiActivities.value = extractApiList(data)
+    } catch(e) { console.error('Failed to fetch activities', e) }
   }
 
   const fetchSavedOffers = async (options?: { perPage?: number }) => {
     if (!auth.enabled) return
-    const { data } = await api.get('/v1/crm-saved-offers', { params: { per_page: options?.perPage || 500 } })
-    apiSavedOffers.value = extractApiList(data)
+    if (!auth.isAuthenticated) return
+    try {
+      const { data } = await api.get('/v1/crm-saved-offers', { params: { per_page: options?.perPage || 500 } })
+      apiSavedOffers.value = extractApiList(data)
+    } catch(e) { console.error('Failed to fetch saved offers', e) }
   }
 
   const refreshApiData = async () => {
-    if (!auth.enabled) return
-    try {
-      await Promise.all([fetchClients({ page: clientPage.value }), fetchMeetings(), fetchActivities(), fetchSavedOffers()])
-    } catch (error) {
-      apiClients.value = []
-      apiMeetings.value = []
-      apiActivities.value = []
-      apiSavedOffers.value = []
-    }
+    if (!auth.enabled) return true
+
+    const tasks = [
+      { key: 'clients', run: () => fetchClients({ page: clientPage.value }), reset: () => { apiClients.value = [] } },
+      { key: 'meetings', run: () => fetchMeetings(), reset: () => { apiMeetings.value = [] } },
+      { key: 'activities', run: () => fetchActivities(), reset: () => { apiActivities.value = [] } },
+      { key: 'savedOffers', run: () => fetchSavedOffers(), reset: () => { apiSavedOffers.value = [] } },
+    ] as const
+
+    const results = await Promise.allSettled(tasks.map((task) => task.run()))
+    let criticalFailure = false
+
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const task = tasks[index]
+        task.reset()
+
+        if (task.key === 'clients') {
+          criticalFailure = true
+          toast.error('Nie udało się pobrać listy klientów. Spróbuj ponownie.')
+        } else {
+          console.warn(`[clientStore] Nie udało się pobrać ${task.key}:`, result.reason)
+        }
+      }
+    })
+
+    return !criticalFailure
   }
 
   watch(
@@ -453,18 +500,23 @@ export const useClientStore = defineStore('client', () => {
     if (auth.enabled) {
       const dateToUse = customDate || new Date().toISOString()
       try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activity.authorId)
+        // const userIdPayload = isUuid ? { user_keycloak_id: activity.authorId } : { user_id: activity.authorId }
+
         if (activity.type === 'MEETING') {
              await api.post('/v1/meetings', {
                 client_id: clientId,
-                user_id: activity.authorId,
+                user_id: isUuid ? undefined : activity.authorId,
+                user_keycloak_id: isUuid ? activity.authorId : undefined,
                 status: 'open',
                 offer_status: 'preparing',
                 resume_at: dateToUse,
+                valid_until: new Date(new Date(dateToUse).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
              })
         } else {
              await api.post('/v1/crm-client-activities', {
                 client_id: clientId,
-                user_id: activity.authorId,
+                user_id: activity.authorId, // Activities controller handles both via resolveUserId
                 type: activity.type,
                 description: activity.description,
                 occurred_at: dateToUse,
@@ -474,7 +526,29 @@ export const useClientStore = defineStore('client', () => {
         await fetchMeetings()
         toast.success('Dodano aktywność')
       } catch(e) { 
-        toast.error('Nie udało się dodać aktywności.')
+        // Fallback: gdy klient ma już otwarte spotkanie (HTTP 409), zapisz jako zwykłą aktywność MEETING
+        const status = e?.response?.status
+        const msg = e?.response?.data?.message as string | undefined
+        if (activity.type === 'MEETING' && status === 409) {
+          try {
+            await api.post('/v1/crm-client-activities', {
+              client_id: clientId,
+              user_id: activity.authorId,
+              type: 'MEETING',
+              description: activity.description,
+              occurred_at: dateToUse,
+            })
+            await fetchActivities()
+            await fetchMeetings()
+            toast.info('Klient ma już otwarte spotkanie – zapisano jako aktywność.')
+            return
+          } catch (fallbackErr) {
+            console.error('Fallback activity save failed', fallbackErr)
+          }
+        }
+
+        console.error('Failed to add activity', e)
+        toast.error(msg || 'Nie udało się dodać aktywności.')
       }
       return
     }
@@ -599,17 +673,21 @@ export const useClientStore = defineStore('client', () => {
       try {
         if (idStr.startsWith('meeting-')) {
           const id = idStr.replace('meeting-', '')
-          await api.patch(`/v1/meetings/${id}`, {
+          const updatePayload: any = {
              resume_at: activity.date,
-             status: 'open', 
-          })
+          }
+          if (activity.isCompleted !== undefined) {
+             updatePayload.status = activity.isCompleted ? 'completed' : 'open'
+          }
+          await api.patch(`/v1/meetings/${id}`, updatePayload)
         } else if (idStr.startsWith('activity-')) {
           const id = idStr.replace('activity-', '')
           await api.patch(`/v1/crm-client-activities/${id}`, {
             type: activity.type,
             description: activity.description,
             occurred_at: activity.date,
-            user_id: activity.authorId
+            user_id: activity.authorId,
+            is_completed: activity.isCompleted
           })
         }
         await refreshApiData()
@@ -636,6 +714,15 @@ export const useClientStore = defineStore('client', () => {
     }
   }
 
+  watch(() => auth.isAuthenticated, (newVal) => {
+    if (newVal) {
+      fetchClients()
+      fetchMeetings()
+      fetchActivities()
+      fetchSavedOffers()
+    }
+  })
+
   return {
     clients,
     clientPage,
@@ -654,5 +741,7 @@ export const useClientStore = defineStore('client', () => {
     fetchActivities,
     fetchSavedOffers,
     refreshApiData,
+    prospects,
+    customers,
   }
 })

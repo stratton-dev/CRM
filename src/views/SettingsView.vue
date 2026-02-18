@@ -2,14 +2,24 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
-import { api } from '@/api/client'
+import { api, apiBaseUrl, getApiBaseOverride, getDefaultApiBaseUrl, setApiBaseUrl } from '@/api/client'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore'
 import { useSessionStore } from '@/stores/session'
+import { useClientStore } from '@/stores/client'
 import { DEFAULT_CONFIG } from '@/components/calculator/tax-engine/constants'
 import type { UserRole } from '@/types/models'
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+const clientStore = useClientStore()
+const defaultApiBase = getDefaultApiBaseUrl()
+const apiBaseOverride = ref(getApiBaseOverride() || '')
+const apiBaseCurrent = ref(apiBaseUrl)
+const apiBaseInput = ref(apiBaseOverride.value || apiBaseCurrent.value)
+const apiBaseTesting = ref(false)
+const apiBaseSaving = ref(false)
+const apiBaseTestMessage = ref<string | null>(null)
+const apiBaseError = ref<string | null>(null)
+
 const token = localStorage.getItem('crm_token')
 const auth = useAuthStore()
 const toast = useToastStore()
@@ -232,6 +242,81 @@ const editingBroadcast = ref({
 const roles: UserRole[] = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
 
 const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max)
+
+const normalizeApiBaseInput = (value: string) => {
+  let v = value.trim()
+  while (v.length > 0 && v.charAt(v.length - 1) === '/') {
+    v = v.substring(0, v.length - 1)
+  }
+  return v
+}
+
+const testApiConnection = async () => {
+  const target = normalizeApiBaseInput(apiBaseInput.value)
+  if (!target) {
+    apiBaseError.value = 'Podaj poprawny adres API (np. https://example.com/api).'
+    apiBaseTestMessage.value = null
+    return
+  }
+  apiBaseTesting.value = true
+  apiBaseError.value = null
+  apiBaseTestMessage.value = null
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000)
+  try {
+    const healthUrl = `${target}/health`
+    const response = await fetch(healthUrl, { method: 'GET', signal: controller.signal })
+    if (response.status >= 500) {
+      throw new Error(`Serwer zwrócił status ${response.status}`)
+    }
+    apiBaseTestMessage.value = response.ok
+      ? `Połączenie OK (status ${response.status}).`
+      : `Host odpowiada (status ${response.status}).` 
+  } catch (error: any) {
+    apiBaseError.value = error?.name === 'AbortError'
+      ? 'Test przekroczył limit czasu (10s).'
+      : (error?.message || 'Nie udało się nawiązać połączenia z API.')
+  } finally {
+    clearTimeout(timeoutId)
+    apiBaseTesting.value = false
+  }
+}
+
+const applyApiBase = async (value: string | null, successMessage: string) => {
+  apiBaseSaving.value = true
+  apiBaseError.value = null
+  apiBaseTestMessage.value = null
+  try {
+    setApiBaseUrl(value)
+    apiBaseCurrent.value = apiBaseUrl
+    apiBaseOverride.value = value || ''
+    apiBaseInput.value = value ? value : apiBaseCurrent.value
+    toast.success(successMessage)
+    if (auth.enabled) {
+      const ok = await clientStore.refreshApiData()
+      if (!ok) {
+        toast.error('Połączenie z API nie zwróciło listy klientów. Sprawdź adres.')
+      }
+    }
+  } catch (error: any) {
+    apiBaseError.value = error?.message || 'Nie udało się zapisać adresu API.'
+  } finally {
+    apiBaseSaving.value = false
+  }
+}
+
+const saveApiConnection = () => {
+  const target = normalizeApiBaseInput(apiBaseInput.value)
+  if (!target) {
+    apiBaseError.value = 'Podaj poprawny adres API (np. https://example.com/api).'
+    return
+  }
+  void applyApiBase(target, 'Zapisano nowy adres API.')
+}
+
+const resetApiConnection = () => {
+  void applyApiBase(null, 'Przywrócono domyślny adres API.')
+}
 
 const sanitizeCalculatorValue = (path: string, value: number) => {
   if (Number.isNaN(value)) return 0
@@ -1038,6 +1123,14 @@ watch(
     fetchMailFolders()
   }
 )
+
+watch(
+  () => apiBaseInput.value,
+  () => {
+    apiBaseError.value = null
+    apiBaseTestMessage.value = null
+  }
+)
 </script>
 
 <template>
@@ -1058,12 +1151,67 @@ watch(
         </button>
       </div>
 
-      <div v-if="activeTab === 'backend' && canAccessSettingsTab('settings-backend')" class="space-y-3 pt-4">
+      <div v-if="activeTab === 'backend' && canAccessSettingsTab('settings-backend')" class="space-y-4 pt-4">
         <h3 class="font-semibold">Backend API</h3>
-        <div class="text-sm text-gray-600">Base URL</div>
-        <div class="font-mono">{{ apiBase }}</div>
-        <p class="text-sm text-gray-500 mt-2">
-          Configure via <code>.env</code> file in <code>crm</code> folder with <code>VITE_API_BASE_URL</code>.
+
+        <div>
+          <div class="text-sm text-gray-600">Aktywny adres</div>
+          <div class="font-mono break-all">{{ apiBaseCurrent }}</div>
+          <p v-if="apiBaseOverride" class="text-xs text-gray-500 mt-1">
+            Nadpisany lokalnie (zapisywany w pamięci urządzenia).
+          </p>
+          <p v-else class="text-xs text-gray-500 mt-1">
+            Wartość z pliku <code>.env</code>: <span class="font-mono">{{ defaultApiBase }}</span>
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <label for="api-base-input" class="text-sm font-semibold text-gray-700">Nowy adres API</label>
+          <input
+            id="api-base-input"
+            v-model="apiBaseInput"
+            type="text"
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+            placeholder="https://api.twoja-domena.pl/api"
+            autocomplete="off"
+          />
+          <p class="text-xs text-gray-500">
+            Adres powinien wskazywać główny endpoint REST (np. <span class="font-mono">https://host/api</span>). Zmiana jest zapisywana lokalnie,
+            więc możesz ją dostosować bez przebudowy aplikacji.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm rounded border border-sky-600 text-sky-600 hover:bg-sky-50 disabled:opacity-60"
+            :disabled="apiBaseTesting || apiBaseSaving"
+            @click="testApiConnection"
+          >
+            {{ apiBaseTesting ? 'Testuję…' : 'Testuj połączenie' }}
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm rounded border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+            :disabled="apiBaseSaving"
+            @click="saveApiConnection"
+          >
+            {{ apiBaseSaving ? 'Zapisuję…' : 'Zapisz' }}
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+            :disabled="apiBaseSaving || !apiBaseOverride"
+            @click="resetApiConnection"
+          >
+            Przywróć domyślny
+          </button>
+        </div>
+
+        <div v-if="apiBaseTestMessage" class="text-xs text-emerald-600">{{ apiBaseTestMessage }}</div>
+        <div v-if="apiBaseError" class="text-xs text-red-600">{{ apiBaseError }}</div>
+        <p class="text-xs text-gray-500">
+          Domyślny adres nadal można ustawić w pliku <code>.env</code> poprzez zmienną <code>VITE_API_BASE_URL</code>.
         </p>
       </div>
 

@@ -22,6 +22,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const session = useSessionStore()
   const data = useDataStore()
   const notifications = ref<Notification[]>([])
+  const sentNotifications = ref<Notification[]>([])
   const refreshIntervalMs = 30000
   let refreshTimer: number | null = null
 
@@ -48,6 +49,53 @@ export const useNotificationStore = defineStore('notification', () => {
     })
     const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
     notifications.value = list.map(mapApiNotification)
+  }
+
+  const fetchSentNotifications = async () => {
+    if (!auth.enabled) return
+    const userId = session.currentUser?.id
+    try {
+      const { data: resp } = await api.get('/v1/notifications/sent', {
+         params: { user_keycloak_id: userId }
+      })
+      const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
+      sentNotifications.value = list.map(mapApiNotification)
+    } catch (e) {
+      console.error('Failed to fetch sent notifications', e)
+      sentNotifications.value = []
+    }
+  }
+
+  const sendBatch = async (recipients: string[], type: string, message: string) => {
+    if (auth.enabled) {
+      return api.post('/v1/notifications/batch', {
+        recipients, 
+        type,
+        title: message,
+        body: message,
+      })
+    }
+    // Mock implementation for local dev
+    recipients.forEach(userId => {
+        const newNotif = {
+            userId,
+            type: type as any,
+            message,
+        }
+        add(newNotif)
+    })
+    
+    // Mock adding to sent list
+    const newSent: Notification = {
+        id: Math.random().toString(36).substr(2, 9),
+        userId: recipients.length > 5 ? `${recipients.length} recipients` : recipients.join(', '), 
+        type: type as any,
+        message,
+        date: new Date().toISOString(),
+        read: false
+    }
+    sentNotifications.value.unshift(newSent)
+    return Promise.resolve()
   }
 
   const startPolling = () => {
@@ -81,18 +129,41 @@ export const useNotificationStore = defineStore('notification', () => {
     data.rawAddNotification(newNotification)
   }
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    // Optimistically update
+    notifications.value = notifications.value.map(n => 
+        n.id == id ? { ...n, read: true } : n
+    )
+
     if (auth.enabled) {
-      return api.patch(`/v1/notifications/${id}`, { read_at: new Date().toISOString() }).then(fetchNotifications)
+      try {
+        await api.put(`/v1/notifications/${id}`, { 
+            read_at: new Date().toISOString()
+        })
+      } catch (e) {
+        console.error('Failed to mark as read', e)
+        // Revert on failure? Usually not worth the complexity for read status
+      }
+    } else {
+        data.rawUpdateNotifications((items) => items.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)))
     }
-    data.rawUpdateNotifications((items) => items.map((notif) => (notif.id === id ? { ...notif, read: true } : notif)))
   }
 
-  const markAllAsRead = (userId: string) => {
+  const markAllAsRead = async (userId: string) => {
+    // Optimistically update
+    notifications.value = notifications.value.map(n => 
+        n.userId === userId ? { ...n, read: true } : n
+    )
+    
     if (auth.enabled) {
-      return api.post('/v1/notifications/mark-all-read', { user_keycloak_id: userId }).then(fetchNotifications)
+      try {
+        await api.post('/v1/notifications/mark-all-read', { user_keycloak_id: userId })
+      } catch (e) {
+          console.error("Failed to mark all as read", e)
+      }
+    } else {
+        data.rawUpdateNotifications((items) => items.map((notif) => (notif.userId === userId ? { ...notif, read: true } : notif)))
     }
-    data.rawUpdateNotifications((items) => items.map((notif) => (notif.userId === userId ? { ...notif, read: true } : notif)))
   }
 
   watch(
@@ -120,5 +191,5 @@ export const useNotificationStore = defineStore('notification', () => {
 
   onScopeDispose(stopPolling)
 
-  return { notifications, add, markAsRead, markAllAsRead, fetchNotifications }
+  return { notifications, sentNotifications, add, sendBatch, markAsRead, markAllAsRead, fetchNotifications, fetchSentNotifications }
 })

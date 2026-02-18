@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
+import { useClientStore } from '@/stores/client'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import type { FileCategory, KnowledgeFile } from '@/types/models'
 import { VueFilesPreview } from 'vue-files-preview'
@@ -19,14 +20,17 @@ const auth = useAuthStore()
 const session = useSessionStore()
 const structure = useStructureStore()
 const toast = useToastStore()
+const clientStore = useClientStore()
 const { currentUser } = storeToRefs(session)
+const { prospects } = storeToRefs(clientStore)
 const router = useRouter()
 const route = useRoute()
 const knowledgeBase = useKnowledgeBaseStore()
 const { files: knowledgeFiles } = storeToRefs(knowledgeBase)
 
 const isProcessActive = ref(false)
-const step = ref(1)
+const stepFromQuery = parseInt(String(route.query.step))
+const step = ref(!isNaN(stepFromQuery) && stepFromQuery >= 1 && stepFromQuery <= 5 ? stepFromQuery : 1)
 const sessionId = ref('')
 
 const companyData = ref({
@@ -46,6 +50,44 @@ const contactDraft = ref({
   email: '',
   is_decision_maker: false,
 })
+
+const showFetchMeetingModal = ref(false)
+const selectMeetingSearch = ref('')
+
+const filteredProspects = computed(() => {
+  if (!selectMeetingSearch.value) return prospects.value
+  const s = selectMeetingSearch.value.toLowerCase()
+  return prospects.value.filter(p => 
+    (p.name && p.name.toLowerCase().includes(s)) ||
+    (p.nip && p.nip.includes(s))
+  )
+})
+
+const handleSelectMeeting = (prospect: any) => {
+  companyData.value.nip = prospect.nip || ''
+  companyData.value.name = prospect.name || ''
+  companyData.value.street = prospect.street || ''
+  companyData.value.zip = prospect.zip || ''
+  companyData.value.city = prospect.city || ''
+  
+  // Set context IDs to update existing record
+  clientId.value = prospect.id
+  if (prospect.meetingId) {
+    meetingId.value = prospect.meetingId
+  }
+
+  if (prospect.contactName) {
+    contactDraft.value.name = prospect.contactName
+    contactDraft.value.position = prospect.contactPosition || ''
+    contactDraft.value.phone = prospect.contactPhone || ''
+    contactDraft.value.email = prospect.contactEmail || ''
+    contactDraft.value.is_decision_maker = !!prospect.isDecisionMaker
+  }
+  
+  showFetchMeetingModal.value = false
+  toast.success('Pobrano dane ze spotkania')
+}
+
 const contactDrafts = ref<
   Array<{
     tempId: string
@@ -482,7 +524,7 @@ const checkNipReservation = async (value: string) => {
   }
   isCheckingNip.value = true
   try {
-    const { data } = await api.get('/v1/clients/check-nip', { params: { nip } })
+    const { data } = await api.get('/v1/clients/check-nip', { params: { nip }, timeout: 60000 })
     const reserved = Boolean(data?.reserved)
     nipBlocked.value = reserved
     if (reserved) {
@@ -512,10 +554,7 @@ const fetchCompanyByNip = async () => {
     toast.warning('Podaj numer NIP.')
     return
   }
-  if (await checkNipReservation(nip)) {
-    toast.warning(nipBlockMessage.value || 'NIP jest już zarezerwowany.')
-    return
-  }
+  
   isFetchingGus.value = true
   gusError.value = null
   try {
@@ -539,7 +578,7 @@ const fetchCompanyByNip = async () => {
 }
 
 const resolveClientIdByNip = async (nip: string) => {
-  const { data } = await api.get('/v1/clients', { params: { search: nip, per_page: 1 } })
+  const { data } = await api.get('/v1/clients', { params: { search: nip, per_page: 1 }, timeout: 60000 })
   const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
   return list.length > 0 ? String(list[0].id) : null
 }
@@ -663,14 +702,23 @@ const saveContactDrafts = async () => {
           phone: item.phone || null,
           email: item.email || null,
           is_decision_maker: item.is_decision_maker || false,
-        })
+        }, { timeout: 60000 })
       )
     )
-    // Clear drafts that were successfully saved, because they will come back in fetchClientContacts
+    // Clear drafts that were successfully saved
     contactDrafts.value = contactDrafts.value.filter((item) => !pending.includes(item))
-    await fetchClientContacts(clientId.value)
+    
+    // We try to fetch contacts, but if it fails, we shouldn't block the whole process, 
+    // as contacts are likely saved. We just proceed.
+    try {
+        await fetchClientContacts(clientId.value)
+    } catch (e) {
+        console.warn('Failed to refresh contacts after save', e)
+    }
+    
     return true
   } catch (error: any) {
+    console.error(error)
     const message = error?.response?.data?.message || error?.message || 'Nie udało się zapisać kontaktów.'
     toast.error(message)
     return false
@@ -680,6 +728,7 @@ const saveContactDrafts = async () => {
 const resolveOpenMeetingId = async (targetClientId: string) => {
   const { data } = await api.get('/v1/meetings', {
     params: { client_id: targetClientId, status: 'open', per_page: 1 },
+    timeout: 60000
   })
   const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
   return list.length > 0 ? String(list[0].id) : null
@@ -693,10 +742,6 @@ const saveClientAndMeeting = async () => {
     const nip = normalizeNip(companyData.value.nip)
     if (!nip || !companyData.value.name || !companyData.value.street || !companyData.value.zip || !companyData.value.city) {
       toast.error('Uzupełnij dane firmy przed przejściem dalej.')
-      return false
-    }
-    if (await checkNipReservation(nip)) {
-      toast.warning(nipBlockMessage.value || 'NIP jest już zarezerwowany.')
       return false
     }
 
@@ -714,17 +759,12 @@ const saveClientAndMeeting = async () => {
           city: companyData.value.city,
         }
         try {
-          const { data } = await api.post('/v1/clients', payload)
+          const { data } = await api.post('/v1/clients', payload, { timeout: 60000 })
           clientId.value = String(data?.id || '')
         } catch (error: any) {
           const status = error?.response?.status
           const errors = error?.response?.data?.errors
           if (status === 422 && errors?.nip) {
-            const reserved = await checkNipReservation(nip)
-            if (reserved) {
-              toast.error(nipBlockMessage.value || 'NIP jest już zarezerwowany.')
-              return false
-            }
             const foundId = await resolveClientIdByNip(nip)
             if (foundId) {
               clientId.value = foundId
@@ -771,7 +811,7 @@ const saveClientAndMeeting = async () => {
         valid_until: validUntil.toISOString().slice(0, 10),
       }
       try {
-        const { data } = await api.post('/v1/meetings', payload)
+        const { data } = await api.post('/v1/meetings', payload, { timeout: 60000 })
         meetingId.value = String(data?.id || '')
         if (meetingId.value) {
           sessionId.value = `MEETING-${meetingId.value}`
@@ -953,20 +993,36 @@ const saveMeetingAnalysis = async () => {
 
 const finalizeMeeting = async () => {
   if (!auth.enabled || !meetingId.value) return
+  
+  // Ostatnie sprawdzenie rezerwacji NIP przed finalizacją (krok 4)
+  const nip = normalizeNip(companyData.value.nip)
+  if (nip) {
+    const isReserved = await checkNipReservation(nip)
+    if (isReserved) {
+      toast.error(nipBlockMessage.value || 'NIP został w międzyczasie zarezerwowany przez innego handlowca.')
+      // Cofamy do kroku 1, aby handlowiec widział błąd rezerwacji
+      step.value = 1
+      throw new Error('NIP_RESERVED')
+    }
+  }
+
   try {
     await api.patch(`/v1/meetings/${meetingId.value}`, {
       status: 'completed',
       calculation_shown: true,
+      reserve_nip: true // Wysyłamy flagę do backendu, aby dokonał rezerwacji przy pierwszej ofercie
     })
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się zakończyć spotkania.'
     toast.error(message)
+    throw error
   }
 }
 
 const loadExistingProcess = async (targetClientId: string, targetMeetingId?: string | null) => {
   if (!auth.enabled) return
   isLoadingExisting.value = true
+  isProcessActive.value = true
   try {
     const { data: client } = await api.get(`/v1/clients/${targetClientId}`)
     clientId.value = String(client?.id || targetClientId)
@@ -996,8 +1052,7 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       sessionId.value = `MEETING-${meetingId.value}`
     }
 
-    if (profileStatus === 'OFFER_PREPARING' && meetingId.value) {
-      isProcessActive.value = true
+    if (!route.query.step && profileStatus === 'OFFER_PREPARING' && meetingId.value) {
       const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
       router.push({
         path: targetPath,
@@ -1009,8 +1064,7 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       return
     }
 
-    if (profileStatus === 'OFFER_GENERATED' && meetingId.value) {
-      isProcessActive.value = true
+    if (!route.query.step && profileStatus === 'OFFER_GENERATED' && meetingId.value) {
       const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
       router.push({
         path: targetPath,
@@ -1072,14 +1126,16 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       }
     }
 
-    if (!meetingId.value) {
-      step.value = 1
-    } else if (consentList.value.filter((c) => c.required).some((c) => !consentAccepted.value[c.id])) {
-      step.value = 2
-    } else if (!meetingAnalysisId.value) {
-      step.value = 3
-    } else {
-      step.value = 4
+    if (!route.query.step) {
+      if (!meetingId.value) {
+        step.value = 1
+      } else if (consentList.value.filter((c) => c.required).some((c) => !consentAccepted.value[c.id])) {
+        step.value = 2
+      } else if (!meetingAnalysisId.value) {
+        step.value = 3
+      } else {
+        step.value = 4
+      }
     }
 
     isProcessActive.value = true
@@ -1130,8 +1186,6 @@ const getCurrentStepName = computed(() => {
       return 'Analiza'
     case 4:
       return 'Prezentacja'
-    case 5:
-      return 'Kalkulacja'
     default:
       return ''
   }
@@ -1192,9 +1246,14 @@ const nextStep = async () => {
     return
   }
 
-  step.value = 5
-  await updateCrmStatus('OFFER_PREPARING')
-  await finalizeMeeting()
+  try {
+    await updateCrmStatus('OFFER_PREPARING')
+    await finalizeMeeting()
+  } catch (err) {
+    // błąd obsłużony wewnątrz finalizeMeeting
+    return 
+  }
+
   const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
   router.push({
     path: targetPath,
@@ -1210,6 +1269,7 @@ const nextStep = async () => {
       uzSalaryNet: analysis.value.uzSalaryNet || undefined,
       // Fallback for legacy calculators
       employees: (analysis.value.uopCount || 0) + (analysis.value.uzCount || 0) || undefined,
+      source: 'process'
     },
   })
 }
@@ -1227,10 +1287,8 @@ const getButtonLabel = computed(() => {
     case 2:
       return 'Dalej: Analiza'
     case 3:
-      return 'Dalej: Baza wiedzy'
+      return 'Dalej: Prezentacja'
     case 4:
-      return 'Stwórz Kalkulację'
-    case 5:
       return 'Stwórz Kalkulację'
     default:
       return 'Dalej'
@@ -1247,6 +1305,7 @@ watch(
 )
 
 onMounted(() => {
+  clientStore.fetchClients() 
   const bootstrap = async () => {
     // Fallback defaults if API is empty or disabled
     const defaults = [
@@ -1292,6 +1351,11 @@ onMounted(() => {
   }
   const targetClientId = Array.isArray(route.query.clientId) ? route.query.clientId[0] : route.query.clientId
   const targetMeetingId = Array.isArray(route.query.meetingId) ? route.query.meetingId[0] : route.query.meetingId
+  
+  if (targetClientId) {
+    isProcessActive.value = true
+  }
+
   void bootstrap().then(() => {
     if (targetClientId) {
       loadExistingProcess(targetClientId, targetMeetingId)
@@ -1300,125 +1364,123 @@ onMounted(() => {
 })
 </script>
 
+
 <template>
-  <div v-if="!isProcessActive" class="flex flex-col items-center justify-center bg-white relative overflow-hidden h-full py-10">
-    <div class="absolute top-10 left-10 z-50">
-      <RouterLink to="/app/dashboard" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm group">
-        <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-        <span class="text-xs font-bold uppercase tracking-widest">Powrót</span>
-      </RouterLink>
-    </div>
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-slate-50 rounded-full blur-3xl -z-10 opacity-60"></div>
-
-    <div class="text-center mb-12 animate-fade-in-up">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white border border-slate-100 shadow-sm mb-6 relative">
-        <span class="font-serif text-2xl text-stratton-gold font-bold">{{ userName.slice(0, 1) }}</span>
-        <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-stratton-gold rounded-full flex items-center justify-center border-2 border-white">
-          <AppIcon name="check-circle" class="w-3 h-3 text-white" />
+  <div v-if="!isProcessActive" class="view-transition pb-20 space-y-8">
+    <div class="w-full pt-6">
+      <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex-1">
+          <div class="flex items-center gap-4 mb-3">
+             <RouterLink to="/app/dashboard" class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition shadow-sm">
+                <AppIcon name="arrow-left" class="w-5 h-5" />
+             </RouterLink>
+             <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Dzień dobry, {{ userName }}</h1>
+          </div>
+          <p class="text-slate-400 font-medium ml-14">Panel Procesu Sprzedażowego</p>
         </div>
       </div>
-      <h1 class="text-3xl font-serif font-bold text-slate-900 mb-2 tracking-tight">Witaj, {{ userName }}</h1>
-      <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">Rozpocznij proces sprzedażowy</p>
-    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 w-full max-w-4xl px-4 relative z-10">
-      <div class="space-y-6 animate-fade-in-up" style="animation-delay: 150ms">
-        <div class="flex items-center gap-4 mb-2">
-          <div class="h-px flex-1 bg-slate-200"></div>
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Spotkania</span>
-          <div class="h-px flex-1 bg-slate-200"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-12">
+        <div @click="startNewMeeting" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-emerald-500/20 hover:-translate-y-2 border border-white/50 hover:border-emerald-200/50 cursor-pointer">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+
+          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-emerald-500/30 group-hover:bg-emerald-500 group-hover:text-white ring-1 ring-emerald-100 group-hover:ring-emerald-400">
+            <AppIcon name="calendar" class="w-8 h-8" />
+          </div>
+          <div class="relative z-10">
+            <h3 class="font-bold text-slate-800 text-lg group-hover:text-emerald-700 transition-colors duration-300">Nowa Sprzedaż</h3>
+            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Rozpocznij proces</p>
+          </div>
         </div>
 
-        <button type="button" class="w-full group relative overflow-hidden bg-white border border-slate-200 hover:border-stratton-gold/50 rounded-xl p-8 text-left transition-all duration-300 hover:shadow-xl hover:shadow-stratton-gold/5" @click="startNewMeeting">
-          <div class="absolute top-0 right-0 w-24 h-24 bg-stratton-gold/5 rounded-bl-[100px] transition-transform group-hover:scale-150 duration-500"></div>
-          <div class="relative z-10 flex justify-between items-start">
-            <div>
-              <div class="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center mb-4 group-hover:bg-stratton-gold group-hover:text-white transition-colors duration-300">
-                <AppIcon name="calendar" class="w-6 h-6 text-slate-400 group-hover:text-white" />
-              </div>
-              <h3 class="text-xl font-bold text-slate-800 mb-2 group-hover:text-stratton-gold transition-colors">Nowe spotkanie</h3>
-              <p class="text-sm text-slate-500 leading-relaxed">Rozpocznij nową ścieżkę sprzedażową z klientem.</p>
-            </div>
-            <AppIcon name="arrow-right" class="w-4 h-4 text-slate-300 group-hover:text-stratton-gold group-hover:translate-x-1 transition-all" />
-          </div>
-        </button>
+        <RouterLink to="/app/clients" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-2 border border-white/50 hover:border-indigo-200/50 cursor-pointer">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-indigo-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
 
-        <RouterLink to="/app/clients" class="w-full group bg-white border border-slate-100 hover:border-slate-300 rounded-xl p-5 flex items-center justify-between transition-all hover:bg-slate-50">
-          <div class="flex items-center gap-4">
-            <div class="w-10 h-10 rounded bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-slate-600 transition">
-              <AppIcon name="folder" class="w-5 h-5" />
-            </div>
-            <span class="font-bold text-slate-600 text-sm group-hover:text-slate-800">Wczytaj istniejące</span>
+          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white ring-1 ring-indigo-100 group-hover:ring-indigo-400">
+            <AppIcon name="folder" class="w-8 h-8" />
           </div>
-          <AppIcon name="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-slate-500" />
-        </RouterLink>
-      </div>
-
-      <div class="space-y-4 animate-fade-in-up" style="animation-delay: 300ms">
-        <div class="flex items-center gap-4 mb-2">
-          <div class="h-px flex-1 bg-slate-200"></div>
-          <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Wsparcie</span>
-          <div class="h-px flex-1 bg-slate-200"></div>
-        </div>
-
-        <RouterLink to="/app/knowledge-base" class="w-full bg-white border border-slate-100 hover:border-slate-300 rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-all group">
-          <div class="w-12 h-12 rounded bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-slate-200 group-hover:bg-white transition">
-            <AppIcon name="book-open" class="w-6 h-6 text-slate-400 group-hover:text-stratton-blue" />
-          </div>
-          <div class="text-left">
-            <h4 class="font-bold text-slate-700 text-sm group-hover:text-stratton-blue transition">Baza Wiedzy</h4>
-            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Dokumenty, procedury</p>
+          <div class="relative z-10">
+            <h3 class="font-bold text-slate-800 text-lg group-hover:text-indigo-700 transition-colors duration-300">Wczytaj Spotkanie</h3>
+            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Kontynuuj pracę</p>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/quick-calculator" class="w-full bg-white border border-slate-100 hover:border-slate-300 rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-all group">
-          <div class="w-12 h-12 rounded bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-slate-200 group-hover:bg-white transition">
-            <AppIcon name="calculator" class="w-6 h-6 text-slate-400 group-hover:text-green-600" />
+        <RouterLink to="/app/knowledge-base" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-teal-500/20 hover:-translate-y-2 border border-white/50 hover:border-teal-200/50 cursor-pointer">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-teal-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+
+          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-teal-500/30 group-hover:bg-teal-500 group-hover:text-white ring-1 ring-teal-100 group-hover:ring-teal-400">
+            <AppIcon name="book-open" class="w-8 h-8" />
           </div>
-          <div class="text-left">
-            <h4 class="font-bold text-slate-700 text-sm group-hover:text-green-600 transition">Szybka Kalkulacja</h4>
-            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Dla klienta</p>
+          <div class="relative z-10">
+            <h3 class="font-bold text-slate-800 text-lg group-hover:text-teal-700 transition-colors duration-300">Baza Wiedzy</h3>
+            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Dokumenty i info</p>
           </div>
         </RouterLink>
-        <RouterLink to="/app/calculator" class="w-full bg-white border border-slate-100 hover:border-slate-300 rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-all group">
-          <div class="w-12 h-12 rounded bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:border-slate-200 group-hover:bg-white transition">
-            <AppIcon name="chart-line" class="w-6 h-6 text-slate-400 group-hover:text-stratton-blue" />
+
+        <RouterLink to="/app/quick-calculator" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 border border-white/50 hover:border-blue-200/50 cursor-pointer">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+
+          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-blue-500/30 group-hover:bg-blue-500 group-hover:text-white ring-1 ring-blue-100 group-hover:ring-blue-400">
+            <AppIcon name="calculator" class="w-8 h-8" />
           </div>
-          <div class="text-left">
-            <h4 class="font-bold text-slate-700 text-sm group-hover:text-stratton-blue transition">Szczegółowa Kalkulacja</h4>
-            <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Pełny raport</p>
+          <div class="relative z-10">
+            <h3 class="font-bold text-slate-800 text-lg group-hover:text-blue-700 transition-colors duration-300">Szybka Kalkulacja</h3>
+            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Uproszczona</p>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/calculator" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 border border-white/50 hover:border-purple-200/50 cursor-pointer">
+          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+
+          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-purple-500/30 group-hover:bg-purple-500 group-hover:text-white ring-1 ring-purple-100 group-hover:ring-purple-400">
+            <AppIcon name="chart-line" class="w-8 h-8" />
+          </div>
+          <div class="relative z-10">
+            <h3 class="font-bold text-slate-800 text-lg group-hover:text-purple-700 transition-colors duration-300">Szczegółowa Kalkulacja</h3>
+            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Pełny raport</p>
           </div>
         </RouterLink>
       </div>
-    </div>
 
-    <div class="mt-20 text-center">
-      <p class="text-[10px] text-slate-300 font-medium uppercase tracking-widest">Stratton Financial Services &copy; 2026</p>
+      <div class="mt-20 text-center">
+        <p class="text-[10px] text-slate-300 font-medium uppercase tracking-widest">Stratton Prime - Doradztwo Biznesowe 2026</p>
+      </div>
     </div>
   </div>
 
-  <div v-else class="w-full flex flex-col animate-fade-in pb-10">
-    <header class="w-full border-b border-slate-100 py-6 mb-8">
-      <div class="max-w-6xl mx-auto px-6 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <button type="button" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition shadow-sm" @click="goBack">
-            <AppIcon name="arrow-left" class="w-4 h-4" />
-          </button>
-          <div>
-            <h1 class="font-serif font-bold text-2xl text-slate-900 tracking-wide flex items-center gap-3">
-              Nowe Spotkanie
-              <span class="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-wider">Sesja Aktywna</span>
-            </h1>
-            <p class="text-xs text-slate-400 font-mono mt-1">ID: {{ sessionId }}</p>
+
+  <div v-else class="view-transition pb-20 space-y-8">
+    <div class="w-full pt-6">
+      <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex-1">
+          <div class="flex items-center gap-4 mb-3">
+             <button @click="goBack" class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition shadow-sm">
+                <AppIcon name="arrow-left" class="w-5 h-5" />
+             </button>
+             <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Nowe Spotkanie Sprzedażowe</h1>
+          </div>
+          <div class="ml-14 flex items-center gap-3">
+              <span class="text-slate-400 font-medium">Panel Procesu Sprzedażowego</span>
+              <span class="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/30 uppercase tracking-wider">Sesja Aktywna</span>
+              <span class="text-xs text-slate-500 font-mono">ID: {{ sessionId }}</span>
           </div>
         </div>
         <div class="hidden md:flex items-center gap-2">
-          <div v-for="i in [1, 2, 3, 4, 5]" :key="i" class="h-1.5 w-12 rounded-full" :class="step >= i ? 'bg-slate-800' : 'bg-slate-200'"></div>
+          <div v-for="i in [1, 2, 3, 4]" :key="i" class="h-1.5 w-12 rounded-full transition-colors" :class="step >= i ? 'bg-stratton-gold' : 'bg-slate-800'"></div>
         </div>
       </div>
-    </header>
 
-    <main class="w-full max-w-6xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       <div class="lg:col-span-4 space-y-6 sticky top-8">
         <div class="bg-slate-900 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
           <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full"></div>
@@ -1456,20 +1518,23 @@ onMounted(() => {
           <div v-if="step === 1" class="space-y-8 animate-fade-in-up">
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 class="font-serif font-bold text-xl text-slate-800">Dane Rejestrowe</h3>
+              <button @click="showFetchMeetingModal = true" class="text-[10px] font-bold text-emerald-600 border border-emerald-200 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 hover:border-emerald-300 transition uppercase tracking-wide flex items-center gap-2">
+                <AppIcon name="refresh" class="w-3.5 h-3.5" />
+                POBIERZ DANE KLIENTA ZE SPOTKANIA
+              </button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div class="space-y-6">
                 <div>
                   <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Numer NIP</label>
                   <div class="flex">
-                    <input v-model="companyData.nip" type="text" class="flex-1 bg-slate-50 border border-slate-200 rounded-l-lg px-4 py-3 text-slate-900 font-mono font-bold focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold outline-none transition-all" @blur="checkNipReservation(companyData.nip)" />
+                    <input v-model="companyData.nip" type="text" class="flex-1 bg-slate-50 border border-slate-200 rounded-l-lg px-4 py-3 text-slate-900 font-mono font-bold focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold outline-none transition-all" />
                     <button type="button" class="bg-slate-800 text-white px-4 rounded-r-lg hover:bg-slate-700 transition" :disabled="isFetchingGus" @click="fetchCompanyByNip">
                       <span v-if="isFetchingGus">...</span>
                       <span v-else>Pobierz</span>
                     </button>
                   </div>
                   <p v-if="gusError" class="text-xs text-red-500 mt-1">{{ gusError }}</p>
-                  <p v-else-if="nipBlockMessage" class="text-xs text-amber-600 mt-1">{{ nipBlockMessage }}</p>
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Pełna Nazwa Firmy</label>
@@ -1737,156 +1802,6 @@ onMounted(() => {
                   <option value="Naprawa komputerów i artykułów osobistych oraz domowych"></option>
                   <option value="Pozostała indywidualna działalność usługowa"></option>
                 </datalist>
-                <select
-                  v-model="analysis.industry"
-                  class="w-full bg-slate-50 border-2 border-slate-200 rounded-lg px-4 py-3 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all cursor-pointer hover:border-slate-300"
-                  @change="industrySearch = analysis.industry"
-                >
-                  <option value="" disabled>Wybierz z listy...</option>
-                  
-                  <optgroup label="Rolnictwo, leśnictwo, łowiectwo i rybactwo">
-                    <option value="Uprawy rolne, chów i hodowla zwierząt, łowiectwo, włączając działalność usługową">Uprawy rolne, chów i hodowla zwierząt, łowiectwo, włączając działalność usługową</option>
-                    <option value="Leśnictwo i pozyskiwanie drewna">Leśnictwo i pozyskiwanie drewna</option>
-                    <option value="Rybactwo">Rybactwo</option>
-                  </optgroup>
-
-                  <optgroup label="Górnictwo i wydobywanie">
-                    <option value="Wydobywanie węgla kamiennego i węgla brunatnego (lignitu)">Wydobywanie węgla kamiennego i węgla brunatnego (lignitu)</option>
-                    <option value="Górnictwo ropy naftowej i gazu ziemnego">Górnictwo ropy naftowej i gazu ziemnego</option>
-                    <option value="Górnictwo rud metali">Górnictwo rud metali</option>
-                    <option value="Pozostałe górnictwo i wydobywanie">Pozostałe górnictwo i wydobywanie</option>
-                    <option value="Usługi wspomagające górnictwo i wydobywanie">Usługi wspomagające górnictwo i wydobywanie</option>
-                  </optgroup>
-
-                  <optgroup label="Przetwórstwo przemysłowe">
-                    <option value="Produkcja art. spożywczych">Produkcja art. spożywczych</option>
-                    <option value="Produkcja napojów">Produkcja napojów</option>
-                    <option value="Produkcja wyrobów tytoniowych">Produkcja wyrobów tytoniowych</option>
-                    <option value="Produkcja wyrobów tekstylnych">Produkcja wyrobów tekstylnych</option>
-                    <option value="Produkcja odzieży">Produkcja odzieży</option>
-                    <option value="Produkcja skór i wyrobów ze skór wyprawionych">Produkcja skór i wyrobów ze skór wyprawionych</option>
-                    <option value="Produkcja wyrobów z drewna oraz korka, z wyłączeniem mebli; Produkcja wyrobów ze słomy i materiałów używanych do wyplatania">Produkcja wyrobów z drewna oraz korka, z wyłączeniem mebli; Produkcja wyrobów ze słomy i materiałów używanych do wyplatania</option>
-                    <option value="Produkcja papieru i wyrobów z papieru">Produkcja papieru i wyrobów z papieru</option>
-                    <option value="Poligrafia i reprodukcja zapisanych nośników informacji">Poligrafia i reprodukcja zapisanych nośników informacji</option>
-                    <option value="Wytwarzanie i przetwarzanie koksu i produktów rafinacji ropy naftowej">Wytwarzanie i przetwarzanie koksu i produktów rafinacji ropy naftowej</option>
-                    <option value="Produkcja chemikaliów i wyrobów chemicznych">Produkcja chemikaliów i wyrobów chemicznych</option>
-                    <option value="Produkcja podstawowych substancji farmaceutycznych oraz leków i pozostałych wyrobów farmaceutycznych">Produkcja podstawowych substancji farmaceutycznych oraz leków i pozostałych wyrobów farmaceutycznych</option>
-                    <option value="Produkcja wyrobów z gumy i tworzyw sztucznych">Produkcja wyrobów z gumy i tworzyw sztucznych</option>
-                    <option value="Produkcja wyrobów z pozostałych mineralnych surowców niemetalicznych">Produkcja wyrobów z pozostałych mineralnych surowców niemetalicznych</option>
-                    <option value="Produkcja metali">Produkcja metali</option>
-                    <option value="Produkcja metalowych wyrobów gotowych, z wyłączeniem maszyn i urządzeń">Produkcja metalowych wyrobów gotowych, z wyłączeniem maszyn i urządzeń</option>
-                    <option value="Produkcja komputerów, wyrobów elektronicznych i optycznych">Produkcja komputerów, wyrobów elektronicznych i optycznych</option>
-                    <option value="Produkcja urządzeń elektrycznych">Produkcja urządzeń elektrycznych</option>
-                    <option value="Produkcja maszyn i urządzeń, gdzie indziej niesklasyfikowana">Produkcja maszyn i urządzeń, gdzie indziej niesklasyfikowana</option>
-                    <option value="Produkcja pojazdów samochodowych, przyczep i naczep, z wyłączeniem motocykli">Produkcja pojazdów samochodowych, przyczep i naczep, z wyłączeniem motocykli</option>
-                    <option value="Produkcja pozostałego sprzętu transportowego">Produkcja pozostałego sprzętu transportowego</option>
-                    <option value="Produkcja mebli">Produkcja mebli</option>
-                    <option value="Pozostała produkcja wyrobów">Pozostała produkcja wyrobów</option>
-                    <option value="Naprawa, konserwacja i instalowanie maszyn i urządzeń">Naprawa, konserwacja i instalowanie maszyn i urządzeń</option>
-                  </optgroup>
-
-                  <optgroup label="Elektryczność, gaz, gorąca woda i para">
-                    <option value="Wytwarzanie i zaopatrywanie w energię elektryczną, gaz, parę wodną, gorącą wodę i powietrze do układów klimatyzacyjnych">Wytwarzanie i zaopatrywanie w energię elektryczną, gaz, parę wodną, gorącą wodę i powietrze do układów klimatyzacyjnych</option>
-                  </optgroup>
-
-                  <optgroup label="Woda, ścieki i odpady, recykling, odkażanie">
-                    <option value="Pobór, uzdatnianie i dostarczanie wody">Pobór, uzdatnianie i dostarczanie wody</option>
-                    <option value="Odprowadzanie i oczyszczanie ścieków">Odprowadzanie i oczyszczanie ścieków</option>
-                    <option value="Zbieranie, przetwarzanie i unieszkodliwianie odpadów oraz odzysk surowców">Zbieranie, przetwarzanie i unieszkodliwianie odpadów oraz odzysk surowców</option>
-                    <option value="Rekultywacją i pozostałe usługi związane z gospodarką odpadami">Rekultywacją i pozostałe usługi związane z gospodarką odpadami</option>
-                  </optgroup>
-
-                  <optgroup label="Budownictwo">
-                    <option value="Roboty budowlane związane ze wznoszeniem budynków">Roboty budowlane związane ze wznoszeniem budynków</option>
-                    <option value="Roboty związane z budową obiektów inżynierii lądowej i wodnej">Roboty związane z budową obiektów inżynierii lądowej i wodnej</option>
-                    <option value="Roboty budowlane specjalistyczne">Roboty budowlane specjalistyczne</option>
-                  </optgroup>
-
-                  <optgroup label="Handel; pojazdy - handel i naprawa">
-                    <option value="Handel hurtowy i detaliczny pojazdami samochodowymi; Naprawa pojazdów samochodowych">Handel hurtowy i detaliczny pojazdami samochodowymi; Naprawa pojazdów samochodowych</option>
-                    <option value="Handel hurtowy (bez pojazdów samochodowych)">Handel hurtowy (bez pojazdów samochodowych)</option>
-                    <option value="Handel detaliczny (bez pojazdów samochodowych)">Handel detaliczny (bez pojazdów samochodowych)</option>
-                  </optgroup>
-
-                  <optgroup label="Transport i magazynowanie">
-                    <option value="Transport lądowy oraz rurociągowy">Transport lądowy oraz rurociągowy</option>
-                    <option value="Transport wodny">Transport wodny</option>
-                    <option value="Transport lotniczy">Transport lotniczy</option>
-                    <option value="Magazynowanie i usługi wspomagające transport">Magazynowanie i usługi wspomagające transport</option>
-                    <option value="Działalność pocztowa i kurierska">Działalność pocztowa i kurierska</option>
-                  </optgroup>
-
-                  <optgroup label="Hotelarstwo i gastronomia">
-                    <option value="Zakwaterowanie">Zakwaterowanie</option>
-                    <option value="Wyżywienie">Wyżywienie</option>
-                  </optgroup>
-
-                  <optgroup label="Informacja i komunikacja">
-                    <option value="Działalność wydawnicza">Działalność wydawnicza</option>
-                    <option value="Działalność filmowa, telewizyjna, dźwiękowa i muzyczna">Działalność filmowa, telewizyjna, dźwiękowa i muzyczna</option>
-                    <option value="Nadawanie programów telewizyjnych i radiowych">Nadawanie programów telewizyjnych i radiowych</option>
-                    <option value="Telekomunikacja">Telekomunikacja</option>
-                    <option value="Oprogramowanie i doradztwo w zakresie informatyki">Oprogramowanie i doradztwo w zakresie informatyki</option>
-                    <option value="Zarządzanie stronami WWW, przetwarzanie danych i hosting">Zarządzanie stronami WWW, przetwarzanie danych i hosting</option>
-                  </optgroup>
-
-                  <optgroup label="Finanse i ubezpieczenia">
-                    <option value="Usługi finansowe z wyłączeniem ubezpieczeń i funduszów emerytalnych">Usługi finansowe z wyłączeniem ubezpieczeń i funduszów emerytalnych</option>
-                    <option value="Ubezpieczenia, reasekuracja i fundusze emerytalne, z wyłączeniem obowiązkowego ubezpieczenia społecznego">Ubezpieczenia, reasekuracja i fundusze emerytalne, z wyłączeniem obowiązkowego ubezpieczenia społecznego</option>
-                    <option value="Usługi objęte pośrednictwem finansowym">Usługi objęte pośrednictwem finansowym</option>
-                  </optgroup>
-
-                  <optgroup label="Rynek nieruchomości">
-                    <option value="Obsługa rynku nieruchomości">Obsługa rynku nieruchomości</option>
-                  </optgroup>
-
-                  <optgroup label="Prawo, rachunkowość, zarządzanie, nauka, technika">
-                    <option value="Usługi prawnicze, rachunkowo-księgowe i doradztwo podatkowe">Usługi prawnicze, rachunkowo-księgowe i doradztwo podatkowe</option>
-                    <option value="Działalność firm centralnych i doradztwo związane z zarządzaniem">Działalność firm centralnych i doradztwo związane z zarządzaniem</option>
-                    <option value="Architektura, inżynieria, badania i analizy techniczne">Architektura, inżynieria, badania i analizy techniczne</option>
-                    <option value="Badania naukowe i prace rozwojowe">Badania naukowe i prace rozwojowe</option>
-                    <option value="Reklama, badanie rynku i opinii publicznej">Reklama, badanie rynku i opinii publicznej</option>
-                    <option value="Projektowanie, fotografia, tłumaczenia, działalność profesjonalna">Projektowanie, fotografia, tłumaczenia, działalność profesjonalna</option>
-                    <option value="Weterynaria">Weterynaria</option>
-                  </optgroup>
-
-                  <optgroup label="Administrowanie">
-                    <option value="Wynajem i dzierżawa">Wynajem i dzierżawa</option>
-                    <option value="Zatrudnienie">Zatrudnienie</option>
-                    <option value="Turystyka">Turystyka</option>
-                    <option value="Usługi detektywistyczne i ochroniarskie">Usługi detektywistyczne i ochroniarskie</option>
-                    <option value="Sprzątanie budynków i gospodarowanie terenami zieleni">Sprzątanie budynków i gospodarowanie terenami zieleni</option>
-                    <option value="Administracja biurowa i wspomaganie prowadzenia działalności gospodarczej">Administracja biurowa i wspomaganie prowadzenia działalności gospodarczej</option>
-                  </optgroup>
-
-                  <optgroup label="Administracja państwowa">
-                    <option value="Administracja publiczna, obrona narodowa i obowiązkowe zabezpieczenia społeczne">Administracja publiczna, obrona narodowa i obowiązkowe zabezpieczenia społeczne</option>
-                  </optgroup>
-
-                  <optgroup label="Baza Wiedzy">
-                    <option value="Baza Wiedzy">Baza Wiedzy</option>
-                  </optgroup>
-
-                  <optgroup label="Zdrowie i pomoc społeczna">
-                    <option value="Opieka zdrowotna">Opieka zdrowotna</option>
-                    <option value="Pomoc społeczna (z zakwaterowaniem)">Pomoc społeczna (z zakwaterowaniem)</option>
-                    <option value="Pomoc społeczna (bez zakwaterowania)">Pomoc społeczna (bez zakwaterowania)</option>
-                  </optgroup>
-
-                  <optgroup label="Kultura, rozrywka i rekreacja">
-                    <option value="Kultura i rozrywka">Kultura i rozrywka</option>
-                    <option value="Biblioteki, archiwa, muzea, zoo oraz inne obiekty kulturalne">Biblioteki, archiwa, muzea, zoo oraz inne obiekty kulturalne</option>
-                    <option value="Gry losowe i zakłady wzajemne">Gry losowe i zakłady wzajemne</option>
-                    <option value="Sport, rozrywka i rekreacja">Sport, rozrywka i rekreacja</option>
-                  </optgroup>
-
-                  <optgroup label="Pozostałe usługi">
-                    <option value="Działalność organizacji członkowskich">Działalność organizacji członkowskich</option>
-                    <option value="Naprawa komputerów i artykułów osobistych oraz domowych">Naprawa komputerów i artykułów osobistych oraz domowych</option>
-                    <option value="Pozostała indywidualna działalność usługowa">Pozostała indywidualna działalność usługowa</option>
-                  </optgroup>
-                  
-                </select>
                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2018,65 +1933,6 @@ onMounted(() => {
 
           </div>
 
-          <div v-else-if="step === 4" class="space-y-6 animate-fade-in-up">
-            <div>
-              <h3 class="text-lg font-bold text-slate-800">Materiały z bazy wiedzy</h3>
-              <p class="text-xs text-slate-500">Wyszukaj i otwórz potrzebne dokumenty przed zakończeniem spotkania.</p>
-            </div>
-            <div v-if="knowledgeCategories.length" class="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                class="px-3 py-1.5 text-xs font-semibold rounded-full border transition"
-                :class="selectedKnowledgeCategory === 'all' ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
-                @click="selectedKnowledgeCategory = 'all'"
-              >
-                Wszystkie
-              </button>
-              <button
-                v-for="category in knowledgeCategories"
-                :key="category"
-                type="button"
-                class="px-3 py-1.5 text-xs font-semibold rounded-full border transition"
-                :class="selectedKnowledgeCategory === category ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
-                @click="selectedKnowledgeCategory = category"
-              >
-                {{ categoryNames[category as FileCategory] || category }}
-              </button>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="relative flex-1">
-                <AppIcon name="magnifying-glass" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input v-model="knowledgeSearch" type="text" placeholder="Szukaj plików po nazwie lub opisie..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-slate-400 focus:border-slate-400" />
-              </div>
-              <button type="button" class="px-4 py-2 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" @click="knowledgeBase.fetchFiles(knowledgeSearch)">
-                Odśwież
-              </button>
-            </div>
-            <div v-if="knowledgeBase.loading" class="text-xs text-slate-400">Ładowanie plików...</div>
-            <div v-else-if="filteredKnowledgeFiles.length === 0" class="text-sm text-slate-500">
-              Brak plików spełniających kryteria wyszukiwania.
-            </div>
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div v-for="(file, index) in filteredKnowledgeFiles" :key="file.id" class="border border-slate-200 rounded-xl p-4 bg-white hover:border-stratton-gold/50 transition">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="font-semibold text-slate-900">{{ file.name }}</p>
-                    <p class="text-xs text-slate-500 line-clamp-2">{{ file.description || 'Brak opisu' }}</p>
-                    <p class="text-[11px] text-slate-400 mt-1">{{ categoryNames[file.category as FileCategory] || file.category }}</p>
-                  </div>
-                  <div class="flex flex-col items-end gap-2">
-                    <button type="button" class="text-xs font-semibold text-stratton-gold hover:underline" @click="openKnowledgeFile(file, index)">
-                      Otwórz
-                    </button>
-                    <button type="button" class="text-[11px] font-semibold text-slate-500 hover:text-slate-700" @click="downloadKnowledgeFile(file)">
-                      Zapisz
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div v-else class="space-y-6 animate-fade-in-up">
             <div class="text-center mb-8">
                <h3 class="text-2xl font-serif font-bold text-slate-800 mb-2">Prezentacja Rozwiązania</h3>
@@ -2113,13 +1969,13 @@ onMounted(() => {
               <!-- Fallback Hardcoded Tiles (only if no dynamic files) -->
               <template v-if="knowledgeFiles.length === 0">
                   <!-- Cash Flow Tile -->
-                  <button @click="openPresentation('CASH_FLOW', 'Cash Flow')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
+                  <button @click="openPresentation('CASH_FLOW', 'Dokumenty do pobrania')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
                      <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
                      <div class="relative z-10">
                         <div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                           <AppIcon name="chart-pie" class="w-7 h-7" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-emerald-700 transition-colors">Cash Flow</h4>
+                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-emerald-700 transition-colors">Dokumenty do pobrania</h4>
                      </div>
                      <div class="relative z-10 flex items-center justify-between mt-auto">
                         <p class="text-sm text-slate-500 font-medium">Analiza finansowa</p>
@@ -2130,13 +1986,13 @@ onMounted(() => {
                   </button>
                   
                   <!-- Legal Tile -->
-                  <button @click="openPresentation('LEGAL', 'Kwestie Prawne')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
+                  <button @click="openPresentation('LEGAL', 'Podstawa prawna')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
                      <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
                      <div class="relative z-10">
                         <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                           <AppIcon name="scale" class="w-7 h-7" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-blue-700 transition-colors">Kwestie Prawne</h4>
+                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-blue-700 transition-colors">Podstawa prawna</h4>
                      </div>
                      <div class="relative z-10 flex items-center justify-between mt-auto">
                         <p class="text-sm text-slate-500 font-medium">Bezpieczeństwo i przepisy</p>
@@ -2147,13 +2003,13 @@ onMounted(() => {
                   </button>
 
                   <!-- Graphic Presentation Tile -->
-                  <button @click="openPresentation('GRAPHIC', 'Graficzne Przedstawienie')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
+                  <button @click="openPresentation('GRAPHIC', 'Schemat działania')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
                      <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
                      <div class="relative z-10">
                         <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 mb-6 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                           <AppIcon name="presentation-chart-line" class="w-7 h-7" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-indigo-700 transition-colors">Graficzne Przedstawienie</h4>
+                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-indigo-700 transition-colors">Schemat działania</h4>
                      </div>
                      <div class="relative z-10 flex items-center justify-between mt-auto">
                         <p class="text-sm text-slate-500 font-medium">Wizualizacja modelu</p>
@@ -2164,13 +2020,13 @@ onMounted(() => {
                   </button>
 
                    <!-- Video Tile -->
-                  <button @click="openPresentation('VIDEO', 'Film Wideo')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
+                  <button @click="openPresentation('VIDEO', 'Materiały wideo')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
                      <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
                      <div class="relative z-10">
                         <div class="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center text-red-600 mb-6 group-hover:bg-red-600 group-hover:text-white transition-colors">
                           <AppIcon name="video-camera" class="w-7 h-7" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-red-700 transition-colors">Film Wideo</h4>
+                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-red-700 transition-colors">Materiały wideo</h4>
                      </div>
                      <div class="relative z-10 flex items-center justify-between mt-auto">
                         <p class="text-sm text-slate-500 font-medium">Materiał multimedialny</p>
@@ -2214,7 +2070,8 @@ onMounted(() => {
           </div>
         </div>
       </div>
-    </main>
+      </div>
+    </div>
 
     <div v-if="showPreview" class="fixed inset-0 z-[60] flex items-center justify-center">
       <div class="absolute inset-0 bg-black/50" @click="closePreview"></div>
@@ -2238,6 +2095,59 @@ onMounted(() => {
         </div>
         <div class="flex-1 overflow-hidden">
           <VueFilesPreview :key="previewKey" :file="previewFile || undefined" :url="previewUrl" class="w-full h-full" />
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showFetchMeetingModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showFetchMeetingModal = false"></div>
+      <div class="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[80vh] animate-scale-in">
+        <div class="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+          <h3 class="text-lg font-serif font-bold text-slate-800">Wybierz ze spotkań (Prospekci)</h3>
+          <button @click="showFetchMeetingModal = false" class="text-slate-400 hover:text-slate-600 transition">
+            <AppIcon name="xmark" class="w-6 h-6" />
+          </button>
+        </div>
+        
+        <div class="p-4 border-b border-slate-100">
+           <div class="relative">
+              <AppIcon name="search" class="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+              <input 
+                v-model="selectMeetingSearch" 
+                type="text" 
+                placeholder="Szukaj po nazwie firmy lub NIP..." 
+                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400"
+                autofocus
+              />
+           </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-2">
+            <div 
+              v-for="prospect in filteredProspects" 
+              :key="prospect.id"
+              @click="handleSelectMeeting(prospect)"
+              class="group p-4 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer transition-all flex items-center justify-between"
+            >
+               <div>
+                  <div class="font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">{{ prospect.name || 'Bez nazwy' }}</div>
+                  <div class="text-xs text-slate-500 font-mono mt-1">NIP: {{ prospect.nip || 'brak' }}</div>
+                  <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                     <span class="inline-flex items-center gap-1">
+                        <AppIcon name="user" class="w-3 h-3" /> {{ prospect.contactName || 'Brak os. kontaktowej' }}
+                     </span>
+                  </div>
+               </div>
+               <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button class="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-emerald-700">
+                    Wybierz
+                  </button>
+               </div>
+            </div>
+            
+            <div v-if="filteredProspects.length === 0" class="text-center py-8 text-slate-500 text-sm">
+                Brak wyników wyszukiwania.
+            </div>
         </div>
       </div>
     </div>

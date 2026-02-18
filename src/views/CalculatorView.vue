@@ -32,16 +32,25 @@ const handleBack = () => {
   if (currentStep.value > -1) {
     currentStep.value--;
   } else {
-    router.push('/app/quick-calculator');
+    if (route.query.source === 'process') {
+      const clientId = route.query.clientId
+      const meetingId = route.query.meetingId
+      router.push({
+        path: '/app/sales/start',
+        query: { clientId, meetingId, step: 4 }
+      })
+    } else {
+      router.back();
+    }
   }
 };
 
 const steps = [
   { id: 0, label: 'Firma', icon: 'building' },
   { id: 1, label: 'Pracownicy', icon: 'users' },
-  { id: 2, label: 'Obecny model wynagrodzenia', icon: 'chart-line' },
-  { id: 3, label: 'Podział wynagrodzenia na zasadnicze i świadczenie', icon: 'chart-pie' },
-  { id: 4, label: 'Oszczędności', icon: 'sliders' },
+  { id: 2, label: 'Suma aktualnego kosztu zatrudnienia', icon: 'chart-line' },
+  { id: 3, label: 'Wynagrodzenie w modelu Eliton Prime<sup>TM</sup>', icon: 'chart-pie' },
+  { id: 4, label: 'Oszczędności po wdrożeniu Eliton Prime<sup>TM</sup>', icon: 'sliders' },
   { id: 5, label: 'Podsumowanie', icon: 'file-invoice-dollar' },
 ];
 
@@ -219,41 +228,49 @@ onMounted(() => {
 
 <template>
   <div class="w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
-    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-serif font-bold text-slate-900 flex items-center gap-3">
-          Kalkulator szczegółowy
-          <span class="text-xs bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-wider">Aktywny</span>
-        </h1>
-        <p class="text-xs text-slate-400 uppercase tracking-widest">
-          {{ currentStep === -1 ? 'Pulpit' : `Krok ${currentStep + 1} / ${steps.length}` }}
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
-        <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors" @click="handleBack">
-          Wstecz
-        </button>
-        <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all" :disabled="!canProceed || currentStep >= steps.length - 1" @click="currentStep++">
-          Dalej
-        </button>
-      </div>
-    </header>
-
-    <div class="relative bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-      <div>
-        <div class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">Firma dla kalkulacji</div>
-        <div class="text-lg font-bold text-slate-900">
-          {{ store.firma.nazwa || 'Nie wybrano firmy' }}
+    <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-8">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-8 pb-8 border-b border-slate-800 gap-6">
+        <div class="flex items-center gap-6 self-start md:self-center">
+            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
+              <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            </button>
+            <div>
+              <h1 class="text-3xl font-serif font-bold text-white flex items-center gap-3">
+                Kalkulator szczegółowy
+                <span class="text-[10px] bg-emerald-500/10 text-emerald-500 font-bold px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider">Aktywny</span>
+              </h1>
+              <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">
+                {{ currentStep === -1 ? 'Pulpit' : `Krok ${currentStep + 1} / ${steps.length}` }}
+              </p>
+            </div>
         </div>
-        <div v-if="store.firma.nip" class="text-xs text-slate-500 font-mono">NIP: {{ store.firma.nip }}</div>
-      </div>
-      <div class="flex items-center gap-2">
-        <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50" @click="showCompanyPicker = !showCompanyPicker">
-          Zmień firmę
+        
+        <button 
+          type="button" 
+          class="flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl shadow-lg shadow-indigo-500/30 transition-all font-bold group disabled:opacity-50 disabled:grayscale self-end md:self-center"
+          :disabled="!canProceed || currentStep >= steps.length - 1" 
+          @click="currentStep++"
+        >
+          <span class="text-sm">Dalej</span>
+          <AppIcon name="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
 
-      <div v-if="showCompanyPicker" class="absolute right-4 top-full mt-3 w-full max-w-xl bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-20">
+      <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 group hover:border-slate-600 transition-colors">
+        <div>
+          <div class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Firma dla kalkulacji</div>
+          <div class="text-xl font-bold text-white tracking-tight">
+            {{ store.firma.nazwa || 'Nie wybrano firmy' }}
+          </div>
+          <div v-if="store.firma.nip" class="text-xs text-slate-400 font-mono mt-1">NIP: <span class="text-slate-300">{{ store.firma.nip }}</span></div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors" @click="showCompanyPicker = !showCompanyPicker">
+            Zmień firmę
+          </button>
+        </div>
+
+        <div v-if="showCompanyPicker" class="absolute right-4 top-full mt-3 w-full max-w-xl bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-20">
         <div class="flex items-center gap-2 mb-3">
           <div class="relative flex-1">
             <input v-model="companySearch" type="text" placeholder="Szukaj po nazwie lub NIP..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-slate-400 focus:border-slate-400" />
@@ -283,6 +300,7 @@ onMounted(() => {
         </div>
       </div>
     </div>
+  </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <aside class="lg:col-span-3 space-y-3">
@@ -299,7 +317,7 @@ onMounted(() => {
           <div class="flex items-center gap-3">
             <AppIcon :name="step.icon" class="w-5 h-5" />
             <div>
-              <div class="font-bold">{{ step.label }}</div>
+              <div class="font-bold" v-html="step.label"></div>
               <div class="text-[10px] uppercase tracking-widest opacity-70">Krok {{ step.id + 1 }}</div>
             </div>
           </div>

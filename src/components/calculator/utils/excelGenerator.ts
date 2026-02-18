@@ -222,8 +222,8 @@ export const excelGenerator = {
       'Obecne\nNetto',
       'Nowa Baza\n(ZUS)',
       'Świadczenie\n(Benefit)',
-      isPlusVariant ? 'Podwyżka Systemowa\n(Stratton 4%)' : 'Podwyżka Systemowa\n(Brak)',
-      'Bonus Administracyjny\n(2% - Budżet Firmy)',
+      isPlusVariant ? 'Podwyżka Systemowa\n(4%)' : 'Podwyżka Systemowa\n(0%)',
+      'Bonus HR/Admin\n(Stratton 2%)',
       'Podwyżka Dodatkowa\n(Od Pracodawcy)',
       'NOWE ŁĄCZNE\nNETTO PRACOWNIKA',
       'ZMIANA\n(ZYSK PRACOWNIKA)',
@@ -268,13 +268,9 @@ export const excelGenerator = {
         wsDetails.getCell(`D${rowIndex}`).value = w.podzial.zasadnicza.nettoGotowka;
         wsDetails.getCell(`E${rowIndex}`).value = w.podzial.swiadczenie.netto;
 
-        let systemRaise = 0;
-        let adminBonus = 0;
-        if (isPlusVariant) {
-          const swiadczenieBrutto = w.podzial.swiadczenie.brutto;
-          systemRaise = swiadczenieBrutto * 0.04;
-          adminBonus = swiadczenieBrutto * 0.02;
-        }
+        const swiadczenieBrutto = w.podzial.swiadczenie.brutto;
+        const systemRaise = isPlusVariant ? swiadczenieBrutto * 0.04 : 0;
+        const adminBonus = swiadczenieBrutto * 0.02;
 
         wsDetails.getCell(`F${rowIndex}`).value = systemRaise;
         wsDetails.getCell(`F${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
@@ -465,6 +461,50 @@ export const excelGenerator = {
       applyColumnStyles(row, standardColumns);
     });
 
+    const summaryRowStandardValues: any = { lp: '', name: 'SUMA', type: '' };
+    standardColumns.forEach((col) => {
+      if (['lp', 'name', 'type', 'stawkaPit'].includes(col.key)) return;
+
+      const total = wyniki.szczegoly.reduce((acc, w) => {
+        let val = 0;
+        const s = w.standard;
+        const zp = s.zusPracownik;
+        const zf = s.zusPracodawca;
+
+        switch (col.key) {
+           case 'netto': val = s.netto; break;
+           case 'brutto': val = s.brutto; break;
+           case 'koszt': val = s.kosztPracodawcy; break;
+           case 'podstZus': val = s.podstawaZus; break;
+           case 'emerytalnaPrac': val = zp.emerytalna; break;
+           case 'rentowaPrac': val = zp.rentowa; break;
+           case 'chorobowaPrac': val = zp.chorobowa; break;
+           case 'zusPrac': val = zp.suma; break;
+           case 'podstZdrow': val = s.podstawaZdrowotna; break;
+           case 'zdrowotna': val = s.zdrowotna; break;
+           case 'kup': val = s.kup; break;
+           case 'podstPit': val = s.podstawaPit; break;
+           case 'pit': val = s.pit; break;
+           case 'emerytalnaFirma': val = zf.emerytalna; break;
+           case 'rentowaFirma': val = zf.rentowa; break;
+           case 'wypadkowaFirma': val = zf.wypadkowa; break;
+           case 'fp': val = zf.fp; break;
+           case 'fgsp': val = zf.fgsp; break;
+           case 'zusFirma': val = zf.suma; break;
+           case 'sumaSkladek': val = zp.suma + zf.suma + s.zdrowotna; break;
+        }
+        return acc + val;
+      }, 0);
+      summaryRowStandardValues[col.key] = total;
+    });
+
+    const summaryRowStandard = wsStandard.addRow(summaryRowStandardValues);
+    applyColumnStyles(summaryRowStandard, standardColumns);
+    summaryRowStandard.font = { bold: true };
+    summaryRowStandard.eachCell((cell: any) => {
+        cell.border = { top: { style: 'double' } };
+    });
+
     const wsSplit = workbook.addWorksheet('Podział (To-Be)');
     wsSplit.columns = splitColumns;
     applyHeaderStyle(wsSplit, 1);
@@ -480,7 +520,7 @@ export const excelGenerator = {
         bruttoZasadnicze: w.podzial.zasadnicza.brutto,
         swiadczenieNetto: w.podzial.swiadczenie.netto,
         dodatek: 0,
-        potracenie: 0,
+        potracenie: 1,
         swiadczenieBrutto: w.podzial.swiadczenie.brutto,
         swiadczenieZaliczka: w.podzial.swiadczenie.zaliczka,
         doWyplatyGotowka: w.podzial.doWyplatyGotowka,
@@ -508,6 +548,64 @@ export const excelGenerator = {
         sumaSkladek,
       });
       applyColumnStyles(row, splitColumns);
+    });
+
+    const summaryRowValues: any = { lp: '', name: 'SUMA', type: '' };
+    splitColumns.forEach((col) => {
+      if (['lp', 'name', 'type', 'stawkaPit'].includes(col.key)) return;
+
+      const total = wyniki.szczegoly.reduce((acc, w) => {
+        let val = 0;
+        // Helper aliases
+        const p = w.podzial;
+        const z = p.zasadnicza; // Base calculation result
+        const s = p.swiadczenie;
+        const pit = p.pit;
+        const zp = z.zusPracownik;
+        const zf = z.zusPracodawca;
+
+        switch (col.key) {
+           case 'bruttoLaczne': val = pit.lacznyPrzychod; break;
+           case 'nettoZasadnicze': val = z.nettoGotowka; break;
+           case 'bruttoZasadnicze': val = z.brutto; break;
+           case 'swiadczenieNetto': val = s.netto; break;
+           case 'dodatek': val = 0; break;
+           case 'potracenie': val = 1; break;
+           case 'swiadczenieBrutto': val = s.brutto; break;
+           case 'swiadczenieZaliczka': val = s.zaliczka; break;
+           case 'doWyplatyGotowka': val = p.doWyplatyGotowka; break;
+           case 'doWyplatySwiadczenie': val = p.doWyplatySwiadczenie; break;
+           case 'doWyplatyRazem': val = p.doWyplaty; break;
+           case 'koszt': val = p.kosztPracodawcy; break;
+           case 'podstZus': val = z.podstawaZus; break;
+           case 'zusE': val = zp.emerytalna; break;
+           case 'zusR': val = zp.rentowa; break;
+           case 'zusC': val = zp.chorobowa; break;
+           case 'zusSuma': val = zp.suma; break;
+           case 'podstZdr': val = z.podstawaZdrowotna; break;
+           case 'sklZdr': val = z.zdrowotna; break;
+           case 'kup': val = pit.kup; break;
+           case 'podstPit': val = pit.podstawa; break;
+           case 'pitZasadnicza': val = pit.kwotaOdZasadniczej; break;
+           case 'pitCalk': val = pit.kwota; break;
+           case 'firmaE': val = zf.emerytalna; break;
+           case 'firmaR': val = zf.rentowa; break;
+           case 'firmaW': val = zf.wypadkowa; break;
+           case 'firmaFP': val = zf.fp; break;
+           case 'firmaFGSP': val = zf.fgsp; break;
+           case 'zusFirma': val = zf.suma; break;
+           case 'sumaSkladek': val = zp.suma + zf.suma + z.zdrowotna; break;
+        }
+        return acc + val;
+      }, 0);
+      summaryRowValues[col.key] = total;
+    });
+
+    const summaryRow = wsSplit.addRow(summaryRowValues);
+    applyColumnStyles(summaryRow, splitColumns);
+    summaryRow.font = { bold: true };
+    summaryRow.eachCell((cell: any) => {
+        cell.border = { top: { style: 'double' } };
     });
 
     await saveWorkbook(workbook, `Raport_Szczegolowy_${firma.nazwa || 'Firma'}`);
