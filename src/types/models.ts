@@ -236,4 +236,6 @@ export interface DocumentTemplate {
   type: 'pdf' | 'html'
   is_active: boolean
   html_content?: string
+  autenti_key?: string | null
+  autenti_mapped?: boolean
 }

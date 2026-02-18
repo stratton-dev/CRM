@@ -1129,7 +1129,7 @@ const getCurrentStepName = computed(() => {
     case 3:
       return 'Analiza'
     case 4:
-      return 'Baza Wiedzy'
+      return 'Prezentacja'
     case 5:
       return 'Kalkulacja'
     default:

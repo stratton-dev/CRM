@@ -23,6 +23,7 @@ export type StatusTone = {
 }
 
 export const autentiStatusTones: Record<string, StatusTone> = {
+  DRAFT: { icon: 'pencil-square', label: 'Wersja robocza', className: 'bg-gray-100 text-gray-700' },
   SENT: { icon: 'envelope', label: 'Wysłano', className: 'bg-blue-100 text-blue-800' },
   VIEWED: { icon: 'eye', label: 'Obejrzano', className: 'bg-yellow-100 text-yellow-800' },
   SIGNED: { icon: 'check-circle', label: 'Podpisano', className: 'bg-green-100 text-green-800' },

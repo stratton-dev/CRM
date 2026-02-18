@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useDataStore } from '@/stores/data'
 import { useToastStore } from '@/stores/toast'
@@ -7,6 +7,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useStructureStore } from '@/stores/structure'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
+import { useClientStore } from '@/stores/client'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
 import { getAutentiStatusTone } from '@/utils/uiColors'
@@ -18,8 +19,10 @@ const notify = useNotificationStore()
 const structure = useStructureStore()
 const auth = useAuthStore()
 const session = useSessionStore()
+const clientStore = useClientStore()
 
 const { autentiDocuments } = storeToRefs(data)
+const { clients } = storeToRefs(clientStore)
 
 const apiDocuments = ref<AutentiDocument[]>([])
 const templates = ref<DocumentTemplate[]>([])
@@ -46,6 +49,20 @@ const editTagGroup = ref<'user' | 'client'>('user')
 const fieldSearch = ref('')
 const connectionState = ref<'idle' | 'loading' | 'ok' | 'error' | 'disabled'>('idle')
 const connectionDetail = ref<string | null>(null)
+const autentiAppUrl = ref<string>('')
+const testTemplateId = ref<string>('')
+const testClientId = ref<string>('')
+const testSignerName = ref('')
+const testSignerEmail = ref('')
+const testClientSearch = ref('')
+const isCreatingTestDoc = ref(false)
+const filterQuery = ref('')
+const filterStatus = ref('')
+const page = ref(1)
+const perPage = ref(25)
+const total = ref(0)
+const pollIntervalMs = 15000
+let pollId: number | undefined
 
 const editTemplateType = computed(() => editingTemplate.value?.type || 'pdf')
 const connectionTone = computed(() => {
@@ -137,6 +154,15 @@ const documents = computed(() => {
   return [...list].sort((a, b) => new Date(b.sentDate).getTime() - new Date(a.sentDate).getTime())
 })
 
+const filteredClients = computed(() => {
+  const list = Array.isArray(clients.value) ? clients.value : []
+  const query = testClientSearch.value.trim().toLowerCase()
+  if (!query) return list
+  return list.filter((client) => client.name.toLowerCase().includes(query) || String(client.nip || '').includes(query))
+})
+
+const selectedTemplate = computed(() => templates.value.find((item) => String(item.id) === testTemplateId.value) || null)
+
 const markAsViewed = (doc: AutentiDocument) => {
   if (auth.enabled) return
   if (doc.status !== 'SENT') return
@@ -175,16 +201,62 @@ const syncAutentiDoc = async (doc: AutentiDocument) => {
   }
 }
 
+const sendAutentiDoc = async (doc: AutentiDocument) => {
+  if (!auth.enabled) return
+  try {
+    const { data: updated } = await api.post(`/v1/autenti-documents/${doc.id}/send`)
+    replaceApiDoc(updated)
+    toast.success('Dokument wysłany do Autenti.')
+  } catch {
+    toast.error('Nie udało się wysłać dokumentu.')
+  }
+}
+
+const deleteAutentiDoc = async (doc: AutentiDocument) => {
+  if (!auth.enabled) return
+  if (doc.status === 'SIGNED') return
+  if (!window.confirm('Usunąć dokument i wycofać proces w Autenti?')) return
+  try {
+    await api.delete(`/v1/autenti-documents/${doc.id}`)
+    apiDocuments.value = apiDocuments.value.filter((item) => item.id !== doc.id)
+    toast.success('Dokument usunięty.')
+  } catch {
+    toast.error('Nie udało się usunąć dokumentu.')
+  }
+}
+
 const fetchAutentiDocs = async () => {
   if (!auth.enabled) return
   isLoading.value = true
   try {
-    const { data: list } = await api.get('/v1/autenti-documents')
-    apiDocuments.value = Array.isArray(list) ? list.map(mapAutentiDoc) : []
+    const { data: response } = await api.get('/v1/autenti-documents', {
+      params: {
+        page: page.value,
+        per_page: perPage.value,
+        status: filterStatus.value || undefined,
+        q: filterQuery.value || undefined,
+      },
+    })
+    const list = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : []
+    apiDocuments.value = list.map(mapAutentiDoc)
+    total.value = Number(response?.total ?? list.length)
   } finally {
     isLoading.value = false
   }
 }
+
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / perPage.value)))
+
+const goToPage = async (nextPage: number) => {
+  if (nextPage < 1 || nextPage > totalPages.value || nextPage === page.value) return
+  page.value = nextPage
+  await fetchAutentiDocs()
+}
+
+watch([filterQuery, filterStatus, perPage], async () => {
+  page.value = 1
+  await fetchAutentiDocs()
+})
 
 const fetchTemplates = async () => {
   if (!auth.enabled) return
@@ -215,18 +287,42 @@ const fetchAutentiStatus = async () => {
     if (!data?.enabled) {
       connectionState.value = 'disabled'
       connectionDetail.value = data?.message || 'Autenti wyłączone po stronie API'
+      autentiAppUrl.value = data?.app_url || ''
       return
     }
     if (data?.ok) {
       connectionState.value = 'ok'
       connectionDetail.value = null
+      autentiAppUrl.value = data?.app_url || ''
       return
     }
     connectionState.value = 'error'
     connectionDetail.value = data?.message || data?.error || 'Brak połączenia z Autenti'
+    autentiAppUrl.value = data?.app_url || ''
   } catch {
     connectionState.value = 'error'
     connectionDetail.value = 'Nie udało się sprawdzić połączenia'
+  }
+}
+
+const buildAutentiProcessLink = (doc: AutentiDocument) => {
+  if (!autentiAppUrl.value || !doc.autentiProcessId) return ''
+  const base = autentiAppUrl.value.replace(/\/+$/, '')
+  const processId = String(doc.autentiProcessId || '').replace('DOCUMENT_PROCESS:', '')
+  return `${base}/?id=${processId}`
+}
+
+const startAutentiOAuth = async () => {
+  if (!auth.enabled) return
+  try {
+    const { data } = await api.get('/v1/autenti/oauth/start')
+    if (data?.url) {
+      window.open(data.url, '_blank', 'noopener,noreferrer')
+      return
+    }
+    toast.error('Nie udało się rozpocząć autoryzacji.')
+  } catch {
+    toast.error('Nie udało się rozpocząć autoryzacji.')
   }
 }
 
@@ -300,6 +396,24 @@ const previewTemplate = async (template: DocumentTemplate) => {
     setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000)
   } catch {
     toast.error('Nie udało się wygenerować podglądu PDF.')
+  }
+}
+
+const downloadTemplate = async (template: DocumentTemplate) => {
+  if (!auth.enabled) return
+  try {
+    const response = await api.get(`/v1/document-templates/${template.id}/download`, { responseType: 'blob' })
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const blobUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = `${template.slug || template.name || 'template'}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000)
+  } catch {
+    toast.error('Nie udało się pobrać pliku PDF.')
   }
 }
 
@@ -436,12 +550,69 @@ const replaceApiDoc = (doc: any) => {
   apiDocuments.value = apiDocuments.value.map((item) => (item.id === mapped.id ? mapped : item))
 }
 
+const createTestDocument = async () => {
+  if (!auth.enabled) return
+  if (!testTemplateId.value) {
+    toast.warning('Wybierz szablon.')
+    return
+  }
+  if (!testClientId.value) {
+    toast.warning('Wybierz klienta.')
+    return
+  }
+  if (testSignerEmail.value && !testSignerName.value) {
+    toast.warning('Podaj imię i nazwisko osoby podpisującej.')
+    return
+  }
+  isCreatingTestDoc.value = true
+  try {
+    const payload: any = {
+      client_id: Number(testClientId.value),
+      user_id: session.currentUser?.id || undefined,
+      autenti: {
+        title: selectedTemplate.value?.name || 'Testowy dokument',
+        file_name: selectedTemplate.value?.slug ? `${selectedTemplate.value.slug}.pdf` : undefined,
+        file_description: selectedTemplate.value?.name || undefined,
+      },
+    }
+    if (testSignerName.value || testSignerEmail.value) {
+      payload.autenti.signer = {
+        name: testSignerName.value || undefined,
+        email: testSignerEmail.value || undefined,
+      }
+    }
+    await api.post(`/v1/document-templates/${testTemplateId.value}/documents`, payload)
+    toast.success('Dokument wysłany do Autenti.')
+    testSignerName.value = ''
+    testSignerEmail.value = ''
+  } catch {
+    toast.error('Nie udało się utworzyć dokumentu.')
+  } finally {
+    isCreatingTestDoc.value = false
+  }
+}
+
 onMounted(async () => {
   if (auth.enabled) {
-    await Promise.all([fetchAutentiDocs(), fetchTemplates(), fetchTemplateSuggestions(), fetchAutentiStatus()])
+    await Promise.all([
+      fetchAutentiDocs(),
+      fetchTemplates(),
+      fetchTemplateSuggestions(),
+      fetchAutentiStatus(),
+      clientStore.fetchClients({ perPage: 200 }),
+    ])
+    pollId = window.setInterval(() => {
+      fetchAutentiDocs()
+    }, pollIntervalMs)
     return
   }
   connectionState.value = 'disabled'
+})
+
+onBeforeUnmount(() => {
+  if (pollId) {
+    window.clearInterval(pollId)
+  }
 })
 </script>
 
@@ -453,18 +624,104 @@ onMounted(async () => {
           <h1 class="text-2xl font-bold text-gray-900">Panel Integracji Autenti</h1>
           <p class="text-sm text-gray-500">{{ auth.enabled ? 'Zarządzaj realnymi procesami podpisu z Autenti.' : 'Symuluj i zarządzaj procesem podpisywania dokumentów dla nowych członków zespołu.' }}</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-gray-500">Status:</span>
           <span class="px-2 py-1 inline-flex items-center text-xs font-semibold rounded-full border" :class="connectionTone.className" :title="connectionDetail || ''">
             {{ connectionTone.label }}
           </span>
+          <button
+            v-if="auth.enabled && connectionState !== 'ok'"
+            type="button"
+            class="px-3 py-1.5 text-xs font-semibold bg-slate-900 text-white rounded hover:bg-slate-800"
+            @click="startAutentiOAuth"
+          >
+            Połącz Autenti
+          </button>
         </div>
       </div>
+      <p v-if="auth.enabled && connectionState !== 'ok' && connectionDetail" class="mt-2 text-xs text-rose-600">
+        {{ connectionDetail }}
+      </p>
     </header>
 
     <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200">
       <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
         <h3 class="font-bold text-gray-700">Dokumenty w Procesie</h3>
+      </div>
+
+      <div v-if="auth.enabled" class="px-6 py-4 border-b border-gray-200 bg-white">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Szablon</label>
+            <select v-model="testTemplateId" class="w-full border rounded px-3 py-2 text-sm">
+              <option value="">Wybierz szablon</option>
+              <option v-for="template in templates" :key="template.id" :value="template.id">
+                {{ template.name }} ({{ template.slug }})
+              </option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Klient</label>
+            <input v-model="testClientSearch" type="text" class="w-full border rounded px-3 py-2 text-sm mb-2" placeholder="Szukaj klienta po nazwie lub NIP..." />
+            <select v-model="testClientId" class="w-full border rounded px-3 py-2 text-sm">
+              <option value="">Wybierz klienta</option>
+              <option v-for="client in filteredClients" :key="client.id" :value="client.id">
+                {{ client.name }} ({{ client.nip || 'brak NIP' }})
+              </option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Podpisujący (opcjonalnie)</label>
+            <input v-model="testSignerName" type="text" class="w-full border rounded px-3 py-2 text-sm" placeholder="Imię i nazwisko" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Email podpisującego</label>
+            <input v-model="testSignerEmail" type="email" class="w-full border rounded px-3 py-2 text-sm" placeholder="email@firma.pl" />
+          </div>
+          <div>
+            <button type="button" class="px-4 py-2 text-sm font-semibold bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50" :disabled="isCreatingTestDoc" @click="createTestDocument">
+              {{ isCreatingTestDoc ? 'Wysyłanie...' : 'Utwórz dokument' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="auth.enabled" class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Szukaj</label>
+            <input v-model="filterQuery" type="text" class="w-full border rounded px-3 py-2 text-sm" placeholder="Odbiorca, email, proces..." />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+            <select v-model="filterStatus" class="w-full border rounded px-3 py-2 text-sm">
+              <option value="">Wszystkie</option>
+              <option value="DRAFT">Wersja robocza</option>
+              <option value="SENT">Wysłano</option>
+              <option value="VIEWED">Obejrzano</option>
+              <option value="SIGNED">Podpisano</option>
+              <option value="REJECTED">Odrzucono</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Na stronę</label>
+            <select v-model.number="perPage" class="w-full border rounded px-3 py-2 text-sm">
+              <option :value="10">10</option>
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </div>
+          <div class="md:col-span-2 flex items-center justify-end gap-2 text-xs text-gray-600">
+            <span>Strona {{ page }} z {{ totalPages }}</span>
+            <button type="button" class="px-2 py-1 border rounded disabled:opacity-50" :disabled="page <= 1 || isLoading" @click="goToPage(page - 1)">
+              Prev
+            </button>
+            <button type="button" class="px-2 py-1 border rounded disabled:opacity-50" :disabled="page >= totalPages || isLoading" @click="goToPage(page + 1)">
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
@@ -473,6 +730,7 @@ onMounted(async () => {
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Odbiorca</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dokumenty</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proces</th>
               <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
               <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ auth.enabled ? 'Akcje' : 'Akcje (Symulacja)' }}</th>
             </tr>
@@ -484,6 +742,15 @@ onMounted(async () => {
                 <div class="text-xs text-gray-500">{{ doc.recipientEmail }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-600 max-w-xs truncate" :title="doc.documentList">{{ doc.documentList }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-600">
+                <div v-if="doc.autentiProcessId" class="flex flex-col gap-1">
+                  <span class="font-mono text-[11px]" :title="doc.autentiProcessId">{{ doc.autentiProcessId }}</span>
+                  <a v-if="doc.status !== 'SIGNED' && buildAutentiProcessLink(doc)" :href="buildAutentiProcessLink(doc)" target="_blank" rel="noreferrer" class="text-indigo-600 hover:underline">
+                    Otwórz w Autenti
+                  </a>
+                </div>
+                <span v-else class="text-gray-400">Brak</span>
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-center">
                 <span class="px-2 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full" :class="getAutentiStatusTone(doc.status).className">
                   <AppIcon :name="getAutentiStatusTone(doc.status).icon" class="w-3.5 h-3.5" />
@@ -500,11 +767,22 @@ onMounted(async () => {
                 <button v-if="auth.enabled" type="button" class="px-3 py-1.5 text-xs font-medium text-sky-800 bg-sky-100 border border-sky-200 rounded hover:bg-sky-200" @click="syncAutentiDoc(doc)">
                   Odśwież
                 </button>
+                <button v-if="auth.enabled && doc.status === 'DRAFT'" type="button" class="px-3 py-1.5 text-xs font-medium text-emerald-800 bg-emerald-100 border border-emerald-200 rounded hover:bg-emerald-200" @click="sendAutentiDoc(doc)">
+                  Wyślij
+                </button>
+                <button
+                  v-if="auth.enabled && doc.status !== 'SIGNED'"
+                  type="button"
+                  class="px-3 py-1.5 text-xs font-medium text-rose-800 bg-rose-100 border border-rose-200 rounded hover:bg-rose-200"
+                  @click="deleteAutentiDoc(doc)"
+                >
+                  Usuń
+                </button>
                 <span v-if="!auth.enabled && doc.status === 'SIGNED'" class="text-xs text-gray-400">Proces zakończony</span>
               </td>
             </tr>
             <tr v-if="documents.length === 0">
-              <td colspan="4" class="px-6 py-12 text-center text-sm text-gray-500">Brak dokumentów w procesie Autenti.</td>
+              <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">Brak dokumentów w procesie Autenti.</td>
             </tr>
           </tbody>
         </table>
@@ -588,6 +866,7 @@ onMounted(async () => {
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nazwa</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Slug</th>
                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sync</th>
                 <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Akcje</th>
               </tr>
             </thead>
@@ -596,14 +875,19 @@ onMounted(async () => {
                 <td class="px-4 py-2 text-sm text-gray-700">{{ template.name }}</td>
                 <td class="px-4 py-2 text-xs text-gray-500">{{ template.slug }}</td>
                 <td class="px-4 py-2 text-xs text-gray-500">{{ (template.type || 'pdf').toUpperCase() }}</td>
+                <td class="px-4 py-2 text-xs text-gray-600">
+                  <span v-if="template.autenti_mapped" class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Autenti</span>
+                  <span v-else class="px-2 py-1 rounded-full bg-gray-100 text-gray-600">Lokalny</span>
+                </td>
                 <td class="px-4 py-2 text-right text-sm space-x-3">
                   <button type="button" class="text-slate-700 hover:underline" @click="previewTemplate(template)">Podgląd PDF</button>
+                  <button type="button" class="text-slate-700 hover:underline" @click="downloadTemplate(template)">Pobierz</button>
                   <button type="button" class="text-indigo-600 hover:underline" @click="startEditTemplate(template)">Edytuj</button>
                   <button type="button" class="text-red-600 hover:underline" @click="removeTemplate(template)">Usuń</button>
                 </td>
               </tr>
               <tr v-if="templates.length === 0">
-                <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500">Brak szablonów.</td>
+                <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">Brak szablonów.</td>
               </tr>
             </tbody>
           </table>
