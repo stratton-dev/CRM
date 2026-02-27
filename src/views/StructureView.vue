@@ -867,8 +867,8 @@ const addUser = async () => {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div v-if="!embedded">
-        <h1 class="text-2xl font-bold text-gray-900">Struktura Organizacji</h1>
-        <p class="text-sm text-gray-500">
+        <h1 class="text-2xl font-bold text-slate-900">Struktura Organizacji</h1>
+        <p class="text-sm text-slate-500">
           <span v-if="currentUser?.role === 'ADMIN'">Widok globalny (Super Admin) - Zarządzaj całą organizacją</span>
           <span v-else>Zarządzaj swoim zespołem i monitoruj strukturę.</span>
         </p>
@@ -880,96 +880,87 @@ const addUser = async () => {
         <button
           v-if="currentUser?.role === 'ADMIN'"
           type="button"
-          class="px-3 py-2 text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 rounded hover:bg-emerald-200 transition shadow-sm"
+          class="px-3 py-2 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition shadow-sm"
           @click="openTeamModal"
         >
           Dodaj zespół
         </button>
 
-        <div class="flex items-center bg-slate-200 rounded-lg p-1">
+        <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
           <button 
             @click="viewMode = 'list'" 
-            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all"
-            :class="viewMode === 'list' ? 'bg-white text-slate-800 shadow' : 'bg-transparent text-slate-500 hover:bg-slate-300/50'"
+            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center"
+            :class="viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-700'"
           >
-            <AppIcon name="list" class="h-4 w-4 inline-block mr-1.5 align-middle" />
+            <AppIcon name="list" class="h-3.5 w-3.5 mr-1.5" />
             Lista
           </button>
           <button 
             @click="viewMode = 'chart'" 
-            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all"
-            :class="viewMode === 'chart' ? 'bg-white text-slate-800 shadow' : 'bg-transparent text-slate-500 hover:bg-slate-300/50'"
+            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center"
+            :class="viewMode === 'chart' ? 'bg-white text-slate-900 shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-700'"
           >
-            <AppIcon name="chart-network" class="h-4 w-4 inline-block mr-1.5 align-middle" />
+            <AppIcon name="chart-network" class="h-3.5 w-3.5 mr-1.5" />
             Schemat
           </button>
         </div>
 
-        <div class="relative">
+        <div class="relative w-64 lg:w-80">
           <input
             v-model="searchQuery"
             type="text"
             placeholder="Szukaj w strukturze..."
-            class="border border-gray-300 rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 bg-white text-gray-900 w-64 shadow-sm"
+            class="w-full border border-slate-200 rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-900 shadow-sm placeholder-slate-400 text-right font-bold"
           />
-          <AppIcon name="search" class="absolute right-3 top-2 h-5 w-5 text-gray-400" />
+          <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
         </div>
         <button
           v-if="currentUser?.role === 'ADMIN'"
           type="button"
-          class="px-4 py-2 text-xs font-bold rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition"
+          class="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm"
           @click="showInactive = !showInactive"
         >
           <span class="flex items-center gap-2">
-            <AppIcon :name="showInactive ? 'xmark' : 'eye'" class="h-4 w-4 text-slate-500" />
+            <AppIcon :name="showInactive ? 'xmark' : 'eye'" class="h-3.5 w-3.5 text-slate-500" />
             {{ showInactive ? 'Ukryj usuniętych' : 'Pokaż usuniętych' }}
           </span>
         </button>
         <button
           v-if="currentUser?.role === 'ADMIN'"
           type="button"
-          class="px-4 py-2 text-xs font-bold rounded-md border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition disabled:opacity-60"
+          class="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 bg-white text-primary hover:bg-slate-50 transition shadow-sm disabled:opacity-60"
           :disabled="isSyncing"
           @click="syncKeycloak"
         >
-          {{ isSyncing ? 'Synchronizuję...' : 'Synchronizuj z Keycloak' }}
-        </button>
-        <button
-          v-if="currentUser?.role === 'ADMIN'"
-          type="button"
-          class="px-4 py-2 text-xs font-bold rounded-md border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition disabled:opacity-60"
-          :disabled="isRegenerating"
-          @click="openRegenerateModal"
-        >
-          {{ isRegenerating ? 'Przeliczam kody...' : 'Przelicz kody struktury' }}
+          {{ isSyncing ? 'Synchronizuję...' : 'Synchronizuj' }}
         </button>
       </div>
     </div>
 
-    <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200 relative">
-      <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 grid grid-cols-12 text-xs font-bold text-gray-500 uppercase tracking-wider">
+    <div class="bg-surface shadow-card rounded-card overflow-hidden border border-slate-200 relative">
+      <div class="bg-slate-50/50 px-6 py-3 border-b border-slate-200 grid grid-cols-12 text-xs font-bold text-slate-500 uppercase tracking-wider">
         <div class="col-span-8">Struktura Organizacyjna</div>
         <div class="col-span-4">Rola / ID</div>
       </div>
 
-      <div v-if="isLoadingStructure" class="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex items-center justify-center">
-        <div class="flex items-center gap-3 text-sm text-gray-600 font-medium">
-          <AppIcon name="refresh" class="h-4 w-4 animate-spin text-gray-500" />
+      <div v-if="isLoadingStructure" class="absolute inset-0 bg-white/80 backdrop-blur-[1px] z-10 flex items-center justify-center">
+        <div class="flex items-center gap-3 text-sm text-slate-600 font-medium">
+          <AppIcon name="refresh" class="h-5 w-5 animate-spin text-primary" />
           <span>Synchronizuję strukturę...</span>
         </div>
       </div>
 
-      <div v-if="viewMode === 'list'" class="divide-y divide-gray-100">
+      <div v-if="viewMode === 'list'" class="divide-y divide-slate-100">
         <div
           v-for="node in visibleNodes"
           :key="node.id"
           class="group relative transition-all duration-200"
           :id="`structure-node-${node.id}`"
           :class="{
-            'bg-sky-100/50': selectedNodeId === node.id,
+            'bg-sky-50/50': selectedNodeId === node.id,
             'opacity-50': draggedNode?.id === node.id,
             'outline-dashed outline-2 outline-green-500 outline-offset-2 z-10': dropTargetNodeId === node.id,
-            'hover:bg-sky-50/50': !draggedNode && !node.isTeamNode,
+            'hover:bg-slate-50': !draggedNode && !node.isTeamNode && selectedNodeId !== node.id,
           }"
           :draggable="node.role !== 'ADMIN' && !node.isTeamNode"
           @click="
@@ -983,19 +974,19 @@ const addUser = async () => {
           @dragleave="dropTargetNodeId = null"
           @drop="handleDrop($event, node)"
         >
-          <div class="px-6 py-3 grid grid-cols-12 items-center min-h-[60px]" :class="node.role !== 'ADMIN' && !node.isTeamNode ? 'cursor-move' : ''">
+          <div class="px-6 py-3 grid grid-cols-12 items-center min-h-[56px]" :class="node.role !== 'ADMIN' && !node.isTeamNode ? 'cursor-move' : ''">
             <div class="col-span-8 flex items-center relative overflow-hidden">
               <div class="absolute left-0 top-0 h-full" :style="{ width: `${node.level * 28}px` }">
                 <div v-for="(hasSibling, index) in node.parentChain" :key="index">
-                  <div v-if="hasSibling" class="absolute top-0 w-px h-full bg-gray-300" :style="{ left: `${index * 28 + 14}px` }"></div>
+                  <div v-if="hasSibling" class="absolute top-0 w-px h-full bg-slate-200" :style="{ left: `${index * 28 + 14}px` }"></div>
                 </div>
                 <div v-if="node.level > 0">
                   <div
-                    class="absolute top-0 w-px bg-gray-300"
+                    class="absolute top-0 w-px bg-slate-200"
                     :class="node.isLast ? 'h-1/2' : 'h-full'"
                     :style="{ left: `${(node.level - 1) * 28 + 14}px` }"
                   ></div>
-                  <div class="absolute h-px w-3.5 bg-gray-300" :style="{ top: '50%', left: `${(node.level - 1) * 28 + 14}px` }"></div>
+                  <div class="absolute h-px w-3.5 bg-slate-200" :style="{ top: '50%', left: `${(node.level - 1) * 28 + 14}px` }"></div>
                 </div>
               </div>
 
@@ -1003,97 +994,95 @@ const addUser = async () => {
 
               <button
                 type="button"
-                class="w-6 h-6 flex items-center justify-center mr-1 flex-shrink-0 text-gray-400 hover:text-sky-600 rounded-full hover:bg-gray-200"
+                class="w-6 h-6 flex items-center justify-center mr-1 flex-shrink-0 text-slate-400 hover:text-primary rounded-full hover:bg-slate-100 transition-colors"
                 @click.stop="toggleNode(node.id)"
               >
-                <svg v-if="node.hasChildren" class="w-4 h-4 transition-transform duration-200" :class="isExpanded(node.id) ? 'rotate-90' : ''" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
-                <span v-else class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                <AppIcon v-if="node.hasChildren" name="chevron-right" class="w-3.5 h-3.5 transition-transform duration-200" :class="isExpanded(node.id) ? 'rotate-90' : ''" />
+                <span v-else class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
               </button>
 
               <div
                 class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm mr-3 transition-transform group-hover:scale-105"
                 :class="{
-                  'bg-amber-200 text-amber-800 border-amber-300': node.role === 'DIRECTOR',
-                  'bg-sky-200 text-sky-800 border-sky-300': node.role === 'MANAGER',
-                  'bg-emerald-200 text-emerald-800 border-emerald-300': node.role === 'SALES',
-                  'bg-red-200 text-red-800 border-red-300': node.role === 'ADMIN',
-                  'bg-slate-200 text-slate-700 border-slate-300': node.isTeamNode,
+                  'bg-amber-100 text-amber-700 border-amber-200': node.role === 'DIRECTOR',
+                  'bg-sky-100 text-sky-700 border-sky-200': node.role === 'MANAGER',
+                  'bg-emerald-100 text-emerald-700 border-emerald-200': node.role === 'SALES',
+                  'bg-rose-100 text-rose-700 border-rose-200': node.role === 'ADMIN',
+                  'bg-slate-100 text-slate-600 border-slate-200': node.isTeamNode,
                 }"
               >
                 {{ getInitials(node.name) }}
               </div>
 
               <div>
-                <div class="text-sm font-bold text-gray-800 flex items-center">
+                <div class="text-sm font-bold text-slate-800 flex items-center">
                   {{ node.name }}
                   <span v-if="node.contractStatus" class="ml-2" :title="`Status umowy: ${node.contractStatus}`">
-                    <AppIcon v-if="node.contractStatus === 'DRAFT'" name="document-text" class="h-4 w-4 text-gray-400" />
-                    <AppIcon v-else-if="node.contractStatus === 'SENT_TO_AUTENTI'" name="envelope" class="h-4 w-4 text-blue-500" />
-                    <AppIcon v-else-if="node.contractStatus === 'SIGNED'" name="check-circle" class="h-4 w-4 text-green-600" />
-                    <AppIcon v-else-if="node.contractStatus === 'REJECTED'" name="x-circle" class="h-4 w-4 text-red-500" />
+                    <AppIcon v-if="node.contractStatus === 'DRAFT'" name="document-text" class="h-3.5 w-3.5 text-slate-400" />
+                    <AppIcon v-else-if="node.contractStatus === 'SENT_TO_AUTENTI'" name="envelope" class="h-3.5 w-3.5 text-blue-500" />
+                    <AppIcon v-else-if="node.contractStatus === 'SIGNED'" name="check-circle" class="h-3.5 w-3.5 text-emerald-500" />
+                    <AppIcon v-else-if="node.contractStatus === 'REJECTED'" name="x-circle" class="h-3.5 w-3.5 text-rose-500" />
                   </span>
-                  <span v-if="node.id === currentUser?.id" class="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded ml-2 border border-gray-200">TY</span>
-                  <span v-if="node.isRemovedFromStructure" class="ml-2 text-[10px] px-1.5 rounded-full border bg-red-100 text-red-700 border-red-200">USUNIĘTY</span>
-                  <span v-else-if="node.enabled === false" class="ml-2 text-[10px] px-1.5 rounded-full border bg-amber-100 text-amber-700 border-amber-200">NIEAKTYWNY</span>
+                  <span v-if="node.id === currentUser?.id" class="bg-indigo-50 text-indigo-600 text-[10px] px-1.5 py-0.5 rounded ml-2 border border-indigo-100 font-bold">TY</span>
+                  <span v-if="node.isRemovedFromStructure" class="ml-2 text-[10px] px-1.5 rounded-full border bg-rose-50 text-rose-600 border-rose-100 font-medium">USUNIĘTY</span>
+                  <span v-else-if="node.enabled === false" class="ml-2 text-[10px] px-1.5 rounded-full border bg-amber-50 text-amber-600 border-amber-100 font-medium">NIEAKTYWNY</span>
                   <span
                     v-if="node.rank"
-                    class="ml-2 text-[10px] px-1.5 rounded-full border opacity-80"
+                    class="ml-2 text-[10px] px-1.5 rounded-full border font-medium"
                     :class="{
-                      'bg-yellow-100 text-yellow-800 border-yellow-300': ['SENIOR', 'MASTER', 'LEGEND'].includes(node.rank),
-                      'bg-gray-100 text-gray-600 border-gray-300': !['SENIOR', 'MASTER', 'LEGEND'].includes(node.rank),
+                      'bg-amber-50 text-amber-700 border-amber-200': ['SENIOR', 'MASTER', 'LEGEND'].includes(node.rank),
+                      'bg-slate-50 text-slate-500 border-slate-200': !['SENIOR', 'MASTER', 'LEGEND'].includes(node.rank),
                     }"
                   >
                     {{ node.rank }}
                   </span>
                 </div>
-                <div class="text-[11px] text-gray-500">{{ node.email }}</div>
+                <div class="text-[11px] text-slate-500">{{ node.email }}</div>
               </div>
             </div>
 
-            <div class="col-span-4 border-l border-gray-100 pl-4">
-              <div class="text-xs font-bold text-gray-700">{{ node.isTeamNode ? 'ZESPÓŁ' : node.role }}</div>
-              <div class="text-xs text-gray-600 font-semibold font-mono mt-0.5 bg-gray-50 inline-block px-1 rounded">
+            <div class="col-span-4 border-l border-slate-100 pl-4">
+              <div class="text-xs font-bold text-slate-700">{{ node.isTeamNode ? 'ZESPÓŁ' : node.role }}</div>
+              <div class="text-xs text-slate-500 font-mono mt-0.5 bg-slate-50 inline-block px-1.5 py-0.5 rounded border border-slate-100">
                 {{ node.isTeamNode ? node.teamGroupPath || 'BRAK' : node.hierarchicalId || node.hierarchicalCode || 'ROOT' }}
               </div>
             </div>
           </div>
 
-          <div v-if="selectedNodeId === node.id && !node.isTeamNode" class="bg-white p-4 border-t border-sky-200 shadow-inner animate-fade-in" @click.stop>
+          <div v-if="selectedNodeId === node.id && !node.isTeamNode" class="bg-slate-50/50 p-4 border-t border-slate-200/50 shadow-inner animate-fade-in" @click.stop>
             <div class="flex justify-between items-center">
-              <div class="flex items-center space-x-6 text-xs text-gray-600">
+              <div class="flex items-center space-x-6 text-xs text-slate-600">
                 <div>
-                  <span class="font-bold block text-gray-400 uppercase text-[10px]">Telefon</span>
+                  <span class="font-bold block text-slate-400 uppercase text-[10px]">Telefon</span>
                   <span>{{ node.phone || 'Brak' }}</span>
                 </div>
                 <div>
-                  <span class="font-bold block text-gray-400 uppercase text-[10px]">Email</span>
-                  <button type="button" class="text-sky-600 hover:underline flex items-center gap-1" @click="mailbox.initiateEmailTo(node.email)">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                  <span class="font-bold block text-slate-400 uppercase text-[10px]">Email</span>
+                  <button type="button" class="text-primary hover:underline flex items-center gap-1" @click="mailbox.initiateEmailTo(node.email)">
+                    <AppIcon name="envelope" class="w-3.5 h-3.5" />
                     <span>{{ node.email }}</span>
                   </button>
                 </div>
                 <div>
-                  <span class="font-bold block text-gray-400 uppercase text-[10px]">Status Umowy</span>
-                  <span v-if="node.contractStatus === 'SENT_TO_AUTENTI'" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-800">
-                    <AppIcon name="envelope" class="h-3.5 w-3.5" />
+                  <span class="font-bold block text-slate-400 uppercase text-[10px]">Status Umowy</span>
+                  <span v-if="node.contractStatus === 'SENT_TO_AUTENTI'" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-medium bg-blue-50 text-blue-600 border border-blue-100">
+                    <AppIcon name="envelope" class="h-3 w-3" />
                     Autenti: Wysłano
                   </span>
-                  <span v-else-if="node.contractStatus === 'SIGNED'" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-medium bg-green-100 text-green-800">
-                    <AppIcon name="check-circle" class="h-3.5 w-3.5" />
+                  <span v-else-if="node.contractStatus === 'SIGNED'" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    <AppIcon name="check-circle" class="h-3 w-3" />
                     Podpisano
                   </span>
-                  <span v-else class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-medium bg-gray-100 text-gray-600">
-                    <AppIcon name="document-text" class="h-3.5 w-3.5" />
+                  <span v-else class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                    <AppIcon name="document-text" class="h-3 w-3" />
                     Draft
                   </span>
                 </div>
                 <div v-if="currentUser?.role === 'ADMIN'">
-                  <span class="font-bold block text-gray-400 uppercase text-[10px]">Rola</span>
+                  <span class="font-bold block text-slate-400 uppercase text-[10px]">Rola</span>
                   <div class="flex items-center gap-2 mt-1">
                     <select
-                      class="border border-gray-200 rounded px-2 py-1 text-xs"
+                      class="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-primary"
                       :value="getRoleValue(node)"
                       @change="setRoleValue(node, ($event.target as HTMLSelectElement).value as UserRole)"
                     >
@@ -1101,7 +1090,7 @@ const addUser = async () => {
                     </select>
                     <button
                       type="button"
-                      class="px-2 py-1 text-xs font-bold bg-slate-900 text-white rounded hover:bg-slate-800"
+                      class="px-2 py-1 text-xs font-bold bg-slate-800 text-white rounded hover:bg-slate-700 transition"
                       @click.stop="saveRole(node)"
                     >
                       Zapisz
@@ -1113,47 +1102,44 @@ const addUser = async () => {
                 <button
                   v-if="!node.isTeamNode && canAddUnder(node)"
                   type="button"
-                  class="p-2 bg-green-100 text-green-800 border border-green-200 rounded hover:bg-green-200 hover:scale-105 transition shadow-sm flex items-center text-xs font-bold"
+                  class="p-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-100 hover:text-emerald-700 transition shadow-sm flex items-center text-xs font-bold"
                   :title="`Dodaj osobę do struktury: ${node.name}`"
                   @click.stop="openAddModal(node)"
                 >
-                  <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                  <AppIcon name="user-plus" class="w-4 h-4 mr-1.5" />
                   Dodaj
                 </button>
                 <button
                   v-if="!node.isTeamNode && node.id !== currentUser?.id"
                   type="button"
-                  class="p-2 bg-sky-100 text-sky-800 border border-sky-200 rounded hover:bg-sky-200 transition shadow-sm"
+                  class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition shadow-sm"
                   :title="`Wyślij wiadomość do: ${node.name}`"
                   @click.stop="openMsgModal(node)"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                  <AppIcon name="chat-bubble-left-ellipsis" class="w-4 h-4" />
                 </button>
                 <button
                   v-if="!node.isTeamNode && node.id !== currentUser?.id && canImpersonate(node)"
                   type="button"
-                  class="p-2 bg-amber-100 text-amber-800 border border-amber-200 rounded hover:bg-amber-200 transition shadow-sm"
+                  class="p-2 bg-amber-50 text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-100 transition shadow-sm"
                   :title="`Podgląd konta: ${node.name}`"
                   @click.stop="initImpersonate(node)"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                  </svg>
+                  <AppIcon name="eye" class="w-4 h-4" />
                 </button>
                 <button
                   v-if="!node.isTeamNode && node.id !== currentUser?.id && canRemove(node)"
                   type="button"
-                  class="p-2 bg-red-100 text-red-800 border border-red-200 rounded hover:bg-red-200 transition shadow-sm"
+                  class="p-2 bg-rose-50 text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-100 transition shadow-sm"
                   :title="`Usuń ze struktury: ${node.name}`"
                   @click.stop="initRemove(node)"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                  <AppIcon name="trash" class="w-4 h-4" />
                 </button>
                 <button
                   v-if="currentUser?.role === 'ADMIN' && (node.isRemovedFromStructure || node.enabled === false)"
                   type="button"
-                  class="p-2 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded hover:bg-indigo-200 transition shadow-sm"
+                  class="p-2 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition shadow-sm"
                   :title="`Przywróć użytkownika: ${node.name}`"
                   @click.stop="restoreUser(node)"
                 >
@@ -1163,11 +1149,11 @@ const addUser = async () => {
             </div>
           </div>
 
-          <div v-if="node.isTeamNode && selectedNodeId === node.id && canAddGlobal && !searchQuery" class="bg-white p-4 border-t border-gray-100" @click.stop>
+          <div v-if="node.isTeamNode && selectedNodeId === node.id && canAddGlobal && !searchQuery" class="bg-slate-50/50 p-4 border-t border-slate-200/50" @click.stop>
             <div class="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                class="px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100 transition shadow-sm text-xs font-bold inline-flex items-center"
+                class="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition shadow-sm text-xs font-bold inline-flex items-center"
                 :title="`Dodaj dyrektora do zespołu: ${node.name}`"
                 @click.stop="openAddModal(node)"
               >
@@ -1177,7 +1163,7 @@ const addUser = async () => {
               <button
                 v-if="node.teamGroupPath"
                 type="button"
-                class="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 transition shadow-sm text-xs font-bold inline-flex items-center"
+                class="px-4 py-2 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition shadow-sm text-xs font-bold inline-flex items-center"
                 :title="`Przywróć wszystkich usuniętych w zespole: ${node.name}`"
                 @click.stop="restoreTeamUsers(node)"
               >
@@ -1187,7 +1173,7 @@ const addUser = async () => {
               <button
                 v-if="node.teamGroupPath"
                 type="button"
-                class="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded hover:bg-red-100 transition shadow-sm text-xs font-bold inline-flex items-center"
+                class="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-100 transition shadow-sm text-xs font-bold inline-flex items-center"
                 :title="`Usuń zespół: ${node.name}`"
                 @click.stop="openDeleteTeamModal(node)"
               >
@@ -1197,7 +1183,7 @@ const addUser = async () => {
               <button
                 v-if="node.teamGroupPath"
                 type="button"
-                class="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded hover:bg-rose-100 transition shadow-sm text-xs font-bold inline-flex items-center"
+                class="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-100 transition shadow-sm text-xs font-bold inline-flex items-center"
                 :title="`Usuń trwale wszystkich usuniętych w zespole: ${node.name}`"
                 @click.stop="deleteRemovedUsersPermanently(node)"
               >
@@ -1208,12 +1194,12 @@ const addUser = async () => {
           </div>
         </div>
 
-        <div v-if="visibleNodes.length === 0 && searchQuery" class="p-12 text-center text-gray-500 bg-gray-50">
+        <div v-if="visibleNodes.length === 0 && searchQuery" class="p-12 text-center text-slate-500 bg-slate-50/50">
           <p class="text-lg font-medium">Brak wyników</p>
           <p class="text-sm mt-1">Nie znaleziono osób pasujących do wyszukiwania.</p>
         </div>
 
-        <div v-if="visibleNodes.length === 0 && !searchQuery" class="p-12 text-center text-gray-500 bg-gray-50">
+        <div v-if="visibleNodes.length === 0 && !searchQuery" class="p-12 text-center text-slate-500 bg-slate-50/50">
           <p class="text-lg font-medium">Struktura jest pusta</p>
           <p class="text-sm mt-1">Rozpocznij od dodania pierwszego Dyrektora Handlowego.</p>
         </div>
@@ -1224,34 +1210,34 @@ const addUser = async () => {
     </div>
 
     <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="showAddModal = false"></div>
-      <div class="bg-white rounded-xl shadow-2xl p-0 w-full max-w-4xl z-10 relative max-h-[95vh] overflow-y-auto flex flex-col">
-        <div class="px-6 py-4 border-b border-gray-100 bg-slate-900 text-white flex justify-between items-center rounded-t-xl sticky top-0 z-20">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showAddModal = false"></div>
+      <div class="bg-surface rounded-card shadow-2xl p-0 w-full max-w-4xl z-10 relative max-h-[95vh] overflow-y-auto flex flex-col">
+        <div class="px-6 py-4 border-b border-slate-700 bg-surface-dark text-white flex justify-between items-center rounded-t-card sticky top-0 z-20">
           <div>
             <h3 class="text-lg font-bold">
               <span v-if="targetParent">Dodaj osobę do: {{ targetParent.name }}</span>
               <span v-else>Dodaj Dyrektora Handlowego</span>
             </h3>
-            <p class="text-xs text-gray-300 opacity-80">Wprowadź komplet danych do umowy.</p>
+            <p class="text-xs text-slate-300 opacity-80">Wprowadź komplet danych do umowy.</p>
           </div>
-          <button type="button" class="text-gray-400 hover:text-white text-2xl" @click="showAddModal = false">✕</button>
+          <button type="button" class="text-slate-400 hover:text-white text-2xl" @click="showAddModal = false">✕</button>
         </div>
 
         <form class="p-6 space-y-8" @submit.prevent="addUser">
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-3">Typ Podmiotu</label>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-3">Typ Podmiotu</label>
             <div class="grid grid-cols-3 gap-4">
-              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-gray-50 transition" :class="newUserData.type === 'PRIVATE' ? 'border-sky-500 bg-sky-50' : 'border-gray-200'">
+              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'PRIVATE' ? 'border-primary bg-sky-50' : 'border-slate-200'">
                 <input v-model="newUserData.type" type="radio" name="etype" value="PRIVATE" class="hidden" />
                 <AppIcon name="user" class="w-6 h-6 mb-1 text-slate-600" />
                 <span class="font-bold text-sm">Osoba Prywatna</span>
               </label>
-              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-gray-50 transition" :class="newUserData.type === 'B2B' ? 'border-sky-500 bg-sky-50' : 'border-gray-200'">
+              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'B2B' ? 'border-primary bg-sky-50' : 'border-slate-200'">
                 <input v-model="newUserData.type" type="radio" name="etype" value="B2B" class="hidden" />
                 <AppIcon name="briefcase" class="w-6 h-6 mb-1 text-slate-600" />
                 <span class="font-bold text-sm">Działalność (JDG)</span>
               </label>
-              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-gray-50 transition" :class="newUserData.type === 'COMPANY' ? 'border-sky-500 bg-sky-50' : 'border-gray-200'">
+              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'COMPANY' ? 'border-primary bg-sky-50' : 'border-slate-200'">
                 <input v-model="newUserData.type" type="radio" name="etype" value="COMPANY" class="hidden" />
                 <AppIcon name="building" class="w-6 h-6 mb-1 text-slate-600" />
                 <span class="font-bold text-sm">Spółka</span>
@@ -1259,98 +1245,98 @@ const addUser = async () => {
             </div>
           </div>
 
-          <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
-            <h4 class="text-sm font-bold text-gray-700 uppercase border-b border-gray-200 pb-2 mb-4">Dane Podstawowe</h4>
+          <div class="bg-slate-50 p-6 rounded-card border border-slate-200">
+            <h4 class="text-sm font-bold text-slate-700 uppercase border-b border-slate-200 pb-2 mb-4">Dane Podstawowe</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <template v-if="newUserData.type === 'PRIVATE'">
                 <div>
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Imię</label>
-                  <input v-model="newUserData.firstName" type="text" class="w-full border p-2 rounded focus:ring-sky-500" @input="updateFullName" />
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Imię</label>
+                  <input v-model="newUserData.firstName" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" @input="updateFullName" />
                 </div>
                 <div>
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nazwisko</label>
-                  <input v-model="newUserData.lastName" type="text" class="w-full border p-2 rounded focus:ring-sky-500" @input="updateFullName" />
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nazwisko</label>
+                  <input v-model="newUserData.lastName" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" @input="updateFullName" />
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">PESEL</label>
-                  <input v-model="newUserData.pesel" type="text" class="w-full border p-2 rounded focus:ring-sky-500" />
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">PESEL</label>
+                  <input v-model="newUserData.pesel" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
                 </div>
               </template>
               <template v-else>
                 <div class="md:col-span-2">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">NIP (Pobierz z GUS)</label>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">NIP (Pobierz z GUS)</label>
                   <div class="flex">
-                    <input v-model="newUserData.nip" type="text" class="flex-1 border p-2 rounded-l focus:ring-sky-500" />
-                    <button type="button" class="bg-slate-800 text-white px-4 rounded-r text-sm font-bold hover:bg-slate-700" @click="fetchGus">
+                    <input v-model="newUserData.nip" type="text" class="flex-1 border border-slate-300 p-2.5 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
+                    <button type="button" class="bg-slate-800 text-white px-4 rounded-r-lg text-sm font-bold hover:bg-slate-700" @click="fetchGus">
                       {{ isFetchingGus ? 'Pobieranie...' : 'Pobierz Dane' }}
                     </button>
                   </div>
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nazwa Firmy</label>
-                  <input v-model="newUserData.name" type="text" class="w-full border p-2 rounded focus:ring-sky-500" />
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nazwa Firmy</label>
+                  <input v-model="newUserData.name" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
                 </div>
                 <div>
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">REGON</label>
-                  <input v-model="newUserData.regon" type="text" class="w-full border p-2 rounded focus:ring-sky-500" />
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">REGON</label>
+                  <input v-model="newUserData.regon" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
                 </div>
                 <div v-if="newUserData.type === 'COMPANY'">
-                  <label class="block text-xs font-bold text-gray-500 uppercase mb-1">KRS</label>
-                  <input v-model="newUserData.krs" type="text" class="w-full border p-2 rounded focus:ring-sky-500" />
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">KRS</label>
+                  <input v-model="newUserData.krs" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
                 </div>
               </template>
 
               <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email</label>
-                <input v-model="newUserData.email" type="email" required class="w-full border p-2 rounded focus:ring-sky-500" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email</label>
+                <input v-model="newUserData.email" type="email" required class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Telefon</label>
-                <input v-model="newUserData.phone" type="text" class="w-full border p-2 rounded focus:ring-sky-500" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Telefon</label>
+                <input v-model="newUserData.phone" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
               </div>
             </div>
           </div>
 
-          <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
-            <h4 class="text-sm font-bold text-gray-700 uppercase border-b border-gray-200 pb-2 mb-4">Adres Zamieszkania / Siedziby</h4>
+          <div class="bg-slate-50 p-6 rounded-card border border-slate-200">
+            <h4 class="text-sm font-bold text-slate-700 uppercase border-b border-slate-200 pb-2 mb-4">Adres Zamieszkania / Siedziby</h4>
             <div class="grid grid-cols-6 gap-4">
               <div class="col-span-4">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ulica</label>
-                <input v-model="newUserData.address.street" type="text" class="w-full border p-2 rounded" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ulica</label>
+                <input v-model="newUserData.address.street" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
               </div>
               <div class="col-span-1">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nr Domu</label>
-                <input v-model="newUserData.address.houseNr" type="text" class="w-full border p-2 rounded" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nr Domu</label>
+                <input v-model="newUserData.address.houseNr" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
               </div>
               <div class="col-span-1">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Lok.</label>
-                <input v-model="newUserData.address.aptNr" type="text" class="w-full border p-2 rounded" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Lok.</label>
+                <input v-model="newUserData.address.aptNr" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
               </div>
               <div class="col-span-2">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Kod Pocztowy</label>
-                <input v-model="newUserData.address.zipCode" type="text" class="w-full border p-2 rounded" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kod Pocztowy</label>
+                <input v-model="newUserData.address.zipCode" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
               </div>
               <div class="col-span-4">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Miasto <span class="text-red-500 text-[10px]">(Generuje ID)</span></label>
-                <input v-model="newUserData.address.city" type="text" required class="w-full border p-2 rounded border-l-4 border-l-sky-500" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Miasto <span class="text-rose-500 text-[10px]">(Generuje ID)</span></label>
+                <input v-model="newUserData.address.city" type="text" required class="w-full border border-slate-300 p-2.5 rounded-input border-l-4 border-l-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
               </div>
             </div>
           </div>
 
-          <div class="bg-slate-100 p-4 rounded-lg border border-slate-300 flex items-center justify-between">
+          <div class="bg-slate-100 p-4 rounded-lg border border-slate-200 flex items-center justify-between">
             <div>
               <label class="block text-[10px] font-bold text-slate-500 uppercase">Automatyczne ID Hierarchiczne</label>
               <input :value="generatedId" type="text" readonly class="bg-transparent text-xl font-mono font-bold text-slate-800 border-none p-0 w-full focus:ring-0" />
             </div>
             <div class="text-right">
               <label class="block text-[10px] font-bold text-slate-500 uppercase">Rola</label>
-              <select v-model="newUserData.role" class="bg-white border p-1 rounded text-sm font-bold">
+              <select v-model="newUserData.role" class="bg-white border border-slate-300 p-1 rounded text-sm font-bold">
                 <option v-for="role in availableRoles" :key="role.val" :value="role.val">{{ role.label }}</option>
               </select>
             </div>
           </div>
 
-          <div class="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
+          <div class="bg-indigo-50 p-6 rounded-card border border-indigo-200">
             <h4 class="text-sm font-bold text-indigo-900 uppercase border-b border-indigo-200 pb-2 mb-4 flex items-center">
               <AppIcon name="pencil-square" class="mr-2 h-4 w-4 text-indigo-800" />
               Dokumenty do wygenerowania (Autenti)
@@ -1358,15 +1344,15 @@ const addUser = async () => {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <label class="flex items-center space-x-3 p-3 bg-white rounded border border-indigo-100 shadow-sm cursor-pointer">
                 <input v-model="newUserData.docs.nda" type="checkbox" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5" />
-                <span class="font-medium text-gray-700">Umowa NDA</span>
+                <span class="font-medium text-slate-700">Umowa NDA</span>
               </label>
               <label class="flex items-center space-x-3 p-3 bg-white rounded border border-indigo-100 shadow-sm cursor-pointer">
                 <input v-model="newUserData.docs.cooperationAgreement" type="checkbox" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5" />
-                <span class="font-medium text-gray-700">Umowa Współpracy</span>
+                <span class="font-medium text-slate-700">Umowa Współpracy</span>
               </label>
               <label class="flex items-center space-x-3 p-3 bg-white rounded border border-indigo-100 shadow-sm cursor-pointer">
                 <input v-model="newUserData.docs.careerPath" type="checkbox" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5" />
-                <span class="font-medium text-gray-700">Ścieżka Kariery</span>
+                <span class="font-medium text-slate-700">Ścieżka Kariery</span>
               </label>
             </div>
             <div>
@@ -1376,7 +1362,7 @@ const addUser = async () => {
                   Wybierz plik
                   <input type="file" class="hidden" @change="handleFile" />
                 </label>
-                <span class="text-sm text-gray-600 italic">{{ newUserData.docs.otherFileName || 'Brak pliku' }}</span>
+                <span class="text-sm text-slate-600 italic">{{ newUserData.docs.otherFileName || 'Brak pliku' }}</span>
               </div>
             </div>
             <p class="text-[10px] text-indigo-600 mt-4">
@@ -1384,11 +1370,11 @@ const addUser = async () => {
             </p>
           </div>
 
-          <div class="pt-4 border-t border-gray-100 flex justify-end space-x-3 sticky bottom-0 bg-white p-4 -mx-6 -mb-6 shadow-up">
-            <button type="button" class="px-5 py-3 text-gray-600 hover:bg-gray-100 rounded-lg font-medium transition" @click="showAddModal = false">Anuluj</button>
+          <div class="pt-4 border-t border-slate-100 flex justify-end space-x-3 sticky bottom-0 bg-white p-4 -mx-6 -mb-6 shadow-up">
+            <button type="button" class="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition" @click="showAddModal = false">Anuluj</button>
             <button
               type="submit"
-              class="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 shadow-lg font-bold flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark shadow-lg font-bold flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="isSending || !newUserData.email || !newUserData.address.city"
             >
               <AppIcon v-if="isSending" name="refresh" class="h-4 w-4 animate-spin mr-2" />
@@ -1400,16 +1386,16 @@ const addUser = async () => {
     </div>
 
     <div v-if="showMsgModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="closeMsgModal"></div>
-      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-10 relative">
-        <h3 class="text-lg font-bold mb-4">Wyślij powiadomienie</h3>
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="closeMsgModal"></div>
+      <div class="bg-surface rounded-card shadow-xl p-6 w-full max-w-md z-10 relative">
+        <h3 class="text-lg font-bold mb-4 text-slate-900">Wyślij powiadomienie</h3>
         <div class="mb-4">
-          <span class="text-sm text-gray-500">Do:</span> <span class="font-bold">{{ selectedUser?.name }}</span>
+          <span class="text-sm text-slate-500">Do:</span> <span class="font-bold text-slate-900">{{ selectedUser?.name }}</span>
         </div>
         <div class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Typ</label>
-            <select v-model="msgData.type" class="w-full border p-2 rounded bg-white text-gray-900">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Typ</label>
+            <select v-model="msgData.type" class="w-full border border-slate-300 p-2.5 rounded-input bg-surface text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm">
               <option value="TASK">Zadanie / Działanie</option>
               <option value="NOTE">Notatka służbowa</option>
               <option value="INFO">Informacja</option>
@@ -1417,12 +1403,12 @@ const addUser = async () => {
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Treść wiadomości</label>
-            <textarea v-model="msgData.text" rows="4" class="w-full border p-2 rounded bg-white text-gray-900" placeholder="Wpisz treść..."></textarea>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Treść wiadomości</label>
+            <textarea v-model="msgData.text" rows="4" class="w-full border border-slate-300 p-2.5 rounded-input bg-surface text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm" placeholder="Wpisz treść..."></textarea>
           </div>
           <div class="flex justify-end space-x-2">
-            <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded" @click="closeMsgModal">Anuluj</button>
-            <button type="button" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700" @click="sendMsg">Wyślij</button>
+            <button type="button" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-btn text-sm font-medium" @click="closeMsgModal">Anuluj</button>
+            <button type="button" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark shadow-sm text-sm font-bold" @click="sendMsg">Wyślij</button>
           </div>
         </div>
       </div>
@@ -1430,19 +1416,19 @@ const addUser = async () => {
 
     <div v-if="showImpersonateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-amber-900/40 backdrop-blur-sm" @click="closeImpersonateModal"></div>
-      <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm z-10 relative border-l-4 border-amber-500">
+      <div class="bg-white rounded-card shadow-2xl p-6 w-full max-w-sm z-10 relative border-l-4 border-amber-500">
         <div class="flex items-start mb-4">
           <div class="bg-amber-100 rounded-full p-2 mr-3 text-amber-600">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+            <AppIcon name="eye" class="w-6 h-6" />
           </div>
           <div>
-            <h3 class="text-lg font-bold text-gray-900">Tryb Podglądu (Shadow Mode)</h3>
-            <p class="text-xs text-gray-500">
-              Logowanie jako: <span class="font-bold text-gray-800">{{ userToImpersonate?.name }}</span>
+            <h3 class="text-lg font-bold text-slate-900">Tryb Podglądu (Shadow Mode)</h3>
+            <p class="text-xs text-slate-500">
+              Logowanie jako: <span class="font-bold text-slate-800">{{ userToImpersonate?.name }}</span>
             </p>
           </div>
         </div>
-        <div class="bg-amber-50 p-3 rounded text-sm text-amber-800 mb-6">
+        <div class="bg-amber-50 p-3 rounded-lg text-sm text-amber-800 mb-6 border border-amber-100">
           <ul class="list-disc pl-4 space-y-1">
             <li>Przejdziesz w tryb tylko do odczytu.</li>
             <li>Wszelkie operacje zapisu zostaną zablokowane.</li>
@@ -1451,8 +1437,8 @@ const addUser = async () => {
           </ul>
         </div>
         <div class="flex justify-end space-x-2">
-          <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium" @click="closeImpersonateModal">Anuluj</button>
-          <button type="button" class="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 text-sm font-bold shadow" @click="confirmImpersonate">
+          <button type="button" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium" @click="closeImpersonateModal">Anuluj</button>
+          <button type="button" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-bold shadow" @click="confirmImpersonate">
             Rozpocznij Podgląd
           </button>
         </div>
@@ -1460,16 +1446,16 @@ const addUser = async () => {
     </div>
 
     <div v-if="showRemoveModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="closeRemoveModal"></div>
-      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-red-500">
-        <h3 class="text-lg font-bold mb-2 text-red-600">Potwierdź Dezaktywację</h3>
-        <p class="text-sm text-gray-600 mb-4">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="closeRemoveModal"></div>
+      <div class="bg-white rounded-card shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-rose-500">
+        <h3 class="text-lg font-bold mb-2 text-rose-600">Potwierdź Dezaktywację</h3>
+        <p class="text-sm text-slate-600 mb-4">
           Czy na pewno chcesz dezaktywować <strong>{{ userToRemove?.name }}</strong> w strukturze?
-          <span class="text-xs text-gray-500 block">Użytkownik zostanie ukryty w drzewie, ale pozostanie w bazie danych.</span>
+          <span class="text-xs text-slate-500 block">Użytkownik zostanie ukryty w drzewie, ale pozostanie w bazie danych.</span>
         </p>
         <div class="mt-6 flex justify-end space-x-2">
-          <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium" @click="closeRemoveModal">Anuluj</button>
-          <button type="button" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-bold shadow" @click="confirmRemove">
+          <button type="button" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium" @click="closeRemoveModal">Anuluj</button>
+          <button type="button" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm font-bold shadow" @click="confirmRemove">
             Dezaktywuj
           </button>
         </div>
@@ -1477,25 +1463,25 @@ const addUser = async () => {
     </div>
 
     <div v-if="showTeamModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="showTeamModal = false"></div>
-      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-emerald-500">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="showTeamModal = false"></div>
+      <div class="bg-surface rounded-card shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-emerald-500">
         <h3 class="text-lg font-bold mb-2 text-emerald-700">Dodaj nowy zespół</h3>
-        <p class="text-xs text-gray-500 mb-4">Zespół zostanie utworzony w Keycloak jako grupa w `/teams/`.</p>
+        <p class="text-xs text-slate-500 mb-4">Zespół zostanie utworzony w Keycloak jako grupa w `/teams/`.</p>
         <div class="space-y-3">
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nazwa zespołu</label>
-            <input v-model="newTeamBase" type="text" class="w-full border p-2 rounded bg-white text-gray-900" placeholder="np. warszawa" />
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nazwa zespołu</label>
+            <input v-model="newTeamBase" type="text" class="w-full border border-slate-300 p-2.5 rounded-input bg-surface text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors text-sm" placeholder="np. warszawa" />
           </div>
           <div>
-            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Kod zespołu (automatyczny)</label>
-            <input :value="computedTeamCode" type="text" readonly class="w-full border p-2 rounded bg-gray-50 text-gray-700 font-mono" />
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Kod zespołu (automatyczny)</label>
+            <input :value="computedTeamCode" type="text" readonly class="w-full border border-slate-300 p-2.5 rounded-input bg-slate-50 text-slate-700 font-mono text-sm" />
           </div>
         </div>
         <div class="mt-6 flex justify-end space-x-2">
-          <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium" @click="showTeamModal = false">Anuluj</button>
+          <button type="button" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-btn text-sm font-medium" @click="showTeamModal = false">Anuluj</button>
           <button
             type="button"
-            class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-sm font-bold shadow disabled:opacity-50"
+            class="px-4 py-2 bg-emerald-600 text-white rounded-btn hover:bg-emerald-700 text-sm font-bold shadow disabled:opacity-50"
             :disabled="isCreatingTeam"
             @click="createTeam"
           >
@@ -1506,23 +1492,23 @@ const addUser = async () => {
     </div>
 
     <div v-if="showRegenerateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="showRegenerateModal = false"></div>
-      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-red-500">
-        <h3 class="text-lg font-bold mb-2 text-red-600">Przelicz kody struktury</h3>
-        <p class="text-sm text-gray-600 mb-4">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="showRegenerateModal = false"></div>
+      <div class="bg-white rounded-card shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-rose-500">
+        <h3 class="text-lg font-bold mb-2 text-rose-600">Przelicz kody struktury</h3>
+        <p class="text-sm text-slate-600 mb-4">
           Operacja przeliczy kody hierarchiczne dla wszystkich użytkowników w strukturze.
         </p>
-        <label class="flex items-center gap-3 text-sm text-gray-700 mb-6">
-          <input v-model="resetCounters" type="checkbox" class="h-4 w-4 text-red-600 focus:ring-red-500" />
+        <label class="flex items-center gap-3 text-sm text-slate-700 mb-6">
+          <input v-model="resetCounters" type="checkbox" class="h-4 w-4 text-rose-600 focus:ring-rose-500 rounded" />
           Resetuj liczniki przed przeliczeniem
         </label>
         <div class="flex justify-end space-x-2">
-          <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium" @click="showRegenerateModal = false">
+          <button type="button" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium" @click="showRegenerateModal = false">
             Anuluj
           </button>
           <button
             type="button"
-            class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-bold shadow disabled:opacity-50"
+            class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm font-bold shadow disabled:opacity-50"
             :disabled="isRegenerating"
             @click="regenerateCodes"
           >
@@ -1533,18 +1519,18 @@ const addUser = async () => {
     </div>
 
     <div v-if="showDeleteTeamModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="showDeleteTeamModal = false"></div>
-      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-red-500">
-        <h3 class="text-lg font-bold mb-2 text-red-600">Usuń zespół</h3>
-        <p class="text-sm text-gray-600 mb-4">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="showDeleteTeamModal = false"></div>
+      <div class="bg-white rounded-card shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-rose-500">
+        <h3 class="text-lg font-bold mb-2 text-rose-600">Usuń zespół</h3>
+        <p class="text-sm text-slate-600 mb-4">
           Czy na pewno chcesz usunąć zespół <strong>{{ teamToDelete?.name }}</strong>?
-          <span class="text-xs text-gray-500 block">Operacja usuwa grupę z Keycloak. Zespół musi być pusty.</span>
+          <span class="text-xs text-slate-500 block">Operacja usuwa grupę z Keycloak. Zespół musi być pusty.</span>
         </p>
         <div class="flex justify-end space-x-2">
-          <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium" @click="showDeleteTeamModal = false">
+          <button type="button" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium" @click="showDeleteTeamModal = false">
             Anuluj
           </button>
-          <button type="button" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-bold shadow" @click="confirmDeleteTeam">
+          <button type="button" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm font-bold shadow" @click="confirmDeleteTeam">
             Usuń zespół
           </button>
         </div>

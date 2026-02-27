@@ -60,7 +60,7 @@ const canProceed = computed(() => {
   return true;
 });
 
-const statusOrder = ['NEW', 'IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT', 'SPECIAL_OFFER', 'RESIGNED', 'SIGNED', 'TERMINATED'];
+const statusOrder = ['NEW', 'OFFER_PREPARING', 'CALCULATION_SENT', 'RESIGNED', 'SIGNED', 'TERMINATED'];
 const eligibleClients = computed(() => {
   const list = Array.isArray(clients.value) ? clients.value : [];
   const term = companySearch.value.trim().toLowerCase();
@@ -185,11 +185,11 @@ onMounted(() => {
           ...store.firma,
           nazwa: data?.name || store.firma.nazwa,
           nip: data?.nip || store.firma.nip,
-          adres: data?.street || store.firma.adres, // Corrected from address_line1 based on other views
-          kodPocztowy: data?.zip || store.firma.kodPocztowy, // Corrected from postal_code based on other views
+          adres: data?.address_line1 || data?.street || store.firma.adres, 
+          kodPocztowy: data?.postal_code || data?.zip || store.firma.kodPocztowy, 
           miasto: data?.city || store.firma.miasto,
-          email: data?.email || store.firma.email,
-          telefon: data?.phone || store.firma.telefon,
+          email: data?.contact_email || data?.email || store.firma.email,
+          telefon: data?.contact_phone || data?.phone || store.firma.telefon,
         };
       })
       .catch((error) => {
@@ -228,10 +228,10 @@ onMounted(() => {
 
 <template>
   <div class="w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
-    <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-8">
-      <div class="flex flex-col md:flex-row justify-between items-center mb-8 pb-8 border-b border-slate-800 gap-6">
+    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-8">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-6">
         <div class="flex items-center gap-6 self-start md:self-center">
-            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
+            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
               <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             </button>
             <div>
@@ -247,11 +247,11 @@ onMounted(() => {
         
         <button 
           type="button" 
-          class="flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl shadow-lg shadow-indigo-500/30 transition-all font-bold group disabled:opacity-50 disabled:grayscale self-end md:self-center"
+          class="h-12 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white px-8 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale self-end md:self-center border border-white/20 hover:brightness-110 active:scale-95"
           :disabled="!canProceed || currentStep >= steps.length - 1" 
           @click="currentStep++"
         >
-          <span class="text-sm">Dalej</span>
+          <span class="text-xs">Dalej</span>
           <AppIcon name="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
@@ -273,8 +273,8 @@ onMounted(() => {
         <div v-if="showCompanyPicker" class="absolute right-4 top-full mt-3 w-full max-w-xl bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-20">
         <div class="flex items-center gap-2 mb-3">
           <div class="relative flex-1">
-            <input v-model="companySearch" type="text" placeholder="Szukaj po nazwie lub NIP..." class="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-slate-400 focus:border-slate-400" />
-            <AppIcon name="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input v-model="companySearch" type="text" placeholder="Szukaj po nazwie lub NIP..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-slate-400 focus:border-slate-400 text-right font-bold" />
+            <AppIcon name="search" class="w-4 h-4 text-slate-400 absolute left-3 top-[10px]" />
           </div>
           <button type="button" class="text-xs text-slate-500 hover:text-slate-700" @click="showCompanyPicker = false">Zamknij</button>
         </div>
@@ -304,21 +304,21 @@ onMounted(() => {
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
       <aside class="lg:col-span-3 space-y-3">
-        <button type="button" class="w-full p-4 rounded-xl border text-left transition" :class="currentStep === -1 ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-slate-50'" @click="currentStep = -1">
+        <button type="button" class="w-full p-4 rounded-xl border-2 text-left transition-all duration-300" :class="currentStep === -1 ? 'border-stratton-gold bg-linear-to-br from-[#D4AF37] to-[#C5A059] text-white shadow-[0_8px_20px_-4px_rgba(197,160,89,0.35)]' : 'border-slate-100 bg-white text-slate-500 hover:border-stratton-gold hover:bg-slate-50'" @click="currentStep = -1">
           <div class="flex items-center gap-3">
             <AppIcon name="dashboard" class="w-5 h-5" />
             <div>
               <div class="font-bold">Pulpit</div>
-              <div class="text-[10px] uppercase tracking-widest opacity-70">Start</div>
+              <div class="text-[10px] uppercase tracking-widest font-extrabold" :class="currentStep === -1 ? 'text-white/80' : 'text-slate-400'">Start</div>
             </div>
           </div>
         </button>
-        <button v-for="step in steps" :key="step.id" type="button" class="w-full p-4 rounded-xl border text-left transition" :class="currentStep === step.id ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-slate-50'" @click="currentStep = step.id">
+        <button v-for="step in steps" :key="step.id" type="button" class="w-full p-4 rounded-xl border-2 text-left transition-all duration-300" :class="currentStep === step.id ? 'border-stratton-gold bg-linear-to-br from-[#D4AF37] to-[#C5A059] text-white shadow-[0_8px_20px_-4px_rgba(197,160,89,0.35)]' : 'border-slate-100 bg-white text-slate-500 hover:border-stratton-gold hover:bg-slate-50'" @click="currentStep = step.id">
           <div class="flex items-center gap-3">
             <AppIcon :name="step.icon" class="w-5 h-5" />
             <div>
               <div class="font-bold" v-html="step.label"></div>
-              <div class="text-[10px] uppercase tracking-widest opacity-70">Krok {{ step.id + 1 }}</div>
+              <div class="text-[10px] uppercase tracking-widest font-extrabold" :class="currentStep === step.id ? 'text-white/80' : 'text-slate-400'">Krok {{ step.id + 1 }}</div>
             </div>
           </div>
         </button>

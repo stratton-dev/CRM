@@ -30,44 +30,46 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-2xl font-semibold textstratton700">Deals</h2>
-      <button class="px-3 py-2 border rounded bg-white hover:bg-gray-50">Add deal</button>
+  <div class="crm-section">
+    <div class="crm-section-header">
+      <h2 class="crm-heading">Deals</h2>
+      <button class="crm-action-btn">Add deal</button>
     </div>
 
-    <div class="bg-white rounded shadow overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 text-left">
-          <tr>
-            <th class="px-4 py-2">#</th>
-            <th class="px-4 py-2">Title</th>
-            <th class="px-4 py-2">Customer</th>
-            <th class="px-4 py-2">Stage</th>
-            <th class="px-4 py-2">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="5" class="px-4 py-3 text-gray-500">
-              <div class="flex items-center gap-2">
-                <AppIcon name="refresh" class="w-4 h-4 animate-spin" />
-                <span>Ładowanie...</span>
-              </div>
-            </td>
-          </tr>
-          <tr v-else-if="error">
-            <td colspan="5" class="px-4 py-3 text-red-600">{{ error }}</td>
-          </tr>
-          <tr v-else v-for="d in rows" :key="d.id" class="border-t">
-            <td class="px-4 py-2">{{ d.id }}</td>
-            <td class="px-4 py-2">{{ d.title }}</td>
-            <td class="px-4 py-2">{{ d.customer?.name || '—' }}</td>
-            <td class="px-4 py-2">{{ d.stage || '—' }}</td>
-            <td class="px-4 py-2">{{ d.amount != null ? Intl.NumberFormat().format(d.amount) : '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="crm-card">
+      <div class="crm-table-wrapper">
+        <table class="crm-table">
+          <thead class="crm-table-head">
+            <tr>
+              <th class="crm-table-th">#</th>
+              <th class="crm-table-th">Title</th>
+              <th class="crm-table-th">Customer</th>
+              <th class="crm-table-th">Stage</th>
+              <th class="crm-table-th">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="5" class="crm-table-empty">
+                <div class="crm-loading">
+                  <AppIcon name="refresh" class="w-4 h-4 animate-spin" />
+                  <span>Ładowanie...</span>
+                </div>
+              </td>
+            </tr>
+            <tr v-else-if="error">
+              <td colspan="5" class="crm-table-error">{{ error }}</td>
+            </tr>
+            <tr v-else v-for="d in rows" :key="d.id" class="crm-table-row">
+              <td class="crm-table-td">{{ d.id }}</td>
+              <td class="crm-table-td">{{ d.title }}</td>
+              <td class="crm-table-td">{{ d.customer?.name || '—' }}</td>
+              <td class="crm-table-td">{{ d.stage || '—' }}</td>
+              <td class="crm-table-td">{{ d.amount != null ? Intl.NumberFormat().format(d.amount) : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

@@ -29,42 +29,44 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-2xl font-semibold textstratton700">Customers</h2>
-      <button class="px-3 py-2 border rounded bg-white hover:bg-gray-50">Add customer</button>
+  <div class="crm-section">
+    <div class="crm-section-header">
+      <h2 class="crm-heading">Customers</h2>
+      <button class="crm-action-btn">Add customer</button>
     </div>
 
-    <div class="bg-white rounded shadow overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 text-left">
-          <tr>
-            <th class="px-4 py-2">#</th>
-            <th class="px-4 py-2">Name</th>
-            <th class="px-4 py-2">Email</th>
-            <th class="px-4 py-2">Phone</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading">
-            <td colspan="4" class="px-4 py-3 text-gray-500">
-              <div class="flex items-center gap-2">
-                <AppIcon name="refresh" class="w-4 h-4 animate-spin" />
-                <span>Ładowanie...</span>
-              </div>
-            </td>
-          </tr>
-          <tr v-else-if="error">
-            <td colspan="4" class="px-4 py-3 text-red-600">{{ error }}</td>
-          </tr>
-          <tr v-else v-for="c in rows" :key="c.id" class="border-t">
-            <td class="px-4 py-2">{{ c.id }}</td>
-            <td class="px-4 py-2">{{ c.name }}</td>
-            <td class="px-4 py-2">{{ c.email || '—' }}</td>
-            <td class="px-4 py-2">{{ c.phone || '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="crm-card">
+      <div class="crm-table-wrapper">
+        <table class="crm-table">
+          <thead class="crm-table-head">
+            <tr>
+              <th class="crm-table-th">#</th>
+              <th class="crm-table-th">Name</th>
+              <th class="crm-table-th">Email</th>
+              <th class="crm-table-th">Phone</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading">
+              <td colspan="4" class="crm-table-empty">
+                <div class="crm-loading">
+                  <AppIcon name="refresh" class="w-4 h-4 animate-spin" />
+                  <span>Ładowanie...</span>
+                </div>
+              </td>
+            </tr>
+            <tr v-else-if="error">
+              <td colspan="4" class="crm-table-error">{{ error }}</td>
+            </tr>
+            <tr v-else v-for="c in rows" :key="c.id" class="crm-table-row">
+              <td class="crm-table-td">{{ c.id }}</td>
+              <td class="crm-table-td">{{ c.name }}</td>
+              <td class="crm-table-td">{{ c.email || '—' }}</td>
+              <td class="crm-table-td">{{ c.phone || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

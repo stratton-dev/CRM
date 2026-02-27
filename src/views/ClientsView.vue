@@ -10,6 +10,7 @@ import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
 import { useMailboxStore } from '@/stores/mailbox'
+import { useNotificationStore } from '@/stores/notification'
 import { api } from '@/api/client'
 import type { Client } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
@@ -41,10 +42,11 @@ const session = useSessionStore()
 const structure = useStructureStore()
 const toast = useToastStore()
 const mailboxStore = useMailboxStore()
+const notifyStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
 
-const { customers: clients } = storeToRefs(clientStore)
+const { clients } = storeToRefs(clientStore)
 const { invoices } = storeToRefs(finance)
 const { users: dataUsers } = storeToRefs(structure)
 const { users: structureUsers } = storeToRefs(structure)
@@ -92,8 +94,15 @@ const calculationStatuses = ref<Array<{ key: string; label: string }>>([])
 const calculationsError = ref<string | null>(null)
 
 const kanbanStages: Array<{ status: Client['status']; title: string }> = [
-  { status: 'SIGNED', title: 'Klienci Stratton Prime' },
+  { status: 'NEW', title: 'Nowy' },
+  { status: 'IN_TALKS', title: 'W rozmowach' },
+  { status: 'OFFER_PREPARING', title: 'Przygotowanie oferty' },
+  { status: 'OFFER_GENERATED', title: 'Oferta wygenerowana' },
+  { status: 'CALCULATION_SENT', title: 'Wysłano ofertę' },
+  { status: 'SPECIAL_OFFER', title: 'Oferta Specjalna' },
+  { status: 'SIGNED', title: 'Podpisany (Stratton Prime)' },
   { status: 'TERMINATED', title: 'Umowa Rozwiązana' },
+  { status: 'RESIGNED', title: 'Rezygnacja' },
 ]
 
 const filteredContacts = computed(() => {
@@ -267,14 +276,11 @@ const sort = (field: keyof Client | 'opiekunDisplay') => {
 const statusLabel = (status: Client['status']) => {
   const labels: Record<Client['status'], string> = {
     NEW: 'Nowy',
-    IN_TALKS: 'W rozmowach',
-    OFFER_PREPARING: 'Przygotowanie oferty',
-    OFFER_GENERATED: 'Oferta wygenerowana',
-    CALCULATION_SENT: 'Wysłano ofertę',
-    SPECIAL_OFFER: 'Oferta specjalna',
-    SIGNED: 'Podpisany',
-    TERMINATED: 'Umowa rozwiązana',
-    RESIGNED: 'Rezygnacja',
+      IN_TALKS: 'W rozmowach',
+      OFFER_PREPARING: 'Przygotowanie oferty',
+      OFFER_GENERATED: 'Oferta wygenerowana',
+      CALCULATION_SENT: 'Wysłano ofertę',
+      SPECIAL_OFFER: 'Oferta Specjalna',
   }
   return labels[status] || status
 }
@@ -315,6 +321,102 @@ const getClientOwner = (client: any) => {
     ? (auth.enabled ? structureUsers.value : dataUsers.value)
     : []
   return userList.find((u) => u.id === client.ownerId) || null
+}
+
+const showMsgModal = ref(false)
+const selectedUserForMsg = ref<any | null>(null)
+const msgData = ref({
+  type: 'TASK' as 'TASK' | 'NOTE' | 'INFO' | 'WARNING',
+  text: '',
+})
+
+const canNotify = (user: any) => {
+  if (!auth.enabled || !currentUser.value) return false
+  if (currentUser.value.role === 'ADMIN') return true
+  
+  const childIds = structure.getSubtreeUserIds(currentUser.value.id)
+  return childIds.includes(user.id) && user.id !== currentUser.value.id
+}
+
+const openMsgModal = (user: any) => {
+  selectedUserForMsg.value = user
+  msgData.value.type = 'TASK'
+  msgData.value.text = ''
+  showMsgModal.value = true
+}
+
+const closeMsgModal = () => {
+  showMsgModal.value = false
+  selectedUserForMsg.value = null
+}
+
+const sendMsg = () => {
+  const recipient = selectedUserForMsg.value
+  if (!recipient || !currentUser.value) return
+  if (!msgData.value.text.trim()) {
+    toast.warning('Wpisz treść wiadomości.')
+    return
+  }
+
+  notifyStore.add({
+    userId: recipient.id,
+    type: msgData.value.type,
+    message: msgData.value.text.trim(),
+  })
+  toast.success(`Wiadomość została wysłana do ${recipient.name}.`)
+  closeMsgModal()
+}
+
+const canImpersonate = (user: any) => {
+  if (!auth.enabled || !currentUser.value) return false
+  return structure.canImpersonate(currentUser.value, user)
+}
+
+const canRemove = (user: any) => {
+  if (!auth.enabled || !currentUser.value) return false
+  return structure.canRemove(currentUser.value, user)
+}
+
+const impersonateUser = async (user: any) => {
+  if (currentUser.value?.id === user.id) {
+    if (!confirm('Czy na pewno chcesz odświeżyć własną sesję?')) return
+    window.location.reload()
+    return
+  }
+  if (!confirm(`Czy na pewno chcesz zalogować się jako ${user.name}?`)) return
+  try {
+    await session.impersonate(user.id)
+    router.push('/app/dashboard')
+    toast.success(`Zalogowano jako ${user.name}`)
+  } catch (error) {
+    toast.error('Nie udało się zalogować jako użytkownik.')
+  }
+}
+
+const removeUser = async (user: any) => {
+  if (!auth.enabled || !currentUser.value) return
+  
+  if (currentUser.value.id === user.id) {
+     if(!confirm('UWAGA: Usuwasz własne konto. Kontynuować?')) return
+  } else {
+     if (!confirm(`Czy na pewno chcesz usunąć ${user.name} ze struktury? Tej operacji nie można cofnąć.`)) return
+  }
+
+  try {
+    await structure.removeUserFromStructure(user, currentUser.value)
+    await structure.fetchStructure()
+    await clientStore.refreshApiData()
+    toast.success(`Usunięto ${user.name} ze struktury.`)
+  } catch (error: any) {
+    const message = error?.response?.data?.message
+    if (message) toast.error(message)
+    else toast.error('Nie udało się usunąć użytkownika.')
+  }
+}
+
+const editRedirect = (user: any) => {
+   router.push({ path: '/app/structure', query: { focus: user.id } })
+   toast.info('Przeniesiono do widoku struktury. Znajdź użytkownika na liście, aby edytować.')
 }
 
 const emailClientOwner = (client: any) => {
@@ -933,8 +1035,43 @@ const addActivity = (clientId: string, type: string, description: string) => {
   if (!description || !u) return
 
   clientStore.addActivity(clientId, { type: type as any, description, authorId: u.id })
-  toast.success('Dodano notatkę.')
+  toast.success('Dodano aktywność.')
   activityDescription.value = ''
+}
+
+const quickNote = ref('')
+const clientNotes = computed(() => {
+  if (!selectedClient.value?.activityHistory) return []
+  return selectedClient.value.activityHistory
+    .filter((act) => act.type === 'NOTE')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+})
+
+const saveQuickNote = async () => {
+  if (!selectedClient.value || !quickNote.value.trim()) return
+  // Use the local wrapper but await the store action indirectly? 
+  // actually local wrapper is not async right now.
+  const description = quickNote.value
+  const u = currentUser.value
+  const clientId = selectedClient.value.id
+  
+  if (!description || !u) return
+
+  try {
+    await clientStore.addActivity(clientId, { type: 'NOTE', description, authorId: u.id })
+    // Remove toast from here because store already shows it on success?
+    // Store shows "Dodano aktywność" on success.
+    // The wrapper 'addActivity' also shows 'Dodano aktywność.'. Double toast.
+    
+    // reset form
+    quickNote.value = ''
+    activityDescription.value = ''
+  } catch (e) {
+    // If store throws, we catch here? 
+    // Store catches internally and shows toast.error. 
+    // It does not re-throw error in the catch block unless we change it.
+    // Currently store catches and returns.
+  }
 }
 
 const exportToCsv = () => {
@@ -989,14 +1126,13 @@ const onDrop = (event: DragEvent, newStatus: Client['status']) => {
     return
   }
 
-  if (client.status === 'SIGNED') {
-    toast.warning('Zmiana statusu podpisanego klienta wymaga weryfikacji.')
-  } else if (['RESIGNED', 'TERMINATED'].includes(client.status)) {
-    toast.warning(`Nie można przenieść klienta ze statusu '${client.status}'.`)
-  } else {
-    clientStore.updateClient(clientId, { status: newStatus })
-    toast.success(`Przeniesiono '${client.name}' do etapu: ${newStatus}`)
+  if (client.status === 'SIGNED' && !confirm('Czy na pewno chcesz zmienić status podpisanego klienta?')) {
+    draggedClientId.value = null
+    return
   }
+
+  clientStore.updateClient(clientId, { status: newStatus })
+  toast.success(`Przeniesiono '${client.name}' do etapu: ${statusLabel(newStatus)}`)
 
   draggedClientId.value = null
 }
@@ -1016,9 +1152,9 @@ if (route.query.expand) {
   <div class="flex flex-col" :class="embedded ? 'h-auto min-h-[600px]' : 'h-[calc(100vh-112px)]'">
 
     <div class="px-6 pt-6 pb-2" v-if="!embedded">
-       <div class="bg-slate-900 text-white rounded-3xl p-8 shadow-xl flex justify-between items-center relative overflow-hidden border border-slate-800">
+       <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border border-slate-800">
           <div class="relative z-10 flex items-center gap-6">
-              <RouterLink to="/app/sales/start" class="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
+              <RouterLink to="/app/sales/start" class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
                   <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
               </RouterLink>
               <div>
@@ -1032,29 +1168,29 @@ if (route.query.expand) {
        </div>
     </div>
     
-    <div class="bg-gray-50 border-b border-gray-200 p-2 flex items-center shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-xl' : ''">
+    <div class="bg-slate-50 border-b border-slate-200 p-2 flex items-center shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-card' : ''">
       <div class="flex items-center gap-3 ml-4">
-        <AppIcon name="users" class="w-5 h-5 text-brand-main" />
-        <h3 class="font-black text-slate-900 text-xl tracking-tight">Klienci w obsłudze</h3>
+        <AppIcon name="users" class="w-5 h-5 text-primary" />
+        <h3 class="font-black text-slate-800 text-xl tracking-tight">Klienci w obsłudze</h3>
       </div>
       
       <div class="flex-1 flex items-center justify-end px-4 gap-4">
         <div class="flex items-center space-x-2">
-          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="router.push('/app/sales/start')">
+          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="router.push('/app/sales/start')">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
             <span>Nowy</span>
           </button>
-          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="exportToCsv">
+          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="exportToCsv">
             <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Eksportuj</span>
           </button>
-          <div class="h-5 w-px bg-gray-300 mx-2"></div>
-          <div class="flex items-center bg-gray-200 rounded p-0.5">
-            <button type="button" class="px-2 py-1 rounded text-sm flex items-center" :class="viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'" @click="setViewMode('list')">
+          <div class="h-5 w-px bg-slate-200 mx-2"></div>
+          <div class="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+            <button type="button" class="px-2 py-1 rounded-md text-sm flex items-center transition-all" :class="viewMode === 'list' ? 'bg-white shadow-sm text-slate-800 font-bold' : 'text-slate-500 hover:text-slate-700'" @click="setViewMode('list')">
               <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
               Lista
             </button>
-            <button type="button" class="px-2 py-1 rounded text-sm flex items-center" :class="viewMode === 'kanban' ? 'bg-white shadow-sm' : 'text-gray-500'" @click="setViewMode('kanban')">
+            <button type="button" class="px-2 py-1 rounded-md text-sm flex items-center transition-all" :class="viewMode === 'kanban' ? 'bg-white shadow-sm text-slate-800 font-bold' : 'text-slate-500 hover:text-slate-700'" @click="setViewMode('kanban')">
               <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
               Kanban
             </button>
@@ -1062,71 +1198,71 @@ if (route.query.expand) {
         </div>
 
         <div class="w-96 relative">
-          <input v-model="filterText" type="text" placeholder="Szukaj klienta, firmy lub NIP..." class="w-full border-gray-300 rounded-lg text-sm pl-10 py-2 focus:ring-brand-main focus:border-brand-main bg-white text-gray-900 shadow-sm" />
-          <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input v-model="filterText" type="text" placeholder="Szukaj klienta, firmy lub NIP..." class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400" />
+          <AppIcon name="search" class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
       </div>
     </div>
 
-    <div v-if="viewMode === 'list'" class="flex-1 relative overflow-hidden bg-white flex flex-col">
+    <div v-if="viewMode === 'list'" class="flex-1 relative overflow-hidden bg-surface flex flex-col">
       <div class="flex-1 overflow-auto min-h-0">
-        <table class="min-w-full divide-y divide-gray-200" style="min-width: 1200px;">
-          <thead class="bg-gray-50 sticky top-0 z-10">
+        <table class="w-full divide-y divide-slate-100">
+          <thead class="bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
-              <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('name')">Nazwa Klienta</th>
-              <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('opiekunDisplay')">Opiekun</th>
-              <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('status')">Status</th>
-              <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer" @click="sort('lastActionDate')">Ostatnia Aktywność</th>
-              <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rezerwacja</th>
-              <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider pr-6">Akcje</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors" @click="sort('name')">Nazwa Klienta</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors" @click="sort('opiekunDisplay')">Opiekun</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors" @click="sort('status')">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors" @click="sort('lastActionDate')">Ostatnia Aktywność</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Rezerwacja</th>
+              <th class="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider pr-6">Akcje</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 bg-white">
+          <tbody class="divide-y divide-slate-50 bg-white">
             <template v-for="client in paginatedClients" :key="client.id">
             <tr
               :id="`client-${client.id}`"
-              class="hover:bg-sky-50 cursor-pointer transition-colors"
-              :class="selectedClient?.id === client.id ? 'bg-sky-100' : ''"
+              class="hover:bg-slate-50 cursor-pointer transition-colors group"
+              :class="selectedClient?.id === client.id ? 'bg-indigo-50/30' : ''"
               @click="selectClient(client)"
             >
-              <td class="px-4 py-1.5 whitespace-nowrap relative">
+              <td class="px-4 py-3 whitespace-nowrap relative">
                 <div>
-                  <div class="text-[13px] font-semibold text-brand-main truncate max-w-[260px]" :title="client.name">{{ client.name }}</div>
-                  <div class="text-[10px] text-gray-500 font-mono">{{ client.nip }}</div>
+                  <div class="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors truncate max-w-[260px]" :title="client.name">{{ client.name }}</div>
+                  <div class="text-xs text-slate-400 font-mono">{{ client.nip }}</div>
                 </div>
               </td>
-              <td class="px-4 py-1.5 whitespace-nowrap" @click.stop="toggleOwnerDetails(client.id)">
-                <div class="w-fit rounded-lg border border-dashed border-gray-200 px-3 py-1 bg-gray-50 hover:bg-white hover:border-sky-300 transition-colors">
-                  <div v-if="client.opiekunRole" class="text-[8px] font-black text-brand-main uppercase tracking-tighter leading-none mb-1">{{ client.opiekunRole }}</div>
-                  <div class="text-xs font-semibold text-gray-800 leading-tight">{{ client.opiekunName }}</div>
-                  <div class="text-[10px] text-gray-400 font-mono tracking-wide">ID: {{ client.opiekunHierarchy }}</div>
+              <td class="px-4 py-3 whitespace-nowrap" @click.stop="toggleOwnerDetails(client.id)">
+                <div class="w-fit rounded-lg border border-dashed border-slate-200 px-3 py-1 bg-slate-50 hover:bg-white hover:border-primary/30 transition-colors group/owner">
+                  <div v-if="client.opiekunRole" class="text-[9px] font-black text-primary uppercase tracking-tighter leading-none mb-1">{{ client.opiekunRole }}</div>
+                  <div class="text-sm font-semibold text-slate-700 leading-tight group-hover/owner:text-primary transition-colors">{{ client.opiekunName }}</div>
+                  <div class="text-[11px] text-slate-400 font-mono tracking-wide">ID: {{ client.opiekunHierarchy }}</div>
                 </div>
               </td>
               <td class="px-4 py-1.5 whitespace-nowrap">
                 <span
-                  class="px-2 py-0.5 inline-flex text-[11px] leading-4 font-semibold rounded-full"
+                  class="px-2 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full"
                   :class="{
-                    'bg-green-100 text-green-800': client.status === 'IN_TALKS',
                     'bg-yellow-100 text-yellow-800': client.status === 'NEW',
+                    'bg-indigo-100 text-indigo-800': client.status === 'IN_TALKS',
                     'bg-amber-100 text-amber-800': client.status === 'OFFER_PREPARING',
-                    'bg-indigo-100 text-indigo-800': client.status === 'OFFER_GENERATED',
+                    'bg-purple-100 text-purple-800': client.status === 'OFFER_GENERATED',
                     'bg-blue-100 text-blue-800': client.status === 'CALCULATION_SENT',
-                    'bg-red-100 text-red-800': client.status === 'RESIGNED',
+                    'bg-pink-100 text-pink-800': client.status === 'SPECIAL_OFFER',
                     'bg-emerald-100 text-emerald-800': client.status === 'SIGNED',
-                    'bg-purple-100 text-purple-800': client.status === 'SPECIAL_OFFER',
                     'bg-gray-200 text-gray-800': client.status === 'TERMINATED',
+                    'bg-red-100 text-red-800': client.status === 'RESIGNED',
                   }"
                 >
                   {{ statusLabel(client.status) }}
                 </span>
               </td>
-              <td class="px-4 py-1.5 whitespace-nowrap text-[11px] text-gray-600">
+              <td class="px-4 py-1.5 whitespace-nowrap text-xs text-gray-600">
                 <div class="flex items-center">
                   <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2 h-2 rounded-full bg-red-500 mr-2 flex-shrink-0" title="Brak kontaktu od ponad 3 dni!"></span>
                   <span>{{ new Date(client.lastActionDate).toLocaleDateString() }}</span>
                 </div>
               </td>
-              <td class="px-4 py-1.5 whitespace-nowrap text-[10px] text-gray-600">
+              <td class="px-4 py-1.5 whitespace-nowrap text-[11px] text-gray-600">
                 <span v-if="getRemainingReservationDays(client) !== null && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status) && (getRemainingReservationDays(client) || 0) > 0" class="inline-flex flex-col items-start rounded bg-sky-100 text-sky-700 font-semibold px-2 py-0.5 leading-tight">
                   <span>rezerwacja do</span>
                   <span>{{ formatReservationDate(client) }}</span>
@@ -1152,41 +1288,85 @@ if (route.query.expand) {
                 </div>
               </td>
             </tr>
-            <tr v-if="expandedClientId === client.id" class="bg-gray-50 border-y border-gray-200 shadow-inner animate-fade-in">
-              <td colspan="5" class="p-0 cursor-default" @click.stop>
-                <div class="p-4 flex justify-between items-center">
+            <tr v-if="expandedClientId === client.id" class="bg-slate-50 border-y border-slate-200 shadow-inner animate-fade-in">
+              <td colspan="6" class="p-0 cursor-default" @click.stop>
+                <div class="p-4 flex justify-between items-center bg-slate-50/50">
                 <div v-if="getClientOwner(client)" class="flex justify-between items-center w-full">
-                    <div class="flex items-center gap-8 text-xs text-gray-600">
+                    <div class="flex items-center gap-8 text-xs text-slate-600">
                         <div>
-                            <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Telefon</span>
-                            <span class="font-medium text-gray-800">{{ getClientOwner(client)?.phone || 'Brak' }}</span>
+                            <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Telefon</span>
+                            <span class="font-medium text-slate-800">{{ getClientOwner(client)?.phone || 'Brak' }}</span>
                         </div>
                         <div>
-                            <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Email</span>
-                            <button type="button" class="text-sky-600 hover:text-sky-800 hover:underline flex items-center gap-1 font-medium" @click="emailClientOwner(client)">
+                            <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Email</span>
+                            <button type="button" class="text-primary hover:text-primary-dark hover:underline flex items-center gap-1 font-medium" @click="emailClientOwner(client)">
                                 <AppIcon name="envelope" class="w-3 h-3" />
                                 <span>{{ getClientOwner(client)?.email }}</span>
                             </button>
                         </div>
                         <div>
-                            <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Rola</span>
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-white text-gray-600 border border-gray-200 shadow-sm">
+                            <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Rola</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-white text-slate-600 border border-slate-200 shadow-sm">
                                 {{ getClientOwner(client)?.role || 'Brak' }}
                             </span>
                         </div>
                         <div>
-                             <span class="font-bold block text-gray-400 uppercase text-[10px] mb-1">Kod Struktury</span>
-                             <span class="font-mono bg-white px-2 py-0.5 rounded border border-gray-200 text-gray-600 shadow-sm">{{ getClientOwner(client)?.hierarchicalId || 'Brak' }}</span>
+                             <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Kod Struktury</span>
+                             <span class="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600 shadow-sm">{{ getClientOwner(client)?.hierarchicalId || 'Brak' }}</span>
                         </div>
                     </div>
                 
                     <div class="flex items-center gap-2">
-                       <button type="button" class="p-2 bg-sky-100 text-sky-800 border border-sky-200 rounded-lg hover:bg-sky-200 hover:shadow-md transition shadow-sm" title="Wyślij wiadomość" @click="emailClientOwner(client)">
+                       <button type="button" class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" title="Wyślij wiadomość" @click="emailClientOwner(client)">
                            <AppIcon name="chat-bubble-left-ellipsis" class="w-5 h-5" />
+                       </button>
+
+                       <!-- Bell Notification Button -->
+                       <button 
+                         v-if="getClientOwner(client) && canNotify(getClientOwner(client))" 
+                         type="button" 
+                         class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" 
+                         title="Wyślij powiadomienie wewnętrzne"
+                         @click="openMsgModal(getClientOwner(client))"
+                       >
+                         <AppIcon name="bell" class="w-5 h-5" />
+                       </button>
+
+                       <button 
+                         v-if="getClientOwner(client) && canImpersonate(getClientOwner(client))" 
+                         type="button" 
+                         class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" 
+                         :title="`Podgląd konta: ${getClientOwner(client)?.name}`"
+                         @click="impersonateUser(getClientOwner(client))"
+                       >
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                         </svg>
+                       </button>
+
+                       <button
+                         v-if="getClientOwner(client) && auth.enabled && currentUser?.role === 'ADMIN'"
+                         type="button"
+                         class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm"
+                         :title="`Przejdź do struktury aby edytować: ${getClientOwner(client)?.name}`"
+                         @click="editRedirect(getClientOwner(client))"
+                       >
+                          <AppIcon name="pencil-square" class="w-5 h-5" />
+                       </button>
+                       
+                       <button 
+                         v-if="getClientOwner(client) && canRemove(getClientOwner(client))" 
+                         type="button" 
+                         class="p-2 bg-white text-red-600 border border-slate-200 rounded-lg hover:bg-red-50 hover:border-red-200 transition shadow-sm" 
+                         :title="`Usuń ze struktury: ${getClientOwner(client)?.name}`"
+                         @click="removeUser(getClientOwner(client))"
+                       >
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                        </button>
                     </div>
                 </div>
-                <div v-else class="text-center text-xs text-gray-500 py-2 w-full">
+                <div v-else class="text-center text-xs text-slate-500 py-2 w-full">
                     Brak danych szczegółowych opiekuna w strukturze.
                 </div>
                 </div>
@@ -1194,13 +1374,13 @@ if (route.query.expand) {
             </tr>
             </template>
             <tr v-if="displayedClients.length === 0">
-              <td colspan="5" class="p-8 text-center text-gray-500 text-sm">Brak rekordów spełniających kryteria.</td>
+              <td colspan="6" class="p-8 text-center text-slate-500 text-sm">Brak rekordów spełniających kryteria.</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div 
-        class="bg-slate-50 border-t border-slate-100 flex justify-between items-center shrink-0"
+        class="bg-surface border-t border-slate-200 flex justify-between items-center shrink-0"
         :class="embedded ? 'px-4 py-2' : 'px-6 py-4'"
       >
         <div class="uppercase tracking-widest text-[10px] text-slate-400 font-medium">
@@ -1212,7 +1392,7 @@ if (route.query.expand) {
             type="button"
             @click="prevClientsPage"
             :disabled="clientsPage === 1"
-            class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <AppIcon name="chevron-left" class="w-3.5 h-3.5" />
             Poprzednia
@@ -1221,7 +1401,7 @@ if (route.query.expand) {
             type="button"
             @click="nextClientsPage"
             :disabled="clientsPage >= totalClientPages"
-            class="px-4 py-2 bg-stratton-gold text-slate-900 rounded-xl text-xs font-bold hover:bg-stratton-gold/90 transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary-dark transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             Następna
             <AppIcon name="chevron-right" class="w-3.5 h-3.5" />
@@ -1230,38 +1410,38 @@ if (route.query.expand) {
       </div>
     </div>
 
-    <div v-if="viewMode === 'kanban'" class="flex-1 overflow-x-auto p-4 bg-gray-100">
+    <div v-if="viewMode === 'kanban'" class="flex-1 overflow-x-auto p-4 bg-surface">
       <div class="flex space-x-4 h-full">
-        <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-gray-50 rounded-lg shadow-sm border border-gray-200 flex flex-col flex-shrink-0">
-          <div class="p-3 border-b border-gray-200">
-            <h3 class="font-semibold text-sm text-gray-700">{{ stage.title }} <span class="text-xs text-gray-400 font-normal">({{ stage.clients.length }})</span></h3>
+        <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col flex-shrink-0">
+          <div class="p-3 border-b border-slate-200 bg-white/50 rounded-t-card">
+            <h3 class="font-bold text-sm text-slate-700">{{ stage.title }} <span class="text-xs text-slate-400 font-normal">({{ stage.clients.length }})</span></h3>
           </div>
           <div class="flex-1 p-2 overflow-y-auto space-y-2" @dragover="onDragOver" @drop="onDrop($event, stage.status)">
             <div
               v-for="client in stage.clients"
               :key="client.id"
               draggable="true"
-              class="bg-white p-3 rounded border border-gray-200 shadow-sm cursor-move hover:border-brand-main relative"
+              class="bg-white p-3 rounded-card border border-slate-200 shadow-sm cursor-move hover:border-primary hover:shadow-md transition-all relative group"
               @dragstart="onDragStart($event, client)"
             >
-              <div v-if="getRemainingReservationDays(client) && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status)" class="absolute top-2 right-2 text-[10px] bg-sky-600 text-white font-bold rounded px-1.5 py-0.5 shadow leading-tight text-right">
+              <div v-if="getRemainingReservationDays(client) && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status)" class="absolute top-2 right-2 text-[10px] bg-primary text-primary-foreground font-bold rounded px-1.5 py-0.5 shadow leading-tight text-right">
                 <span class="block">rezerwacja do</span>
                 <span class="block">{{ formatReservationDate(client) }}</span>
               </div>
               <div class="flex justify-between items-start">
-                <p class="font-bold text-sm text-brand-main pr-2 break-words">{{ client.name }}</p>
+                <p class="font-bold text-sm text-slate-800 group-hover:text-primary transition-colors pr-2 break-words">{{ client.name }}</p>
                 <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0 mt-1" title="Brak kontaktu od ponad 3 dni!"></span>
               </div>
-              <p class="text-[11px] text-gray-400 font-mono mt-1">{{ client.nip }}</p>
-              <div class="mt-2 pt-2 border-t border-gray-100">
-                <p class="text-[10px] text-gray-400">Opiekun:</p>
-                <div v-if="client.opiekunRole" class="text-[8px] font-black text-brand-main uppercase">{{ client.opiekunRole }}</div>
-                <p class="text-xs text-gray-800 font-bold leading-tight">{{ client.opiekunName }}</p>
-                <p class="text-[10px] text-gray-500 font-mono">ID: {{ client.opiekunHierarchy }}</p>
+              <p class="text-[11px] text-slate-400 font-mono mt-1">{{ client.nip }}</p>
+              <div class="mt-2 pt-2 border-t border-slate-100">
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Opiekun</p>
+                <div v-if="client.opiekunRole" class="text-[8px] font-black text-primary uppercase tracking-tight">{{ client.opiekunRole }}</div>
+                <p class="text-xs text-slate-700 font-bold leading-tight">{{ client.opiekunName }}</p>
+                <p class="text-[10px] text-slate-400 font-mono">ID: {{ client.opiekunHierarchy }}</p>
               </div>
-              <div class="text-xs text-gray-400 mt-3 flex justify-between items-center">
+              <div class="text-xs text-slate-400 mt-3 flex justify-between items-center">
                 <span>{{ client.city }}</span>
-                <button type="button" class="p-1 hover:bg-gray-100 rounded group relative" title="Pokaż szczegóły" @click.stop="selectClient(client)">
+                <button type="button" class="p-1 hover:bg-slate-100 rounded group relative" title="Pokaż szczegóły" @click.stop="selectClient(client)">
                   <span class="absolute inset-0 m-1 bg-emerald-400 rounded-full animate-ping opacity-50"></span>
                   <svg class="relative w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -1270,7 +1450,7 @@ if (route.query.expand) {
                 </button>
               </div>
             </div>
-            <div v-if="stage.clients.length === 0" class="h-full border-2 border-dashed border-gray-200 rounded-md flex items-center justify-center text-xs text-gray-400 p-4">
+            <div v-if="stage.clients.length === 0" class="h-full border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center text-xs text-slate-400 p-4">
               Przeciągnij klienta tutaj
             </div>
           </div>
@@ -1279,26 +1459,24 @@ if (route.query.expand) {
     </div>
 
     <div v-if="selectedClient" class="fixed inset-0 z-40">
-      <div class="absolute inset-0 bg-black/30" @click="closePanel"></div>
-      <div class="absolute top-0 right-0 h-full w-full max-w-2xl bg-gray-50 z-50 shadow-2xl flex flex-col animate-slide-in-right">
-        <div class="p-4 bg-white border-b border-gray-200 flex-shrink-0">
+      <div class="absolute inset-0 bg-black/30 backdrop-blur-[1px]" @click="closePanel"></div>
+      <div class="absolute top-0 right-0 h-full w-full max-w-2xl bg-surface z-50 shadow-2xl flex flex-col animate-slide-in-right">
+        <div class="p-6 bg-white border-b border-slate-200 flex-shrink-0">
           <div class="flex justify-between items-start">
             <div>
-              <h3 class="text-lg font-bold text-gray-900">{{ selectedClient.name }}</h3>
-              <p class="text-xs text-gray-500">NIP: {{ selectedClient.nip }}</p>
+              <h3 class="text-xl font-bold text-slate-900">{{ selectedClient.name }}</h3>
+              <p class="text-sm text-slate-500 font-mono mt-0.5">NIP: {{ selectedClient.nip }}</p>
             </div>
-            <button type="button" class="p-2 text-gray-400 hover:bg-gray-100 rounded-full" @click="closePanel">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button type="button" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors" @click="closePanel">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
-          <div class="flex items-center space-x-2 mt-4">
-            <div class="flex items-center space-x-2">
-              <label class="text-xs font-bold text-gray-500">STATUS:</label>
-            <select :value="selectedClient.status" class="py-1 text-sm rounded border-gray-300 focus:ring-brand-main focus:border-brand-main bg-white" :disabled="isReadOnly" @change="changeStatus($event, selectedClient.id)">
+          <div class="flex items-center gap-4 mt-6">
+            <div class="flex items-center gap-2">
+              <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
+            <select :value="selectedClient.status" class="py-1.5 pl-3 pr-8 text-sm font-medium rounded-lg border-slate-300 focus:ring-primary focus:border-primary bg-white shadow-sm" :disabled="isReadOnly" @change="changeStatus($event, selectedClient.id)">
                 <option value="NEW">Nowy</option>
-                <option value="IN_TALKS">W rozmowach</option>
                 <option value="OFFER_PREPARING">Przygotowanie oferty</option>
-                <option value="OFFER_GENERATED">Oferta wygenerowana</option>
                 <option value="CALCULATION_SENT">Wysłano ofertę</option>
                 <option value="SIGNED">Podpisany</option>
                 <option value="TERMINATED">Umowa rozwiązana</option>
@@ -1306,85 +1484,85 @@ if (route.query.expand) {
               </select>
             </div>
             <div class="flex-1"></div>
-            <button type="button" class="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-xs hover:bg-gray-100" @click="continueProcess(selectedClient)">
+            <button type="button" class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-slate-50 transition-colors" @click="continueProcess(selectedClient)">
               Kontynuuj proces
             </button>
             <button
               v-if="selectedClient.meetingStatus === 'open'"
               type="button"
-              class="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-xs hover:bg-gray-100"
+              class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-slate-50 transition-colors"
               @click="openRescheduleModal(selectedClient)"
             >
               Wstrzymaj / przełóż
             </button>
-            <button type="button" class="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-xs hover:bg-gray-100" @click="generateContract(selectedClient.id)">
+            <button type="button" class="bg-primary text-primary-foreground border border-transparent px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-primary-dark transition-colors" @click="generateContract(selectedClient.id)">
               Generuj Umowę
             </button>
           </div>
         </div>
 
-        <div class="border-b border-gray-200 bg-white flex-shrink-0">
-          <nav class="flex space-x-4 px-4">
-            <button type="button" class="px-1 py-3 text-sm font-medium" :class="activePanelTab === 'details' ? 'border-b-2 border-brand-main text-brand-main' : 'text-gray-500'" @click="activePanelTab = 'details'">Szczegóły</button>
-            <button type="button" class="px-1 py-3 text-sm font-medium" :class="activePanelTab === 'contacts' ? 'border-b-2 border-brand-main text-brand-main' : 'text-gray-500'" @click="activePanelTab = 'contacts'">Kontakt</button>
-            <button type="button" class="px-1 py-3 text-sm font-medium" :class="activePanelTab === 'activity' ? 'border-b-2 border-brand-main text-brand-main' : 'text-gray-500'" @click="activePanelTab = 'activity'">Aktywności</button>
-            <button type="button" class="px-1 py-3 text-sm font-medium" :class="activePanelTab === 'finance' ? 'border-b-2 border-brand-main text-brand-main' : 'text-gray-500'" @click="activePanelTab = 'finance'">Finanse</button>
-            <button type="button" class="px-1 py-3 text-sm font-medium" :class="activePanelTab === 'offers' ? 'border-b-2 border-brand-main text-brand-main' : 'text-gray-500'" @click="activePanelTab = 'offers'">Oferty</button>
+        <div class="border-b border-slate-200 bg-white flex-shrink-0">
+          <nav class="flex space-x-6 px-6">
+            <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'details'">Szczegóły</button>
+            <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'contacts' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'contacts'">Kontakt</button>
+            <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'activity'">Aktywności</button>
+            <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'finance' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'finance'">Finanse</button>
+            <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'offers' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'offers'">Oferty</button>
           </nav>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-6">
+        <div class="flex-1 overflow-y-auto p-6 bg-surface">
           <div v-if="activePanelTab === 'details'" class="space-y-6">
-            <div class="bg-white p-4 border border-gray-200 rounded">
-              <h4 class="font-bold text-gray-700 uppercase text-xs mb-3">Dane Firmy</h4>
-              <dl class="grid grid-cols-3 gap-4 text-sm">
+            <div class="bg-white p-6 border border-slate-200 rounded-card shadow-sm">
+              <h4 class="font-bold text-slate-400 uppercase text-xs tracking-wider mb-4">Dane Firmy</h4>
+              <dl class="grid grid-cols-3 gap-6 text-sm">
                 <div class="col-span-2">
-                  <dt class="text-gray-500">Nazwa</dt>
-                  <dd class="text-gray-900 font-medium">{{ selectedClient.name }}</dd>
+                  <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">Nazwa</dt>
+                  <dd class="text-slate-900 font-medium text-base">{{ selectedClient.name }}</dd>
                 </div>
                 <div class="col-span-1">
-                  <dt class="text-gray-500">NIP</dt>
-                  <dd class="text-gray-900 font-medium font-mono">{{ selectedClient.nip }}</dd>
+                  <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">NIP</dt>
+                  <dd class="text-slate-900 font-medium font-mono text-base">{{ selectedClient.nip }}</dd>
                 </div>
                 <div class="col-span-2">
-                  <dt class="text-gray-500">Adres</dt>
-                  <dd class="text-gray-900 font-medium">
+                  <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">Adres</dt>
+                  <dd class="text-slate-900 font-medium">
                     {{ [selectedClient.street, selectedClient.buildingNr].filter(Boolean).join(' ') || '—' }}
                   </dd>
                 </div>
                 <div class="col-span-1">
-                  <dt class="text-gray-500">Miasto</dt>
-                  <dd class="text-gray-900 font-medium">
+                  <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">Miasto</dt>
+                  <dd class="text-slate-900 font-medium">
                     {{ [selectedClient.zip, selectedClient.city].filter(Boolean).join(' ') || '—' }}
                   </dd>
                 </div>
               </dl>
             </div>
-            <div class="bg-white p-4 border border-gray-200 rounded">
-              <h4 class="font-bold text-gray-700 uppercase text-xs mb-3">Zgody</h4>
-              <div v-if="consentsLoading" class="text-sm text-gray-400">Ładowanie zgód...</div>
-              <div v-else-if="!consentCatalog.length" class="text-sm text-gray-400">Brak zdefiniowanych zgód.</div>
+            <div class="bg-white p-6 border border-slate-200 rounded-card shadow-sm">
+              <h4 class="font-bold text-slate-400 uppercase text-xs tracking-wider mb-4">Zgody</h4>
+              <div v-if="consentsLoading" class="text-sm text-slate-400">Ładowanie zgód...</div>
+              <div v-else-if="!consentCatalog.length" class="text-sm text-slate-400">Brak zdefiniowanych zgód.</div>
               <div v-else class="space-y-3">
-                <label v-for="consent in consentCatalog" :key="consent.id" class="flex items-start gap-3 border border-gray-200 rounded-lg p-3 hover:border-brand-main/30">
+                <label v-for="consent in consentCatalog" :key="consent.id" class="flex items-start gap-3 border border-slate-200 rounded-lg p-3 hover:border-primary/50 transition-colors bg-slate-50/50 cursor-pointer">
                   <input
                     type="checkbox"
-                    class="mt-1 h-4 w-4 rounded border-gray-300 text-brand-main focus:ring-brand-main"
+                    class="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-all"
                     :checked="isConsentAccepted(consent.id)"
                     :disabled="isReadOnly"
                     @change="toggleClientConsent(consent.id, ($event.target as HTMLInputElement).checked)"
                   />
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
-                      <span class="font-semibold text-gray-800">{{ consent.title }}</span>
-                      <span v-if="consent.required" class="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Wymagana</span>
-                      <span v-if="needsConsentUpdate(consent.id)" class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Wymaga aktualizacji</span>
+                      <span class="font-semibold text-slate-800">{{ consent.title }}</span>
+                      <span v-if="consent.required" class="text-[10px] font-bold text-amber-600 uppercase tracking-wider bg-amber-50 px-1.5 py-0.5 rounded">Wymagana</span>
+                      <span v-if="needsConsentUpdate(consent.id)" class="text-[10px] font-bold text-rose-600 uppercase tracking-wider bg-rose-50 px-1.5 py-0.5 rounded">Wymaga aktualizacji</span>
                     </div>
-                    <p v-if="consent.description" class="text-xs text-gray-500">{{ consent.description }}</p>
+                    <p v-if="consent.description" class="text-xs text-slate-500 mt-1">{{ consent.description }}</p>
                     <div v-if="consent.file_url" class="mt-2 flex items-center gap-3 text-xs">
-                      <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, false)">Podgląd</button>
-                      <button type="button" class="text-sky-600 hover:underline" @click.stop="openConsentFile(consent, true)">Pobierz</button>
+                      <button type="button" class="text-primary hover:underline font-medium" @click.stop="openConsentFile(consent, false)">Podgląd</button>
+                      <button type="button" class="text-primary hover:underline font-medium" @click.stop="openConsentFile(consent, true)">Pobierz</button>
                     </div>
-                    <div class="mt-2 text-[11px] text-gray-400 flex flex-wrap gap-x-4 gap-y-1">
+                    <div class="mt-2 text-[10px] text-slate-400 flex flex-wrap gap-x-4 gap-y-1 font-mono">
                       <span>Akceptacja: {{ formatDateTime(getConsentEntry(consent.id)?.accepted_at) }}</span>
                       <span>Odmowa: {{ formatDateTime(getConsentEntry(consent.id)?.denied_at) }}</span>
                       <span>Aktualizacja zgody: {{ formatDateTime(consent.updated_at) }}</span>
@@ -1396,17 +1574,18 @@ if (route.query.expand) {
           </div>
 
           <div v-else-if="activePanelTab === 'contacts'" class="space-y-6">
-            <div class="bg-white p-4 border border-gray-200 rounded">
-              <div class="flex items-center justify-between mb-3">
-                <h4 class="font-bold text-gray-700 uppercase text-xs">Osoby Kontaktowe</h4>
-                <span class="text-xs text-gray-400">Liczba: {{ filteredContacts.length }}</span>
+            <div class="bg-white p-6 border border-slate-200 rounded-card shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h4 class="font-bold text-slate-400 uppercase text-xs tracking-wider">Osoby Kontaktowe</h4>
+                <span class="text-xs text-slate-400 font-mono bg-slate-100 px-2 py-1 rounded">Liczba: {{ filteredContacts.length }}</span>
               </div>
-              <div class="mb-4">
+              <div class="mb-4 relative">
+                <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   v-model="contactSearch"
                   type="text"
                   placeholder="Szukaj kontaktu..."
-                  class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none"
+                  class="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none text-right font-bold"
                 />
               </div>
               <div v-if="contactsLoading" class="text-sm text-gray-400">Ładowanie kontaktów...</div>
@@ -1500,6 +1679,42 @@ if (route.query.expand) {
                 </div>
               </div>
               <p v-else class="text-sm text-gray-400">Brak aktywności.</p>
+            </div>
+            
+            <div class="bg-white p-4 border border-gray-200 rounded shadow-sm">
+              <h4 class="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
+                <AppIcon name="document-text" class="w-4 h-4" />
+                Notatki
+              </h4>
+              <div class="mb-4">
+                 <textarea
+                   v-model="quickNote"
+                   placeholder="Wpisz treść notatki..."
+                   class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none min-h-[100px] resize-y"
+                 ></textarea>
+                 <div class="flex justify-end mt-2">
+                   <button 
+                     type="button" 
+                     class="bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-700 transition shadow-sm flex items-center gap-2"
+                     @click="saveQuickNote"
+                   >
+                     <AppIcon name="plus" class="w-3 h-3" />
+                     Zapisz notatkę
+                   </button>
+                 </div>
+              </div>
+              
+              <div class="space-y-3 mt-6 pt-4 border-t border-slate-100">
+                <div v-if="clientNotes.length === 0" class="text-center py-4 text-slate-400 text-xs italic">
+                  Brak notatek dla tego klienta.
+                </div>
+                <div v-else v-for="note in clientNotes" :key="note.id" class="bg-yellow-50/50 border border-yellow-100 rounded-lg p-3 relative group">
+                  <div class="text-xs text-slate-400 font-mono mb-1 flex justify-between">
+                     <span>{{ new Date(note.date).toLocaleString() }}</span>
+                  </div>
+                  <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ note.description }}</p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1779,5 +1994,36 @@ if (route.query.expand) {
         </div>
       </div>
     </div>
+
+    <!-- Notification Modal -->
+    <div v-if="showMsgModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="closeMsgModal"></div>
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-10 relative">
+        <h3 class="text-lg font-bold mb-4 text-gray-900">Wyślij powiadomienie</h3>
+        <div class="mb-4">
+          <span class="text-sm text-gray-500">Do:</span> <span class="font-bold text-gray-900">{{ selectedUserForMsg?.name }}</span>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Typ</label>
+            <select v-model="msgData.type" class="w-full border p-2 rounded bg-white text-gray-900">
+              <option value="TASK">Zadanie / Działanie</option>
+              <option value="NOTE">Notatka służbowa</option>
+              <option value="INFO">Informacja</option>
+              <option value="WARNING">Ostrzeżenie / Przypomnienie</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Treść wiadomości</label>
+            <textarea v-model="msgData.text" rows="4" class="w-full border p-2 rounded bg-white text-gray-900" placeholder="Wpisz treść..."></textarea>
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded" @click="closeMsgModal">Anuluj</button>
+            <button type="button" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700" @click="sendMsg">Wyślij</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>

@@ -186,13 +186,13 @@ const signedContractsWithDetails = computed(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="bg-stratton-900 rounded-3xl p-8 mb-8 shadow-2xl relative overflow-hidden group">
+    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card p-8 mb-8 shadow-card-hover border border-slate-800 relative overflow-hidden group">
       <!-- Decor -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
       
       <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex items-center gap-6">
-          <RouterLink to="/app/dashboard" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
+          <RouterLink to="/app/dashboard" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
              <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           </RouterLink>
 
@@ -247,21 +247,21 @@ const signedContractsWithDetails = computed(() => {
           <h3 class="font-bold text-slate-800 uppercase text-xs tracking-wider">Podsumowanie Zespołu</h3>
         </div>
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-100">
-            <thead class="bg-slate-50/50">
+          <table class="crm-table divide-y divide-slate-100">
+            <thead class="crm-table-head">
               <tr>
-                <th class="px-8 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Handlowiec</th>
-                <th class="px-8 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prowizja Bezpośrednia</th>
-                <th class="px-8 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Prowizja ze Struktury</th>
-                <th class="px-8 py-4 text-right text-[10px] font-bold text-stratton-blue uppercase tracking-widest bg-blue-50/30">Łącznie</th>
+                <th class="crm-table-th crm-table-th-xs">Handlowiec</th>
+                <th class="crm-table-th crm-table-th-xs text-right">Prowizja Bezpośrednia</th>
+                <th class="crm-table-th crm-table-th-xs text-right">Prowizja ze Struktury</th>
+                <th class="crm-table-th crm-table-th-xs text-right text-stratton-blue">Łącznie</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50 bg-white">
               <tr v-for="row in summaryData" :key="row.repId" class="hover:bg-slate-50 cursor-pointer transition-colors group" @click="selectRepForDetails(row)">
-                <td class="px-8 py-5 whitespace-nowrap text-sm font-bold text-slate-800 group-hover:text-stratton-blue transition-colors">{{ row.repName }}</td>
-                <td class="px-8 py-5 whitespace-nowrap text-right text-sm text-slate-600 font-medium">{{ row.directCommission.toFixed(2) }} PLN</td>
-                <td class="px-8 py-5 whitespace-nowrap text-right text-sm text-slate-600 font-medium">{{ row.overrideCommission.toFixed(2) }} PLN</td>
-                <td class="px-8 py-5 whitespace-nowrap text-right text-sm font-bold text-stratton-blue bg-blue-50/20 group-hover:bg-blue-50/40 transition-colors">{{ row.totalCommission.toFixed(2) }} PLN</td>
+                <td class="crm-table-td whitespace-nowrap text-sm font-bold text-slate-800 group-hover:text-stratton-blue transition-colors">{{ row.repName }}</td>
+                <td class="crm-table-td whitespace-nowrap text-right text-sm text-slate-600 font-medium">{{ row.directCommission.toFixed(2) }} PLN</td>
+                <td class="crm-table-td whitespace-nowrap text-right text-sm text-slate-600 font-medium">{{ row.overrideCommission.toFixed(2) }} PLN</td>
+                <td class="crm-table-td whitespace-nowrap text-right text-sm font-bold text-stratton-blue">{{ row.totalCommission.toFixed(2) }} PLN</td>
               </tr>
             </tbody>
           </table>
@@ -273,30 +273,33 @@ const signedContractsWithDetails = computed(() => {
           <h3 class="font-bold text-gray-700">Szczegóły dla: {{ selectedRep.repName }}</h3>
         </div>
         <div v-if="detailsForSelectedRep.length > 0" class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+          <table class="crm-table divide-y divide-gray-200">
+            <thead class="crm-table-head">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Klient / Faktura</th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Opłata Serwisowa</th>
-                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Typ Prowizji</th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase text-indigo-600">Prowizja</th>
+                <th class="crm-table-th crm-table-th-xs">Klient / Faktura</th>
+                <th class="crm-table-th crm-table-th-xs text-right">Opłata Serwisowa</th>
+                <th class="crm-table-th crm-table-th-xs text-center">Typ Prowizji</th>
+                <th class="crm-table-th crm-table-th-xs text-right text-indigo-600">Prowizja</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
               <tr v-for="row in detailsForSelectedRep" :key="row.invoiceNumber" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="crm-table-td whitespace-nowrap">
                   <div class="text-sm font-bold text-gray-900">{{ row.clientName }}</div>
                   <div class="text-xs text-gray-500">{{ row.invoiceNumber }} ({{ new Date(row.issueDate).toLocaleDateString() }})</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">{{ row.serviceFee.toFixed(2) }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <span v-if="row.commissionType === 'DIRECT_FIRST'" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full" :class="row.isFastTrack ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+                <td class="crm-table-td whitespace-nowrap text-right text-sm text-gray-900">{{ row.serviceFee.toFixed(2) }}</td>
+                <td class="crm-table-td whitespace-nowrap text-center">
+                  <span
+                    v-if="row.commissionType === 'DIRECT_FIRST'"
+                    :class="row.isFastTrack ? 'crm-badge-success' : 'crm-badge-warn'"
+                  >
                     Pierwsza ({{ row.daysDiff }} dni)
                   </span>
-                  <span v-else-if="row.commissionType === 'DIRECT_RENEWAL'" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Odnowienie</span>
-                  <span v-else class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">Struktura</span>
+                  <span v-else-if="row.commissionType === 'DIRECT_RENEWAL'" class="crm-badge-info">Odnowienie</span>
+                  <span v-else class="crm-badge-neutral">Struktura</span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-indigo-600">
+                <td class="crm-table-td whitespace-nowrap text-right text-sm font-bold text-indigo-600">
                   {{ row.repCommission.toFixed(2) }}
                   <div class="text-[10px] text-gray-400 font-normal">{{ Math.round((row.repCommission / row.serviceFee) * 100) }}% bazy</div>
                 </td>
@@ -313,36 +316,39 @@ const signedContractsWithDetails = computed(() => {
         <h3 class="font-bold text-gray-700">Szczegóły Faktur</h3>
       </div>
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+        <table class="crm-table divide-y divide-gray-200">
+          <thead class="crm-table-head">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Klient / Faktura</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Opłata Serwisowa</th>
-              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Typ Prowizji</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase text-indigo-600">Prowizja</th>
+              <th class="crm-table-th crm-table-th-xs">Klient / Faktura</th>
+              <th class="crm-table-th crm-table-th-xs text-right">Opłata Serwisowa</th>
+              <th class="crm-table-th crm-table-th-xs text-center">Typ Prowizji</th>
+              <th class="crm-table-th crm-table-th-xs text-right text-indigo-600">Prowizja</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="row in settlementRows" :key="row.invoiceNumber" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="crm-table-td whitespace-nowrap">
                 <div class="text-sm font-bold text-gray-900">{{ row.clientName }}</div>
                 <div class="text-xs text-gray-500">{{ row.invoiceNumber }} ({{ new Date(row.issueDate).toLocaleDateString() }})</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">{{ row.serviceFee.toFixed(2) }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span v-if="row.commissionType === 'DIRECT_FIRST'" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full" :class="row.isFastTrack ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'">
+              <td class="crm-table-td whitespace-nowrap text-right text-sm text-gray-900">{{ row.serviceFee.toFixed(2) }}</td>
+              <td class="crm-table-td whitespace-nowrap text-center">
+                <span
+                  v-if="row.commissionType === 'DIRECT_FIRST'"
+                  :class="row.isFastTrack ? 'crm-badge-success' : 'crm-badge-warn'"
+                >
                   Pierwsza ({{ row.daysDiff }} dni)
                 </span>
-                <span v-else-if="row.commissionType === 'DIRECT_RENEWAL'" class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Odnowienie</span>
-                <span v-else class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">Struktura</span>
+                <span v-else-if="row.commissionType === 'DIRECT_RENEWAL'" class="crm-badge-info">Odnowienie</span>
+                <span v-else class="crm-badge-neutral">Struktura</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-indigo-600">
+              <td class="crm-table-td whitespace-nowrap text-right text-sm font-bold text-indigo-600">
                 {{ row.repCommission.toFixed(2) }}
                 <div class="text-[10px] text-gray-400 font-normal">{{ Math.round((row.repCommission / row.serviceFee) * 100) }}% bazy</div>
               </td>
             </tr>
             <tr v-if="settlementRows.length === 0">
-              <td colspan="4" class="px-6 py-8 text-center text-gray-500">Brak rozliczeń.</td>
+              <td colspan="4" class="crm-table-empty text-center">Brak rozliczeń.</td>
             </tr>
           </tbody>
         </table>
@@ -362,39 +368,37 @@ const signedContractsWithDetails = computed(() => {
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-100">
-          <thead class="bg-slate-50/50">
+        <table class="crm-table divide-y divide-slate-100">
+          <thead class="crm-table-head">
             <tr>
-              <th class="px-8 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nazwa Klienta</th>
-              <th class="px-8 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Opiekun</th>
-              <th class="px-8 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-              <th class="px-8 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Miasto</th>
-              <th class="px-8 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data Umowy</th>
+              <th class="crm-table-th crm-table-th-xs">Nazwa Klienta</th>
+              <th class="crm-table-th crm-table-th-xs">Opiekun</th>
+              <th class="crm-table-th crm-table-th-xs text-center">Status</th>
+              <th class="crm-table-th crm-table-th-xs">Miasto</th>
+              <th class="crm-table-th crm-table-th-xs">Data Umowy</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-50 bg-white">
             <tr v-for="client in signedContractsWithDetails" :key="client.id" class="hover:bg-slate-50 transition-all group">
-              <td class="px-8 py-5 whitespace-nowrap">
+              <td class="crm-table-td whitespace-nowrap">
                 <div class="font-bold text-slate-800 text-sm group-hover:text-stratton-blue transition-colors">{{ client.name }}</div>
                 <div class="text-[10px] text-slate-400 font-mono mt-0.5 tracking-tight group-hover:text-slate-500">{{ client.nip }}</div>
               </td>
-              <td class="px-8 py-5 whitespace-nowrap">
+              <td class="crm-table-td whitespace-nowrap">
                 <div class="text-sm font-medium text-slate-600">{{ client.opiekunDisplay }}</div>
               </td>
-              <td class="px-8 py-5 whitespace-nowrap text-center">
-                <span class="inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase tracking-wider">
-                  Podpisany
-                </span>
+              <td class="crm-table-td whitespace-nowrap text-center">
+                <span class="crm-badge-success uppercase tracking-wider text-[10px]">Podpisany</span>
               </td>
-              <td class="px-8 py-5 whitespace-nowrap text-sm text-slate-600 font-medium italic">
+              <td class="crm-table-td whitespace-nowrap text-sm text-slate-600 font-medium italic">
                 {{ client.city || '—' }}
               </td>
-              <td class="px-8 py-5 whitespace-nowrap text-sm text-slate-400 font-medium">
+              <td class="crm-table-td whitespace-nowrap text-sm text-slate-400 font-medium">
                 {{ client.contractSignedDate || '—' }}
               </td>
             </tr>
             <tr v-if="signedContractsWithDetails.length === 0">
-              <td colspan="5" class="px-8 py-10 text-center text-slate-400 italic text-sm">Brak podpisanych umów.</td>
+              <td colspan="5" class="crm-table-empty text-center">Brak podpisanych umów.</td>
             </tr>
           </tbody>
         </table>

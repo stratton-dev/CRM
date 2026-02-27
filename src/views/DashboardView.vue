@@ -42,24 +42,12 @@ const roleDisplayName = computed(() => {
 })
 
 const canAddClient = computed(() => viewPermissions.isViewAllowed('sales-start', session.currentUser?.role))
-const canViewMeetings = computed(() => {
-  if (session.currentUser?.role === 'ADMIN') return true
-  return viewPermissions.isViewAllowed('meetings', session.currentUser?.role)
-})
 const handleAddClientClick = (e?: Event) => {
   if (e) e.preventDefault()
   if (canAddClient.value) {
-    router.push({ path: '/app/sales/start', query: { mode: 'new' } })
+    router.push({ path: '/app/sales/start' })
   } else {
-    alert(`Brak uprawnień do "Dodaj Klienta". Twoja rola: ${session.currentUser?.role || 'Nieznana'}`)
-  }
-}
-const handleAddMeetingClick = (e?: Event) => {
-  if (e) e.preventDefault()
-  if (canViewMeetings.value) {
-    router.push({ name: 'meetings' })
-  } else {
-    alert(`Brak uprawnień do "Dodaj Spotkanie". Twoja rola: ${session.currentUser?.role || 'Nieznana'}`)
+    alert(`Brak uprawnień do "Strefa Klienta". Twoja rola: ${session.currentUser?.role || 'Nieznana'}`)
   }
 }
 
@@ -70,6 +58,7 @@ const showMeetingsTab = ref(true)
 const showTeamTab = ref(true)
 const showKPIsTab = ref(true)
 const showCalculationsTab = ref(true)
+
 const showArrearsTab = ref(true)
 const isRefreshing = ref(false)
 const dateFrom = ref('')
@@ -200,7 +189,7 @@ const newsItems = computed(() => {
       if (item.category === 'EVENTS') { tag = 'WYDARZENIE'; color = 'bg-purple-500' }
       else if (item.category === 'UPDATE') { tag = 'AKTUALIZACJA'; color = 'bg-blue-500' }
       else if (item.category === 'SALES') { tag = 'SPRZEDAŻ'; color = 'bg-green-500' }
-      else if (item.category === 'ANNOUNCEMENT') { tag = 'OGŁOSZENIE'; color = 'bg-amber-500' }
+      else if (item.category === 'ANNOUNCEMENT') { tag = 'OGŁOSZENIE'; color = 'bg-primary' }
 
       const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString() : ''
 
@@ -223,7 +212,7 @@ const newsItems = computed(() => {
   return fallbackList.map((item) => ({
     id: item.id,
     tag: item.tag || 'INFO',
-    color: item.tag === 'PRODUKT' ? 'bg-blue-500' : 'bg-amber-500',
+    color: item.tag === 'PRODUKT' ? 'bg-blue-500' : 'bg-primary',
     title: item.title,
     date: '', 
     content: item.description || '',
@@ -455,291 +444,283 @@ watch(
 <template>
   <div class="view-transition pb-10 space-y-4">
     <div v-if="viewMode === 'hub'" class="w-full pt-2">
-      <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-6 mb-4 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex-1">
           <h1 class="font-serif font-bold text-3xl text-white mb-2 tracking-tight">Dzień dobry, {{ firstName }}</h1>
           <div class="flex flex-col gap-1.5 max-w-md">
             <div class="flex justify-end items-baseline gap-2">
               <span class="text-xs font-bold text-slate-400">{{ goalLabel }}:</span>
-              <span class="text-xs font-bold text-stratton-gold">{{ goalScore }}% zrealizowane</span>
+              <span class="text-xs font-bold text-primary">{{ goalScore }}% zrealizowane</span>
             </div>
             <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-              <div class="h-full bg-stratton-gold rounded-full" :style="{ width: `${goalScore}%` }"></div>
+              <div class="h-full bg-primary rounded-full" :style="{ width: `${goalScore}%` }"></div>
             </div>
           </div>
         </div>
         <div class="flex gap-4">
-          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-2xl p-3 w-28 flex flex-col items-center justify-center h-20">
+          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-4 w-32 flex flex-col items-center justify-center h-24">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Leady Nowe</span>
-            <span class="text-2xl font-bold text-stratton-gold">{{ leadCount }}</span>
+            <span class="text-2xl font-bold text-primary">{{ leadCount }}</span>
           </div>
-          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-2xl p-3 w-28 flex flex-col items-center justify-center h-20">
+          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-4 w-32 flex flex-col items-center justify-center h-24">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Spotkania</span>
-            <span class="text-2xl font-bold text-stratton-gold">{{ todaysMeetings }}</span>
+            <span class="text-2xl font-bold text-primary">{{ todaysMeetings }}</span>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 mb-8">
-        <template v-if="canViewMeetings">
-          <div @click="handleAddMeetingClick" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-7 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-1.5 border border-white/50 hover:border-purple-200/50 cursor-pointer">
-            <div class="absolute inset-0 bg-linear-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-linear-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-            <div class="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-purple-400 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-            <div class="relative w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-purple-500/30 group-hover:bg-purple-500 group-hover:text-white ring-1 ring-purple-100 group-hover:ring-purple-400">
-              <div class="relative">
-                <AppIcon name="calendar" class="w-7 h-7" />
-                <div class="absolute -top-1 -right-2 bg-white rounded-full p-0.5 shadow-sm group-hover:bg-purple-600 transition-colors">
-                  <AppIcon name="plus" class="w-3 h-3 text-purple-600 group-hover:text-white" />
-                </div>
-              </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 mb-10 px-4">
+        <div @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-900 border border-slate-700">
+          <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Dashboard" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="layout-dashboard" class="w-8 h-8" />
             </div>
-            <div class="relative z-10">
-              <h3 class="font-bold text-slate-800 text-base group-hover:text-purple-700 transition-colors duration-300">Dodaj Spotkanie</h3>
-              <p class="text-[11px] text-slate-400 mt-0.5 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Zaplanuj termin</p>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Dashboard</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Statystyki i raporty</p>
             </div>
           </div>
-        </template>
-        <div v-else @click="handleAddMeetingClick" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-7 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden border border-white/50 opacity-50 grayscale cursor-not-allowed">
-          <div class="relative w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl opacity-50">
-            <div class="relative">
-              <AppIcon name="calendar" class="w-7 h-7" />
+        </div>
+        
+        <div v-if="canAddClient" @click="handleAddClientClick" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+          <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Strefa Klienta" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="user-plus" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Strefa Klienta</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Rozpocznij proces</p>
             </div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-base">Dodaj Spotkanie</h3>
-            <p class="text-[11px] text-slate-400 mt-0.5 font-medium tracking-wide">Brak uprawnień</p>
-          </div>
         </div>
-
-        <div v-if="canAddClient" @click="handleAddClientClick" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-7 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-green-500/20 hover:-translate-y-1.5 border border-white/50 hover:border-green-200/50 cursor-pointer">
-          <div class="absolute inset-0 bg-linear-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-linear-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-green-400 to-green-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-          
-          <div class="relative w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-green-500/30 group-hover:bg-green-500 group-hover:text-white ring-1 ring-green-100 group-hover:ring-green-400">
-            <AppIcon name="user-plus" class="w-7 h-7" />
+        
+        <div v-else @click="handleAddClientClick" class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20" alt="Strefa Klienta" />
+             <div class="absolute inset-0 bg-slate-900/80"></div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-base group-hover:text-green-700 transition-colors duration-300">Dodaj Klienta</h3>
-            <p class="text-[11px] text-slate-400 mt-0.5 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Rozpocznij proces</p>
-          </div>
-        </div>
-        <div v-else @click="handleAddClientClick" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-7 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden border border-white/50 opacity-50 grayscale cursor-not-allowed">
-           <div class="relative w-14 h-14 min-w-14 min-h-14 aspect-square shrink-0 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center text-3xl opacity-50">
-             <div class="relative">
-               <AppIcon name="user-plus" class="w-7 h-7" />
-             </div>
-           </div>
-           <div class="relative z-10">
-             <h3 class="font-bold text-slate-800 text-base">Dodaj Klienta</h3>
-             <p class="text-[11px] text-slate-400 mt-0.5 font-medium tracking-wide">Brak uprawnień</p>
-           </div>
-        </div>
-
-        <RouterLink to="/app/quick-calculator" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 border border-white/50 hover:border-blue-200/50">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-blue-500/30 group-hover:bg-blue-500 group-hover:text-white ring-1 ring-blue-100 group-hover:ring-blue-400">
-            <AppIcon name="calculator" class="w-8 h-8" />
-          </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-blue-700 transition-colors duration-300">Kalkulator</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Szybka wycena</p>
-          </div>
-        </RouterLink>
-
-        <div class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-2 border border-white/50 hover:border-indigo-200/50" @click="viewMode = 'stats'">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-indigo-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white ring-1 ring-indigo-100 group-hover:ring-indigo-400">
-            <AppIcon name="chart-pie" class="w-8 h-8" />
-          </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-indigo-700 transition-colors duration-300">Dashboard</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Wyniki i Prowizje</p>
-          </div>
-        </div>
-
-        <RouterLink to="/app/mailbox" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-2 border border-white/50 hover:border-amber-200/50">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-amber-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-amber-500/30 group-hover:bg-amber-500 group-hover:text-white ring-1 ring-amber-100 group-hover:ring-amber-400">
-            <AppIcon name="envelope" class="w-8 h-8" />
-          </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-amber-700 transition-colors duration-300">Poczta</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Skrzynka ({{ unreadCount }})</p>
-          </div>
-        </RouterLink>
-
-        <div class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-red-500/20 hover:-translate-y-2 border border-white/50 hover:border-red-200/50">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-           <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 to-red-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-red-500/30 group-hover:bg-red-500 group-hover:text-white ring-1 ring-red-100 group-hover:ring-red-400">
-            <AppIcon name="filter" class="w-8 h-8" />
-          </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-red-700 transition-colors duration-300">Leady</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Kampanie</p>
-          </div>
-        </div>
-
-        <RouterLink to="/app/knowledge-base" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-teal-500/20 hover:-translate-y-2 border border-white/50 hover:border-teal-200/50">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-teal-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-          
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-teal-500/30 group-hover:bg-teal-500 group-hover:text-white ring-1 ring-teal-100 group-hover:ring-teal-400">
-            <AppIcon name="graduation-cap" class="w-8 h-8" />
-          </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-teal-700 transition-colors duration-300">Baza Wiedzy</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Wiedza i Certyfikaty</p>
-          </div>
-        </RouterLink>
-
-        <RouterLink to="/app/calendar" custom v-slot="{ navigate }">
-          <div @click="navigate" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-pink-500/20 hover:-translate-y-2 border border-white/50 hover:border-pink-200/50 block">
-            <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-            <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine pointer-events-none" />
-            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-400 to-pink-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left pointer-events-none"></div>
-
-            <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-pink-500/30 group-hover:bg-pink-500 group-hover:text-white ring-1 ring-pink-100 group-hover:ring-pink-400 pointer-events-none">
-              <AppIcon name="calendar" class="w-8 h-8 pointer-events-none" />
+           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-slate-500">
+               <AppIcon name="user-plus" class="w-8 h-8" />
             </div>
-            <div class="relative z-10 pointer-events-none">
-              <h3 class="font-bold text-slate-800 text-lg group-hover:text-pink-700 transition-colors duration-300">Kalendarz</h3>
-              <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Harmonogram</p>
+            <div>
+              <h3 class="crm-tile-title text-xl text-slate-400 mb-1">Strefa Klienta</h3>
+              <p class="crm-tile-desc text-xs text-slate-600 font-medium">Brak uprawnień</p>
+            </div>
+          </div>
+        </div>
+
+        <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+          <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Kalkulator" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="calculator" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Kalkulator</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Nowoczesna symulacja</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/settlements" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 border border-white/50 hover:border-purple-200/50">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+        <!-- Removed duplicate Payroll Link -->
 
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-purple-500/30 group-hover:bg-purple-500 group-hover:text-white ring-1 ring-purple-100 group-hover:ring-purple-400">
-            <AppIcon name="wallet" class="w-8 h-8" />
+        <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-purple-700 transition-colors duration-300">Rozliczenia</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Finanse</p>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="book-open" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Baza Wiedzy</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Wiedza i Certyfikaty</p>
+            </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/recruitment" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center cursor-pointer transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-2 border border-white/50 hover:border-orange-200/50">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-orange-500/30 group-hover:bg-orange-500 group-hover:text-white ring-1 ring-orange-100 group-hover:ring-orange-400">
-            <AppIcon name="users" class="w-8 h-8" />
+        <RouterLink to="/app/settlements" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1580519542036-c47de6196ba5?q=80&w=2671&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Moje rozliczenia" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-orange-700 transition-colors duration-300">Rekrutacja</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">zarządzaj kandydatami</p>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="wallet" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Moje rozliczenia</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Moje finanse</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Klienci" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="file-contract" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Klienci w obsłudze</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj umowami</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink v-if="userRole !== 'SALES'" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Rekrutacja" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="users" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Rekrutacja</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj kandydatami</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/mailbox" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1596526131083-e8c633c948d2?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Poczta" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="mail" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Poczta</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Korespondencja</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/calendar" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=2668&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Kalendarz" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="calendar" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Kalendarz</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Harmonogram</p>
+            </div>
           </div>
         </RouterLink>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <div class="relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/50 p-6 group transition-all duration-500 overflow-hidden hover:shadow-2xl hover:shadow-slate-500/20 hover:-translate-y-1">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-400 to-slate-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+        <div class="relative bg-white rounded-card shadow-card border border-slate-100 p-6 group transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:-translate-y-0.5">
+          <div class="absolute inset-0 bg-linear-to-br from-slate-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
           <div class="relative z-10">
             <div class="flex justify-between items-center mb-4">
-              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-stratton-gold pl-3 transition-colors duration-300 group-hover:text-stratton-gold">Najbliższe Wydarzenia</h3>
+              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Najbliższe Wydarzenia</h3>
             </div>
             
             <div class="space-y-3">
-              <div v-for="event in upcomingEvents" :key="event.id" class="relative group/item bg-slate-50/50 rounded-xl p-3 flex items-center gap-3 hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-slate-100" @click="goToEvent(event)">
-                <div class="bg-white group-hover/item:bg-stratton-gold group-hover/item:text-white transition-colors rounded-lg p-1.5 text-center w-12 shadow-sm shrink-0">
+              <div v-if="upcomingEvents.length === 0" class="text-center py-6 text-slate-400 italic text-sm">Brak nadchodzących wydarzeń</div>
+              <div v-for="event in upcomingEvents" :key="event.id" class="relative group/item bg-slate-50 rounded-xl p-3 flex items-center gap-3 hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-slate-100 ring-1 ring-slate-100" @click="goToEvent(event)">
+                <div class="bg-white group-hover/item:bg-primary group-hover/item:text-white transition-colors rounded-lg p-1.5 text-center w-12 shadow-sm shrink-0 ring-1 ring-slate-200 group-hover/item:ring-primary">
                   <div class="text-[9px] text-slate-400 uppercase font-bold group-hover/item:text-white/80">{{ event.month }}</div>
                   <div class="text-lg font-bold text-slate-800 group-hover/item:text-white">{{ event.day }}</div>
                 </div>
                 <div class="flex-1">
-                  <h4 class="font-bold text-slate-800 text-xs group-hover/item:text-stratton-gold transition-colors">{{ event.title }}</h4>
+                  <h4 class="font-bold text-slate-800 text-xs group-hover/item:text-primary transition-colors">{{ event.title }}</h4>
                   <div class="text-[10px] text-slate-500 mt-0.5 flex items-center group-hover/item:text-slate-600">
                     <AppIcon name="clock" class="w-3 h-3" />
-                    <span class="text-sm">{{ event.time }}</span>
+                    <span class="text-sm ml-1">{{ event.time }}</span>
                   </div>
                 </div>
-                <div class="text-slate-300 group-hover/item:text-stratton-gold group-hover/item:translate-x-1 transition-all">
+                <div class="text-slate-300 group-hover/item:text-primary group-hover/item:translate-x-1 transition-all">
                   <AppIcon name="chevron-right" class="w-2.5 h-2.5" />
                 </div>
               </div>
             </div>
 
             <div class="mt-4 text-center">
-              <RouterLink to="/app/calendar" class="text-[10px] font-bold text-stratton-gold hover:text-slate-800 uppercase tracking-widest transition group/link inline-flex items-center relative z-10">
+              <RouterLink to="/app/calendar" class="text-[10px] font-bold text-primary hover:text-slate-800 uppercase tracking-widest transition group/link inline-flex items-center relative z-10">
                 Pełny Kalendarz <span class="ml-1 group-hover/link:translate-x-1 transition-transform">→</span>
               </RouterLink>
             </div>
           </div>
         </div>
 
-        <div class="relative bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm border border-white/50 p-6 group transition-all duration-500 overflow-hidden hover:shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1">
+        <div class="relative bg-white rounded-card shadow-card border border-slate-100 p-6 group transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:-translate-y-0.5">
           <!-- News Background Image -->
           <Transition name="fade">
              <div 
               v-if="newsItems.length > 0 && newsItems[currentNewsIndex]?.image"
               :key="newsItems[currentNewsIndex]?.id"
-              class="absolute inset-0 bg-cover bg-center transition-all duration-700 opacity-20 group-hover:scale-110 group-hover:opacity-30"
+              class="absolute inset-0 bg-cover bg-center transition-all duration-700 opacity-10 group-hover:scale-110 group-hover:opacity-20"
               :style="{ backgroundImage: `url('${newsItems[currentNewsIndex]?.image}')` }"
              ></div>
           </Transition>
 
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-amber-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+          <div class="absolute inset-0 bg-linear-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
           <div class="relative z-10">
             <div class="flex justify-between items-center mb-4">
-              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-stratton-gold pl-3 transition-colors duration-300 group-hover:text-stratton-gold">Aktualności</h3>
+              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Aktualności</h3>
             </div>
             
-            <div class="relative h-[320px] flex flex-col" @mouseenter="newsHovered = true" @mouseleave="newsHovered = false">
+            <div class="relative h-80 flex flex-col" @mouseenter="newsHovered = true" @mouseleave="newsHovered = false">
               <div class="flex-1 relative overflow-hidden" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">
                 <TransitionGroup name="news-slide" tag="div" class="h-full w-full relative">
                   <div 
                     v-if="newsItems.length > 0"
                     :key="newsItems[currentNewsIndex]?.id"
-                    class="absolute inset-0 flex flex-col justify-start bg-transparent p-1 cursor-pointer"
+                    class="absolute inset-0 flex flex-col justify-start bg-transparent p-1 cursor-pointer bg-cover bg-center rounded-lg transition-all duration-500"
+                    :style="newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS') ? { backgroundImage: 'url(https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80)', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.8)' } : {}"
                   >
+                    <div v-if="newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')" class="absolute inset-0 bg-black/30 rounded-lg"></div>
+                    <div class="relative z-10 flex flex-col h-full">
                     <div class="flex items-center justify-between mb-3">
                       <span class="text-[10px] font-bold px-2 py-0.5 rounded text-white shadow-sm transition-transform hover:scale-105" :class="newsItems[currentNewsIndex]?.color">
                         {{ newsItems[currentNewsIndex]?.tag }}
                       </span>
-                      <span v-if="newsItems[currentNewsIndex]?.date" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{{ newsItems[currentNewsIndex]?.date }}</span>
+                      <span v-if="newsItems[currentNewsIndex]?.date" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.date }}</span>
                     </div>
-                    <h4 class="font-bold text-slate-900 text-lg mb-2 uppercase tracking-tight hover:text-amber-700 transition-colors line-clamp-2">{{ newsItems[currentNewsIndex]?.title }}</h4>
-                    <div class="news-content-area text-slate-700 leading-relaxed text-base line-clamp-5" v-html="newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej treści</i>'"></div>
+                    <h4 class="font-bold text-slate-900 text-lg mb-2 uppercase tracking-tight hover:text-primary transition-colors line-clamp-2" :class="{'text-white hover:text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.title }}</h4>
+                    <div class="news-content-area text-slate-700 leading-relaxed text-base line-clamp-5" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}" v-html="newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej treści</i>'"></div>
+                    </div>
                   </div>
                   <div v-else key="empty" class="flex items-center justify-center h-full text-slate-400 italic">Brak aktualności</div>
                 </TransitionGroup>
               </div>
               
               <div class="mt-auto text-center pt-2 flex flex-col items-center gap-1.5">
-                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-stratton-gold transition-colors cursor-pointer" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">Kliknij aby czytać więcej</span>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-primary transition-colors cursor-pointer" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">Kliknij aby czytać więcej</span>
                 <div class="flex gap-1.5 mt-0.5 z-20">
                   <div 
                     v-for="(_, index) in newsItems" 
                     :key="index"
-                    class="w-1.5 h-1.5 rounded-full transition-all duration-300 cursor-pointer hover:scale-125 hover:bg-stratton-gold"
-                    :class="index === currentNewsIndex ? 'bg-stratton-gold scale-110' : 'bg-slate-300 opacity-50'"
+                    class="w-1.5 h-1.5 rounded-full transition-all duration-300 cursor-pointer hover:scale-125 hover:bg-primary"
+                    :class="index === currentNewsIndex ? 'bg-primary scale-110' : 'bg-slate-300 opacity-50'"
                     @click.stop="currentNewsIndex = index"
                   ></div>
                 </div>
@@ -751,33 +732,33 @@ watch(
     </div>
 
     <div v-else class="space-y-8 max-w-7xl mx-auto pt-6">
-      <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-8">
+      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-8">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 pb-8 border-b border-slate-800 gap-6">
           <div class="flex items-center gap-6">
-            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="viewMode = 'hub'">
+            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="viewMode = 'hub'">
               <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             </button>
             <div>
               <h2 class="font-serif font-bold text-4xl text-white tracking-tight">Dashboard</h2>
-              <p class="text-xs text-slate-500 cursor-pointer hover:text-stratton-gold mt-1 uppercase tracking-widest font-bold" @click="toggleRole">Widok: {{ roleDisplayName }}</p>
+              <p class="text-xs text-slate-500 cursor-pointer hover:text-primary mt-1 uppercase tracking-widest font-bold" @click="toggleRole">Widok: {{ roleDisplayName }}</p>
             </div>
           </div>
           
           <div class="flex flex-wrap items-center gap-6 w-full md:w-auto">
             <div class="relative w-full md:w-48">
               <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Od</label>
-              <input v-model="dateFrom" type="date" :max="maxDate" class="w-full bg-slate-800 border border-slate-700 text-white py-2 px-4 rounded-xl text-sm font-bold focus:outline-none focus:border-stratton-gold cursor-pointer transition hover:bg-slate-750" />
+              <input v-model="dateFrom" type="date" :max="maxDate" class="w-full bg-slate-800 border border-slate-700 text-white py-2 px-4 rounded-lg text-sm font-bold focus:outline-none focus:border-primary cursor-pointer transition hover:bg-slate-750" />
             </div>
 
             <div class="relative w-full md:w-48">
               <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Do</label>
-              <input v-model="dateTo" type="date" :max="maxDate" class="w-full bg-slate-800 border border-slate-700 text-white py-2 px-4 rounded-xl text-sm font-bold focus:outline-none focus:border-stratton-gold cursor-pointer transition hover:bg-slate-750" />
+              <input v-model="dateTo" type="date" :max="maxDate" class="w-full bg-slate-800 border border-slate-700 text-white py-2 px-4 rounded-lg text-sm font-bold focus:outline-none focus:border-primary cursor-pointer transition hover:bg-slate-750" />
             </div>
 
             <div class="relative w-full md:w-56">
               <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Zakres</label>
               <div class="relative">
-                <select v-model="viewScope" class="w-full bg-slate-800 border border-slate-700 text-white py-2 pl-4 pr-10 rounded-xl text-sm font-bold focus:outline-none focus:border-stratton-gold cursor-pointer appearance-none transition hover:bg-slate-750">
+                <select v-model="viewScope" class="w-full bg-slate-800 border border-slate-700 text-white py-2 pl-4 pr-10 rounded-lg text-sm font-bold focus:outline-none focus:border-primary cursor-pointer appearance-none transition hover:bg-slate-750">
                   <option value="all" v-if="userRole === 'ADMIN'">Cała firma</option>
                   <option value="mine">Widok: Moje</option>
                   <option v-if="userRole === 'ADMIN'" value="role:DIRECTOR">Widok: Dyrektorzy</option>
@@ -795,63 +776,64 @@ watch(
         <div class="flex items-center gap-4 flex-wrap">
         <button 
           @click="showKPIsTab = !showKPIsTab"
-          class="px-3 py-2.5 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
-          :class="showKPIsTab ? 'bg-stratton-gold text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-stratton-gold ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
+          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          :class="showKPIsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="chart-pie" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showKPIsTab ? 'text-white' : 'text-slate-500'" />
           <span class="leading-tight text-center">Liczniki</span>
         </button>
         <button 
           @click="showClientsTab = !showClientsTab"
-          class="px-3 py-2.5 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
-          :class="showClientsTab ? 'bg-stratton-gold text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-stratton-gold ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
+          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          :class="showClientsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="address-book" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showClientsTab ? 'text-white' : 'text-slate-500'" />
           <span class="leading-tight text-center">Klienci w obsłudze</span>
         </button>
         <button 
           @click="showMeetingsTab = !showMeetingsTab"
-          class="px-3 py-2.5 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
-          :class="showMeetingsTab ? 'bg-stratton-gold text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-stratton-gold ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
+          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          :class="showMeetingsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="calendar" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showMeetingsTab ? 'text-white' : 'text-slate-500'" />
           <span class="leading-tight text-center">Spotkania w obsłudze</span>
         </button>
         <button 
           @click="showTeamTab = !showTeamTab"
-          class="px-3 py-2.5 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
-          :class="showTeamTab ? 'bg-stratton-gold text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-stratton-gold ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
+          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          :class="showTeamTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="people-group" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showTeamTab ? 'text-white' : 'text-slate-500'" />
           <span class="leading-tight text-center">Mój Zespół</span>
         </button>
         <button 
           @click="showArrearsTab = !showArrearsTab"
-          class="px-3 py-2.5 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
-          :class="showArrearsTab ? 'bg-stratton-gold text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-stratton-gold ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
+          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          :class="showArrearsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="file-invoice-dollar" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showArrearsTab ? 'text-white' : 'text-slate-500'" />
           <span class="leading-tight text-center">Zaległości Płatnicze</span>
         </button>
         <button 
           @click="showCalculationsTab = !showCalculationsTab"
-          class="px-3 py-2.5 rounded-xl font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
-          :class="showCalculationsTab ? 'bg-stratton-gold text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-stratton-gold ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
+          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          :class="showCalculationsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="stopwatch" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showCalculationsTab ? 'text-white' : 'text-slate-500'" />
           <span class="leading-tight text-center">Wysłane kalkulacje</span>
         </button>
+
       </div>
 
       </div>
 
       <!-- Quick Toggles removed from here -->
 
-      <div class="grid grid-cols-1 md:grid-cols-2 pb-10 xl:grid-cols-3 gap-8" v-if="showKPIsTab">
-        <div v-for="kpi in kpis" :key="kpi.id" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 relative overflow-visible group hover:shadow-lg hover:-translate-y-1 transition flex flex-col justify-between min-h-[380px]">
+      <div class="grid grid-cols-1 md:grid-cols-2 pb-10 xl:grid-cols-4 gap-6" v-if="showKPIsTab">
+        <div v-for="kpi in kpis" :key="kpi.id" class="bg-surface rounded-card shadow-card border border-slate-100 p-2 relative overflow-visible group hover:shadow-card-hover hover:-translate-y-1 transition flex flex-col justify-between min-h-[340px]">
           <div class="flex justify-between items-start mb-2 px-4 pt-4">
-            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest leading-tight w-full text-center">{{ kpi.title }}</h3>
-            <div class="hidden w-3 h-3 rounded-full shadow-sm ring-2 ring-white" :class="kpi.score >= 90 ? 'bg-green-500' : kpi.score >= 70 ? 'bg-stratton-gold' : 'bg-red-500'"></div>
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest leading-tight w-full text-center">{{ kpi.title }}</h3>
+            <div class="hidden w-2 h-2 rounded-full shadow-sm ring-2 ring-white" :class="kpi.score >= 90 ? 'bg-green-500' : kpi.score >= 70 ? 'bg-primary' : 'bg-red-500'"></div>
           </div>
           
           <div class="flex-1 flex items-center justify-center w-full h-full">
@@ -868,26 +850,26 @@ watch(
       </div>
 
       <!-- Injected Clients View (Stats Mode) -->
-      <div v-if="showClientsTab" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8 animate-fade-in-down">
+      <div v-if="showClientsTab" class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-8 animate-fade-in-down">
         <ClientsView :embedded="true" :date-from="dateFrom" :date-to="dateTo" />
       </div>
 
       <!-- Injected Meetings View (Stats Mode) -->
-      <div v-if="showMeetingsTab" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8 animate-fade-in-down">
+      <div v-if="showMeetingsTab" class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-8 animate-fade-in-down">
         <MeetingsManagementView :embedded="true" />
       </div>
 
       <!-- Injected Team View (Stats Mode) -->
-      <div v-if="showTeamTab" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 animate-fade-in-down">
+      <div v-if="showTeamTab" class="bg-surface rounded-card shadow-card border border-slate-100 p-6 mb-8 animate-fade-in-down">
         <StructureView :embedded="true" />
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8" v-if="showCalculationsTab">
-        <div class="bg-gray-50 border-b border-gray-200 p-2 flex items-center shadow-sm flex-shrink-0">
+      <div class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-8" v-if="showCalculationsTab">
+        <div class="bg-slate-50 border-b border-slate-100 p-2 flex items-center shadow-sm shrink-0">
           <div class="flex items-center gap-3 ml-4 flex-1">
-            <AppIcon name="stopwatch" class="w-5 h-5 text-brand-main" />
+            <AppIcon name="stopwatch" class="w-5 h-5 text-primary" />
             <div class="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
-              <h3 class="font-black text-slate-900 text-xl tracking-tight">Wysłane kalkulacje</h3>
+              <h3 class="font-bold text-slate-800 text-lg tracking-tight">Wysłane kalkulacje</h3>
               <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Termin do 14 dni dla oferty Eliton Prime+TM</p>
             </div>
           </div>
@@ -898,25 +880,25 @@ watch(
           <table class="w-full text-sm text-left">
             <thead class="text-xs text-slate-400 uppercase bg-slate-50 border-b border-slate-200 font-bold tracking-wider">
               <tr>
-                <th class="px-4 py-5">Firma</th>
-                <th class="px-4 py-5 hidden md:table-cell">NIP</th>
-                <th class="px-4 py-5 hidden lg:table-cell">Data</th>
-                <th class="px-4 py-5">Ważność PLUS</th>
-                <th class="px-4 py-5 text-slate-700">Pozostało</th>
-                <th class="px-4 py-5">Status</th>
-                <th class="px-4 py-5 text-right">Akcje</th>
+                <th class="px-4 py-4">Firma</th>
+                <th class="px-4 py-4 hidden md:table-cell">NIP</th>
+                <th class="px-4 py-4 hidden lg:table-cell">Data</th>
+                <th class="px-4 py-4">Ważność PLUS</th>
+                <th class="px-4 py-4 text-slate-700">Pozostało</th>
+                <th class="px-4 py-4">Status</th>
+                <th class="px-4 py-4 text-right">Akcje</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
-              <tr v-for="calc in paginatedActiveCalculations" :key="calc.id" class="hover:bg-slate-50 transition group">
-                <td class="px-4 py-5 font-bold text-slate-800 relative text-base max-w-[350px] truncate" :title="calc.company">
+            <tbody class="divide-y divide-slate-100 text-slate-600">
+              <tr v-for="calc in paginatedActiveCalculations" :key="calc.id" class="hover:bg-slate-50/80 transition group">
+                <td class="px-4 py-4 font-bold text-slate-800 relative text-sm max-w-[350px] truncate" :title="calc.company">
                   <span v-if="calc.daysLeft != null && calc.daysLeft <= 3" class="inline-block w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse border-2 border-white mr-2" title="Pilne"></span>
                   {{ calc.company }}
                 </td>
-                <td class="px-4 py-5 text-slate-500 hidden md:table-cell font-mono text-xs whitespace-nowrap">{{ calc.nip }}</td>
-                <td class="px-4 py-5 text-slate-500 hidden lg:table-cell whitespace-nowrap">{{ calc.date }}</td>
-                <td class="px-4 py-5 text-slate-700 font-medium whitespace-nowrap">{{ calc.validUntil }}</td>
-                <td class="px-4 py-5 whitespace-nowrap">
+                <td class="px-4 py-4 text-slate-500 hidden md:table-cell font-mono text-xs whitespace-nowrap">{{ calc.nip }}</td>
+                <td class="px-4 py-4 text-slate-500 hidden lg:table-cell whitespace-nowrap">{{ calc.date }}</td>
+                <td class="px-4 py-4 text-slate-700 font-medium whitespace-nowrap">{{ calc.validUntil }}</td>
+                <td class="px-4 py-4 whitespace-nowrap">
                   <span
                     class="inline-flex items-center px-3 py-1 rounded text-xs font-bold shadow-sm"
                     :class="(calc.daysLeft ?? 0) <= 3 ? 'bg-red-100 text-red-700' : (calc.daysLeft ?? 0) <= 7 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'"
@@ -925,11 +907,11 @@ watch(
                     <span v-if="calc.daysLeft != null && calc.daysLeft <= 3" class="ml-2 text-[9px] uppercase opacity-80 border-l border-red-300 pl-2">Alarm</span>
                   </span>
                 </td>
-                <td class="px-4 py-5 whitespace-nowrap">
+                <td class="px-4 py-4 whitespace-nowrap">
                   <span class="text-[10px] font-bold text-slate-500 border border-slate-200 px-3 py-1 rounded uppercase bg-white">{{ calc.status }}</span>
                 </td>
-                <td class="px-4 py-5 text-right whitespace-nowrap">
-                  <button type="button" class="text-stratton-blue hover:text-white font-bold text-xs bg-blue-50 hover:bg-stratton-blue px-4 py-2 rounded-lg transition shadow-sm" @click="openCalculation(calc)">
+                <td class="px-4 py-4 text-right whitespace-nowrap">
+                  <button type="button" class="text-primary hover:text-white font-bold text-xs bg-blue-50 hover:bg-primary px-4 py-2 rounded-lg transition shadow-sm" @click="openCalculation(calc)">
                     Otwórz
                   </button>
                 </td>
@@ -959,12 +941,12 @@ watch(
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-12" v-if="showArrearsTab">
-        <div class="bg-gray-50 border-b border-gray-200 p-2 flex items-center shadow-sm flex-shrink-0">
+      <div class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-12" v-if="showArrearsTab">
+        <div class="bg-slate-50 border-b border-slate-100 p-2 flex items-center shadow-sm shrink-0">
           <div class="flex items-center gap-3 ml-4">
             <AppIcon name="file-invoice-dollar" class="w-5 h-5 text-red-600" />
             <div class="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
-              <h3 class="font-black text-slate-900 text-xl tracking-tight">Zaległości Płatnicze</h3>
+              <h3 class="font-bold text-slate-800 text-lg tracking-tight">Zaległości Płatnicze</h3>
               <p class="text-[10px] text-red-700 font-bold uppercase tracking-widest mt-0.5">Wymagana interwencja doradcy.</p>
             </div>
           </div>
@@ -973,27 +955,27 @@ watch(
           <table class="w-full text-sm text-left">
             <thead class="text-xs text-slate-400 uppercase bg-slate-50 border-b border-slate-200 font-bold">
               <tr>
-                <th class="px-8 py-5">Firma</th>
-                <th class="px-8 py-5">Nr Faktury</th>
-                <th class="px-8 py-5 font-bold text-slate-700">Kwota</th>
-                <th class="px-8 py-5">Termin Płatności</th>
-                <th class="px-8 py-5 text-red-600 font-bold">Opóźnienie</th>
-                <th class="px-8 py-5">Status</th>
-                <th class="px-8 py-5 text-right">Akcja</th>
+                <th class="px-6 py-4">Firma</th>
+                <th class="px-6 py-4">Nr Faktury</th>
+                <th class="px-6 py-4 font-bold text-slate-700">Kwota</th>
+                <th class="px-6 py-4">Termin Płatności</th>
+                <th class="px-6 py-4 text-red-600 font-bold">Opóźnienie</th>
+                <th class="px-6 py-4">Status</th>
+                <th class="px-6 py-4 text-right">Akcja</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
+            <tbody class="divide-y divide-slate-100 text-slate-600">
               <tr v-if="overdueInvoices.length === 0" class="bg-white">
-                <td colspan="7" class="px-8 py-6 text-sm text-slate-500">Brak zaległości płatniczych.</td>
+                <td colspan="7" class="px-6 py-6 text-sm text-slate-500">Brak zaległości płatniczych.</td>
               </tr>
               <tr v-for="inv in paginatedOverdueInvoices" :key="inv.id" class="hover:bg-red-50/10 transition bg-white group">
-                <td class="px-8 py-5 font-bold text-slate-800 text-base max-w-[350px] truncate" :title="inv.company">{{ inv.company }}</td>
-                <td class="px-8 py-5 text-slate-500 font-mono text-xs whitespace-nowrap">{{ inv.number }}</td>
-                <td class="px-8 py-5 font-bold text-slate-900 text-base whitespace-nowrap">{{ inv.amountGross.toFixed(2) }} PLN</td>
-                <td class="px-8 py-5 text-slate-500 whitespace-nowrap">{{ inv.dueDate }}</td>
-                <td class="px-8 py-5 text-red-600 font-bold bg-red-50 whitespace-nowrap">+{{ inv.daysOverdue ?? 0 }} dni</td>
-                <td class="px-8 py-5 whitespace-nowrap"><span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold border border-red-200">UNPAID</span></td>
-                <td class="px-8 py-5 text-right whitespace-nowrap"><button type="button" class="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition shadow-sm">Szczegóły</button></td>
+                <td class="px-6 py-4 font-bold text-slate-800 text-sm max-w-[350px] truncate" :title="inv.company">{{ inv.company }}</td>
+                <td class="px-6 py-4 text-slate-500 font-mono text-xs whitespace-nowrap">{{ inv.number }}</td>
+                <td class="px-6 py-4 font-bold text-slate-900 text-sm whitespace-nowrap">{{ inv.amountGross.toFixed(2) }} PLN</td>
+                <td class="px-6 py-4 text-slate-500 whitespace-nowrap">{{ inv.dueDate }}</td>
+                <td class="px-6 py-4 text-red-600 font-bold bg-red-50 whitespace-nowrap">+{{ inv.daysOverdue ?? 0 }} dni</td>
+                <td class="px-6 py-4 whitespace-nowrap"><span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold border border-red-200">UNPAID</span></td>
+                <td class="px-6 py-4 text-right whitespace-nowrap"><button type="button" class="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition shadow-sm">Szczegóły</button></td>
               </tr>
             </tbody>
           </table>
@@ -1018,11 +1000,13 @@ watch(
             Następna
           </button>
         </div>
-      </div>
+  
     </div>
+  </div>
+
     <!-- News Modal -->
     <Teleport to="body">
-      <div v-if="isNewsModalOpen && selectedNews" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm" @click.self="closeNewsModal">
+      <div v-if="isNewsModalOpen && selectedNews" class="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm" @click.self="closeNewsModal">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all p-8 relative">
           <button @click="closeNewsModal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition">
             <AppIcon name="xmark" class="w-6 h-6" />

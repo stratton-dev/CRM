@@ -68,9 +68,9 @@ onMounted(async () => {
       <div class="text-center">
         <div class="flex flex-col items-center justify-center gap-4 mb-6">
           <img :src="logoUrl" alt="Stratton logo" class="w-16 h-16" />
-          <span class="text-2xl font-serif font-bold text-stratton-dark tracking-widest">STRATTON</span>
+          <span class="text-2xl font-sans font-bold text-stratton-dark tracking-widest">STRATTON</span>
         </div>
-        <h2 class="text-xl font-bold text-slate-700 font-serif">Logowanie do Systemu CRM 2.0</h2>
+        <h2 class="text-xl font-bold text-slate-700 font-sans">Logowanie do Systemu CRM 2.0</h2>
         <p class="text-sm text-slate-400 mt-2">Zaloguj się, aby uzyskać dostęp.</p>
       </div>
 

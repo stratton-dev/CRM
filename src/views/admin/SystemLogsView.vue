@@ -17,25 +17,25 @@ onMounted(() => {
        <h1 class="text-2xl font-bold text-slate-900">Logi Systemowe</h1>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden animate-fade-in border border-slate-200">
+    <div class="crm-card animate-fade-in">
       <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
         <h3 class="font-bold text-slate-700">Rejestr Zdarzeń (Audit Log)</h3>
       </div>
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-slate-50">
+      <table class="crm-table divide-y divide-slate-200">
+        <thead class="crm-table-head">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Data</th>
-            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Użytkownik (ID)</th>
-            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Akcja</th>
-            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Szczegóły</th>
+            <th class="crm-table-th crm-table-th-xs">Data</th>
+            <th class="crm-table-th crm-table-th-xs">Użytkownik (ID)</th>
+            <th class="crm-table-th crm-table-th-xs">Akcja</th>
+            <th class="crm-table-th crm-table-th-xs">Szczegóły</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-200">
           <tr v-for="log in auditLogs" :key="log.id" class="hover:bg-slate-50 transition">
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">{{ new Date(log.date).toLocaleString() }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-700">{{ log.actorId }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-indigo-600 font-medium">{{ log.action }}</td>
-            <td class="px-6 py-4 text-xs text-slate-600">{{ log.details }}</td>
+            <td class="crm-table-td whitespace-nowrap text-xs text-slate-500">{{ new Date(log.date).toLocaleString() }}</td>
+            <td class="crm-table-td whitespace-nowrap text-xs font-bold text-slate-700">{{ log.actorId }}</td>
+            <td class="crm-table-td whitespace-nowrap text-xs text-indigo-600 font-medium">{{ log.action }}</td>
+            <td class="crm-table-td text-xs text-slate-600">{{ log.details }}</td>
           </tr>
         </tbody>
       </table>

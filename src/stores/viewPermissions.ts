@@ -43,6 +43,8 @@ export type CrmViewKey =
   | 'settings-statuses'
   | 'settings-broadcasts'
   | 'news-management'
+  | 'leads'
+  | 'payroll'
 
 export type ViewPermissionEntry = {
   view_key: CrmViewKey
@@ -90,6 +92,8 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'settings-statuses', label: 'Ustawienia: Statusy' },
   { key: 'settings-broadcasts', label: 'Ustawienia: Broadcasty' },
   { key: 'news-management', label: 'Zarządzanie Aktualnościami' },
+  { key: 'leads', label: 'Zarządzanie Leadami' },
+  { key: 'payroll', label: 'Lista Płac' },
 ]
 
 const SETTINGS_TAB_KEYS: CrmViewKey[] = [
@@ -142,6 +146,8 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'settings-statuses': ['ADMIN'],
   'settings-broadcasts': ['ADMIN'],
   'news-management': ['ADMIN'],
+  leads: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
+  payroll: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
 }
 
 const toMap = (entries: ViewPermissionEntry[]) => {

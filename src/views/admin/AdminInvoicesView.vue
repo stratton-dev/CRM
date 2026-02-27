@@ -167,8 +167,11 @@ onMounted(() => {
     </div>
 
     <div class="bg-white rounded-xl shadow border border-gray-100 p-4 flex flex-wrap gap-4 items-center">
-      <input v-model="query" type="text" placeholder="Szukaj po numerze lub kliencie" class="flex-1 min-w-[220px] text-sm" />
-      <select v-model="statusFilter" class="text-sm">
+      <div class="relative flex-1 min-w-[220px]">
+        <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input v-model="query" type="text" placeholder="Szukaj po numerze lub kliencie" class="w-full pl-10 pr-4 py-2 crm-input text-right font-bold" />
+      </div>
+      <select v-model="statusFilter" class="crm-select max-w-[200px]">
         <option value="ALL">Wszystkie statusy</option>
         <option value="UNPAID">Nieopłacone</option>
         <option value="PAID">Opłacone</option>
@@ -181,41 +184,40 @@ onMounted(() => {
         <span class="text-xs text-gray-500">{{ filteredInvoices.length }} pozycji</span>
       </div>
       <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+        <table class="crm-table">
+          <thead class="crm-table-head text-gray-500 uppercase text-xs">
             <tr>
-              <th class="px-6 py-3 text-left">Numer</th>
-              <th class="px-6 py-3 text-left">Klient</th>
-              <th class="px-6 py-3 text-left">Data wystawienia</th>
-              <th class="px-6 py-3 text-right">Netto</th>
-              <th class="px-6 py-3 text-right">Brutto</th>
-              <th class="px-6 py-3 text-center">Status</th>
-              <th class="px-6 py-3 text-right">Akcje</th>
+              <th class="crm-table-th">Numer</th>
+              <th class="crm-table-th">Klient</th>
+              <th class="crm-table-th">Data wystawienia</th>
+              <th class="crm-table-th text-right">Netto</th>
+              <th class="crm-table-th text-right">Brutto</th>
+              <th class="crm-table-th text-center">Status</th>
+              <th class="crm-table-th text-right">Akcje</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
             <tr v-for="inv in filteredInvoices" :key="inv.id" class="hover:bg-gray-50">
-              <td class="px-6 py-3 font-medium text-gray-800">{{ inv.number }}</td>
-              <td class="px-6 py-3 text-gray-700">{{ clientMap.get(inv.clientId) || '—' }}</td>
-              <td class="px-6 py-3 text-gray-600">{{ formatDate(inv.issueDate) }}</td>
-              <td class="px-6 py-3 text-right text-gray-700">{{ inv.amountNet.toFixed(2) }} PLN</td>
-              <td class="px-6 py-3 text-right text-gray-700">{{ inv.amountGross.toFixed(2) }} PLN</td>
-              <td class="px-6 py-3 text-center">
+              <td class="crm-table-td font-medium text-gray-800">{{ inv.number }}</td>
+              <td class="crm-table-td text-gray-700">{{ clientMap.get(inv.clientId) || '—' }}</td>
+              <td class="crm-table-td text-gray-600">{{ formatDate(inv.issueDate) }}</td>
+              <td class="crm-table-td text-right text-gray-700">{{ inv.amountNet.toFixed(2) }} PLN</td>
+              <td class="crm-table-td text-right text-gray-700">{{ inv.amountGross.toFixed(2) }} PLN</td>
+              <td class="crm-table-td text-center">
                 <span
-                  class="px-2 py-1 rounded-full text-xs font-semibold"
-                  :class="inv.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                  :class="inv.status === 'PAID' ? 'crm-badge-success' : 'crm-badge-warn'"
                 >
                   {{ inv.status === 'PAID' ? 'Opłacona' : 'Nieopłacona' }}
                 </span>
               </td>
-              <td class="px-6 py-3 text-right">
+              <td class="crm-table-td text-right">
                 <button type="button" class="text-indigo-600 hover:text-indigo-900 text-xs font-semibold" @click="openEdit(inv)">
                   Koryguj / Edytuj
                 </button>
               </td>
             </tr>
             <tr v-if="filteredInvoices.length === 0">
-              <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-400">Brak faktur spełniających kryteria.</td>
+              <td colspan="7" class="crm-table-empty text-center">Brak faktur spełniających kryteria.</td>
             </tr>
           </tbody>
         </table>
@@ -232,22 +234,22 @@ onMounted(() => {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label class="text-sm text-gray-600">
               Numer faktury
-              <input v-model="form.number" type="text" class="mt-1 w-full text-sm" placeholder="FV/01/2026/0001" />
+              <input v-model="form.number" type="text" class="mt-1 crm-input" placeholder="FV/01/2026/0001" />
             </label>
             <label class="text-sm text-gray-600">
               Klient
-              <select v-model="form.clientId" class="mt-1 w-full text-sm">
+              <select v-model="form.clientId" class="mt-1 crm-select">
                 <option value="">Wybierz klienta</option>
                 <option v-for="client in clients" :key="client.id" :value="client.id">{{ client.name }}</option>
               </select>
             </label>
             <label class="text-sm text-gray-600">
               Data wystawienia
-              <input v-model="form.issueDate" type="date" class="mt-1 w-full text-sm" />
+              <input v-model="form.issueDate" type="date" class="mt-1 crm-input" />
             </label>
             <label class="text-sm text-gray-600">
               Status
-              <select v-model="form.status" class="mt-1 w-full text-sm">
+              <select v-model="form.status" class="mt-1 crm-select">
                 <option value="UNPAID">Nieopłacona</option>
                 <option value="PAID">Opłacona</option>
               </select>
@@ -257,15 +259,15 @@ onMounted(() => {
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label class="text-sm text-gray-600">
               Kwota netto
-              <input v-model="form.amountNet" type="number" step="0.01" class="mt-1 w-full text-sm" />
+              <input v-model="form.amountNet" type="number" step="0.01" class="mt-1 crm-input" />
             </label>
             <label class="text-sm text-gray-600">
               Opłata serwisowa netto
-              <input v-model="form.serviceFeeNet" type="number" step="0.01" class="mt-1 w-full text-sm" />
+              <input v-model="form.serviceFeeNet" type="number" step="0.01" class="mt-1 crm-input" />
             </label>
             <label class="text-sm text-gray-600">
               Kwota brutto
-              <input v-model="form.amountGross" type="number" step="0.01" class="mt-1 w-full text-sm" />
+              <input v-model="form.amountGross" type="number" step="0.01" class="mt-1 crm-input" />
             </label>
           </div>
 
@@ -278,7 +280,7 @@ onMounted(() => {
 
           <label class="text-sm text-gray-600">
             Link do PDF (opcjonalnie)
-            <input v-model="form.pdfUrl" type="text" class="mt-1 w-full text-sm" placeholder="https://..." />
+            <input v-model="form.pdfUrl" type="text" class="mt-1 crm-input" placeholder="https://..." />
           </label>
         </div>
         <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">

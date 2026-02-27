@@ -11,7 +11,9 @@ import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
 import { useClientStore } from '@/stores/client'
+import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
+import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import type { FileCategory, KnowledgeFile } from '@/types/models'
 import { VueFilesPreview } from 'vue-files-preview'
 import 'vue-files-preview/lib/style.css'
@@ -21,11 +23,18 @@ const session = useSessionStore()
 const structure = useStructureStore()
 const toast = useToastStore()
 const clientStore = useClientStore()
+const calculatorStore = useCalculatorStore()
+const viewPermissions = useViewPermissionsStore()
 const { currentUser } = storeToRefs(session)
 const { prospects } = storeToRefs(clientStore)
 const router = useRouter()
 const route = useRoute()
 const knowledgeBase = useKnowledgeBaseStore()
+
+const canViewMeetings = computed(() => {
+  if (session.currentUser?.role === 'ADMIN') return true
+  return viewPermissions.isViewAllowed('meetings', session.currentUser?.role)
+})
 const { files: knowledgeFiles } = storeToRefs(knowledgeBase)
 
 const isProcessActive = ref(false)
@@ -74,6 +83,21 @@ const handleSelectMeeting = (prospect: any) => {
   clientId.value = prospect.id
   if (prospect.meetingId) {
     meetingId.value = prospect.meetingId
+  }
+
+  // Map analysis data from prospect
+  analysis.value.industry = prospect.industry || ''
+  industrySearch.value = analysis.value.industry // Sync search input
+
+  if (prospect.employeesTotal > 0) {
+    analysis.value.employeeCount = prospect.employeesTotal
+    analysis.value.uopCount = prospect.employeesTotal // Sync template model
+  } else if (prospect.companySize) {
+    const parsed = parseInt(String(prospect.companySize).replace(/\D/g, ''))
+    if (!isNaN(parsed)) {
+      analysis.value.employeeCount = parsed
+      analysis.value.uopCount = parsed // Sync template model
+    }
   }
 
   if (prospect.contactName) {
@@ -296,6 +320,7 @@ const analysis = ref({
   hasDebts: null as boolean | null,
   needsFinancing: null as boolean | null,
   financingPurpose: '',
+  clientChallenge: '',
 
   // Legacy fields
   isInvesting: null as boolean | null, // Legacy name for planningInvestments
@@ -333,6 +358,21 @@ const categoryNames: Record<FileCategory, string> = {
   LEGAL: 'Kwestie Prawne',
   GRAPHIC: 'Graficzne Przedstawienie',
   VIDEO: 'Film Wideo',
+}
+
+const getTileColorClass = (category?: string | null) => {
+  const cat = String(category || '').toUpperCase()
+  const map: Record<string, string> = {
+    'CASH_FLOW': 'crm-tile-emerald',
+    'LEGAL': 'crm-tile-blue',
+    'GRAPHIC': 'crm-tile-indigo',
+    'VIDEO': 'crm-tile-rose',
+    'UMOWY': 'crm-tile-amber',
+    'PROCESY': 'crm-tile-violet',
+    'PRAWO': 'crm-tile-sky',
+    'MARKETING': 'crm-tile-pink'
+  }
+  return map[cat] || ''
 }
 
 const safeKnowledgeFiles = computed<KnowledgeFile[]>(() => (Array.isArray(knowledgeFiles.value) ? knowledgeFiles.value : []))
@@ -646,6 +686,33 @@ const saveContactEdit = async () => {
   }
 }
 
+const deleteContact = async () => {
+  if (contactEdit.value.mode === 'draft') {
+    contactDrafts.value = contactDrafts.value.filter(
+      (item) => item.tempId !== contactEdit.value.tempId
+    )
+    closeContactEdit()
+    toast.success('Usunięto kontakt.')
+    return
+  }
+
+  if (!auth.enabled || !contactEdit.value.id) return
+
+  if (!confirm('Czy na pewno chcesz usunąć ten kontakt?')) return
+  
+  try {
+    await api.delete(`/v1/contacts/${contactEdit.value.id}`)
+    toast.success('Usunięto kontakt.')
+    closeContactEdit()
+    if (clientId.value) {
+        await fetchClientContacts(clientId.value)
+    }
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się usunąć kontaktu.'
+    toast.error(message)
+  }
+}
+
 const saveContactDrafts = async () => {
   if (!auth.enabled) return true
   const pending = contactDrafts.value.filter((item) => !item.saved)
@@ -874,7 +941,7 @@ const updateCrmReservationAndStatus = async () => {
 }
 
 const updateCrmStatus = async (
-  status: 'NEW' | 'IN_TALKS' | 'OFFER_PREPARING' | 'OFFER_GENERATED' | 'CALCULATION_SENT' | 'SPECIAL_OFFER' | 'RESIGNED' | 'SIGNED' | 'TERMINATED'
+  status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED'
 ) => {
   if (!auth.enabled || !clientId.value) return
   try {
@@ -1011,6 +1078,23 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
     if (meeting?.id) {
       meetingId.value = String(meeting.id)
       sessionId.value = `MEETING-${meetingId.value}`
+      
+      // Auto-fill employee counts from meeting data/client data
+      if (meeting.company_size && !analysis.value.uopCount) {
+        analysis.value.uopCount = parseInt(meeting.company_size) || null
+      }
+    }
+
+    if (!analysis.value.uopCount && client?.company_size) {
+        analysis.value.uopCount = parseInt(client.company_size) || null
+        analysis.value.employeeCount = analysis.value.uopCount
+    }
+    
+    // Attempt to map industry from client profile if available
+    const clientIndustry = (client as any)?.industry || (client as any)?.crm_profile?.industry || ''
+    if (clientIndustry && !analysis.value.industry) {
+        analysis.value.industry = clientIndustry
+        industrySearch.value = clientIndustry
     }
 
     if (!route.query.step && profileStatus === 'OFFER_PREPARING' && meetingId.value) {
@@ -1053,9 +1137,16 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       if (analysisItem?.id) {
         meetingAnalysisId.value = String(analysisItem.id)
       }
+      
+      // Fallback strategies for industry and employees if not in analysis
+      const existingIndustry = analysisItem?.industry || client?.industry || (client as any)?.crm_profile?.industry || ''
+      const existingEmployees = analysisItem?.employees_count ?? analysis.value.uopCount ?? null
+
       analysis.value = {
         ...analysis.value,
-        industry: analysisItem?.industry || '',
+        industry: existingIndustry,
+        uopCount: existingEmployees,
+        employeeCount: existingEmployees, // Map to both fields just in case
         taxationType: analysisItem?.tax_model || analysis.value.taxationType,
         contractType: analysisItem?.tax_model || '',
         desiredSavingsAmount: analysisItem?.expected_savings ?? null,
@@ -1085,6 +1176,11 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
                     ? false
                 : null,
       }
+      
+      // Update industry search field
+      if (existingIndustry) {
+          industrySearch.value = existingIndustry
+      }
     }
 
     if (!route.query.step) {
@@ -1111,20 +1207,69 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
 const startNewMeeting = () => {
   sessionId.value = `DRAFT-${Math.floor(100 + Math.random() * 900)}`
   step.value = 1
-  isProcessActive.value = true
+  // Do NOT auto open process here if used for resetting.
+  // Instead, the button that calls this will set isProcessActive = true manually if needed, 
+  // OR we pass a flag. But standard usage is click -> startNewMeeting.
+  // Wait, if I use it for clearing, I might accidentally open it.
+  // Let's split this into resetState and startNewMeeting.
   clientId.value = null
   meetingId.value = null
   meetingAnalysisId.value = null
   crmProfileId.value = null
   existingContacts.value = []
   contactDrafts.value = []
+  
+  // Clear company data
+  companyData.value = {
+    nip: '',
+    name: '',
+    street: '',
+    zip: '',
+    city: '',
+  }
+  
+  // Clear analysis data
+  analysis.value = {
+    industry: '',
+    taxationType: 'vat',
+    hasBenefits: null,
+    employeeCount: null,
+    contractType: '',
+    avgEarnings: null,
+    uopCount: null,
+    uopSalaryNet: null,
+    uzCount: null,
+    uzSalaryNet: null,
+    zusCost: null,
+    planningInvestments: null,
+    highZUSPayments: null,
+    implementingSavings: null,
+    desiredSavingsAmount: null,
+    hasDebts: null,
+    needsFinancing: null,
+    financingPurpose: '',
+    clientChallenge: '',
+    isInvesting: null,
+    isHiring: null,
+    isOptimizing: null,
+    isRestructuring: null,
+    isSelling: null,
+    isBuying: null,
+  }
+
   resetContactDraft()
   closeContactEdit()
 }
 
+const openNewMeeting = () => {
+    startNewMeeting()
+    isProcessActive.value = true
+}
+
 const cancelProcess = () => {
-  if (window.confirm('Czy na pewno chcesz anulować proces? Utracisz wprowadzone dane.')) {
+  if (confirm('Czy na pewno chcesz anulować proces? Utracisz wprowadzone dane.')) {
     isProcessActive.value = false
+    startNewMeeting() // Reset state
   }
 }
 
@@ -1198,6 +1343,14 @@ const nextStep = async () => {
       toast.warning('Proszę uzupełnić wymagane pola analizy.')
       return
     }
+    
+    // Inject Challenge into Calculator Store for PDF generation later
+    if (analysis.value.clientChallenge) {
+       calculatorStore.firma.wyzwanieKlienta = analysis.value.clientChallenge;
+       // Trigger mocked AI generation 
+       await calculatorStore.generateAiDiagnosis(analysis.value.clientChallenge);
+    }
+
     const ok = await saveMeetingAnalysis()
     if (!ok) return
   }
@@ -1306,7 +1459,7 @@ onMounted(() => {
   }
 
   if (route.query.mode === 'new') {
-    startNewMeeting()
+    openNewMeeting()
     void bootstrap()
     return
   }
@@ -1329,7 +1482,7 @@ onMounted(() => {
 <template>
   <div v-if="!isProcessActive" class="view-transition pb-20 space-y-8">
     <div class="w-full pt-6">
-      <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex-1">
           <div class="flex items-center gap-4 mb-3">
              <RouterLink to="/app/dashboard" class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition shadow-sm">
@@ -1342,73 +1495,150 @@ onMounted(() => {
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-12">
-        <div @click="startNewMeeting" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-emerald-500/20 hover:-translate-y-2 border border-white/50 hover:border-emerald-200/50 cursor-pointer">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-emerald-500/30 group-hover:bg-emerald-500 group-hover:text-white ring-1 ring-emerald-100 group-hover:ring-emerald-400">
-            <AppIcon name="calendar" class="w-8 h-8" />
+        <RouterLink to="/app/leads" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Leady" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-emerald-700 transition-colors duration-300">Nowa Sprzedaż</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Rozpocznij proces</p>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="users" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Leady</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj leadami</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink v-if="canViewMeetings" to="/app/meetings" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Spotkania" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold relative">
+              <AppIcon name="briefcase" class="w-8 h-8" />
+              <div class="absolute -top-1 -right-2 bg-white rounded-full p-0.5 shadow-sm group-hover:bg-pink-600 transition-colors hidden">
+                <AppIcon name="plus" class="w-3 h-3 text-pink-600 group-hover:text-white" />
+              </div>
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Spotkania</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zaplanuj termin</p>
+            </div>
+          </div>
+        </RouterLink>
+        <div v-else class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20" alt="Spotkania" />
+             <div class="absolute inset-0 bg-slate-900/80"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-slate-500">
+               <AppIcon name="briefcase" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-slate-400 mb-1">Spotkania</h3>
+              <p class="crm-tile-desc text-xs text-slate-600 font-medium">Brak uprawnień</p>
+            </div>
           </div>
         </div>
 
-        <RouterLink to="/app/clients" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-2 border border-white/50 hover:border-indigo-200/50 cursor-pointer">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-400 to-indigo-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-indigo-500/30 group-hover:bg-indigo-500 group-hover:text-white ring-1 ring-indigo-100 group-hover:ring-indigo-400">
-            <AppIcon name="folder" class="w-8 h-8" />
+        <div @click="openNewMeeting" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Nowa Sprzedaż" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-indigo-700 transition-colors duration-300">Wczytaj Spotkanie</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Kontynuuj pracę</p>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="calendar" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Nowa Sprzedaż</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Rozpocznij proces</p>
+            </div>
           </div>
-        </RouterLink>
+        </div>
 
-        <RouterLink to="/app/knowledge-base" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-teal-500/20 hover:-translate-y-2 border border-white/50 hover:border-teal-200/50 cursor-pointer">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-teal-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-teal-500/30 group-hover:bg-teal-500 group-hover:text-white ring-1 ring-teal-100 group-hover:ring-teal-400">
-            <AppIcon name="book-open" class="w-8 h-8" />
+        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Klienci w obsłudze" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-teal-700 transition-colors duration-300">Baza Wiedzy</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Dokumenty i info</p>
-          </div>
-        </RouterLink>
-
-        <RouterLink to="/app/quick-calculator" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-2 border border-white/50 hover:border-blue-200/50 cursor-pointer">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-blue-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-blue-500/30 group-hover:bg-blue-500 group-hover:text-white ring-1 ring-blue-100 group-hover:ring-blue-400">
-            <AppIcon name="calculator" class="w-8 h-8" />
-          </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-blue-700 transition-colors duration-300">Szybka Kalkulacja</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Uproszczona</p>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="file-contract" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Klienci w obsłudze</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Baza Klientów</p>
+            </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/calculator" class="relative bg-white/80 backdrop-blur-sm rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center transition-all duration-500 group h-48 overflow-hidden hover:shadow-2xl hover:shadow-purple-500/20 hover:-translate-y-2 border border-white/50 hover:border-purple-200/50 cursor-pointer">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div class="absolute -inset-full top-0 block h-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-40 group-hover:animate-shine" />
-          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
-
-          <div class="relative w-16 h-16 min-w-16 min-h-16 aspect-square shrink-0 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-3xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-sm group-hover:shadow-purple-500/30 group-hover:bg-purple-500 group-hover:text-white ring-1 ring-purple-100 group-hover:ring-purple-400">
-            <AppIcon name="chart-line" class="w-8 h-8" />
+        <!-- Payroll Tile -->
+        <div @click="router.push('/app/payroll')" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700 cursor-pointer">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1554224155-1696413565d3?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Lista Płac" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
-          <div class="relative z-10">
-            <h3 class="font-bold text-slate-800 text-lg group-hover:text-purple-700 transition-colors duration-300">Szczegółowa Kalkulacja</h3>
-            <p class="text-xs text-slate-400 mt-1 font-medium tracking-wide group-hover:text-slate-600 transition-colors">Pełny raport</p>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="file-invoice-dollar" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Lista Płac</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Generuj ilustracje</p>
+            </div>
+          </div>
+        </div>
+
+        <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Szybka Kalkulacja" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="calculator" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Szybka Kalkulacja</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Uproszczona</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Szczegółowa Kalkulacja" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="chart-pie" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Szczegółowa Kalkulacja</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Pełny raport</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="book-open" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-white mb-1">Baza Wiedzy</h3>
+              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Dokumenty i info</p>
+            </div>
           </div>
         </RouterLink>
       </div>
@@ -1422,13 +1652,13 @@ onMounted(() => {
 
   <div v-else class="view-transition pb-20 space-y-8">
     <div class="w-full pt-6">
-      <div class="bg-slate-900 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex-1">
           <div class="flex items-center gap-4 mb-3">
              <button @click="goBack" class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition shadow-sm">
                 <AppIcon name="arrow-left" class="w-5 h-5" />
              </button>
-             <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Nowe Spotkanie Sprzedażowe</h1>
+             <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Nowa Sprzedaż</h1>
           </div>
           <div class="ml-14 flex items-center gap-3">
               <span class="text-slate-400 font-medium">Panel Procesu Sprzedażowego</span>
@@ -1445,7 +1675,7 @@ onMounted(() => {
       <div class="lg:col-span-4 space-y-6 sticky top-8">
         <div class="bg-slate-900 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
           <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full"></div>
-          <span class="text-stratton-gold font-bold text-6xl font-serif opacity-20 absolute bottom-4 right-4">{{ step }}</span>
+          <span class="text-stratton-gold font-bold text-9xl font-serif absolute -bottom-4 right-4 drop-shadow-lg">{{ step }}</span>
           <h2 class="text-2xl font-bold font-serif mb-2 relative z-10">{{ getCurrentStepName }}</h2>
           <p class="text-slate-400 text-sm relative z-10 mb-8 leading-relaxed">Wprowadź wymagane informacje, aby przejść do kolejnego etapu procesu sprzedażowego.</p>
           <div class="space-y-4 relative z-10">
@@ -1479,7 +1709,7 @@ onMounted(() => {
           <div v-if="step === 1" class="space-y-8 animate-fade-in-up">
             <div class="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 class="font-serif font-bold text-xl text-slate-800">Dane Rejestrowe</h3>
-              <button @click="showFetchMeetingModal = true" class="text-[10px] font-bold text-emerald-600 border border-emerald-200 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 hover:border-emerald-300 transition uppercase tracking-wide flex items-center gap-2">
+              <button @click="showFetchMeetingModal = true" class="text-[10px] font-bold text-stratton-gold border border-stratton-gold/30 bg-stratton-gold/5 px-3 py-1.5 rounded-lg hover:bg-stratton-gold hover:text-stratton-900 transition uppercase tracking-wide flex items-center gap-2">
                 <AppIcon name="refresh" class="w-3.5 h-3.5" />
                 POBIERZ DANE KLIENTA ZE SPOTKANIA
               </button>
@@ -1490,7 +1720,7 @@ onMounted(() => {
                   <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Numer NIP</label>
                   <div class="flex">
                     <input v-model="companyData.nip" type="text" class="flex-1 bg-slate-50 border border-slate-200 rounded-l-lg px-4 py-3 text-slate-900 font-mono font-bold focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold outline-none transition-all" />
-                    <button type="button" class="bg-slate-800 text-white px-4 rounded-r-lg hover:bg-slate-700 transition" :disabled="isFetchingGus" @click="fetchCompanyByNip">
+                    <button type="button" class="bg-stratton-gold text-stratton-900 px-6 rounded-r-lg hover:bg-white transition shadow-sm font-bold text-xs uppercase" :disabled="isFetchingGus" @click="fetchCompanyByNip">
                       <span v-if="isFetchingGus">...</span>
                       <span v-else>Pobierz</span>
                     </button>
@@ -1599,7 +1829,7 @@ onMounted(() => {
                     <input v-model="contactDraft.is_decision_maker" type="checkbox" class="h-4 w-4 text-stratton-gold border-slate-300 rounded focus:ring-stratton-gold" />
                     Osoba decyzyjna
                   </label>
-                  <button type="button" class="bg-slate-900 text-white text-xs font-semibold px-5 py-2.5 rounded-lg shadow-sm hover:bg-slate-800" @click="addContactDraft">
+                  <button type="button" class="bg-stratton-gold text-stratton-900 text-xs font-bold px-5 py-2.5 rounded-lg shadow-lg shadow-stratton-gold/10 hover:bg-white transition-all transform hover:-translate-y-0.5 active:translate-y-0" @click="addContactDraft">
                     Dodaj kontakt
                   </button>
                 </div>
@@ -1671,8 +1901,8 @@ onMounted(() => {
                     v-model="industrySearch"
                     list="industry-options"
                     type="text"
-                    placeholder="Wyszukaj branżę..."
-                    class="w-full bg-white border-2 border-slate-200 rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-800 font-semibold focus:border-stratton-gold focus:ring-2 focus:ring-amber-100 outline-none transition-all"
+                    placeholder="Szukaj"
+                    class="w-full bg-white border-2 border-slate-200 rounded-lg pl-10 pr-4 py-2.5 text-sm text-slate-800 font-bold focus:border-stratton-gold focus:ring-2 focus:ring-amber-100 outline-none transition-all text-right"
                     @input="analysis.industry = industrySearch"
                   />
                 </div>
@@ -1780,7 +2010,6 @@ onMounted(() => {
                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide">Oczekiwana oszczędność</label>
                         <div class="relative">
                             <input v-model.number="analysis.desiredSavingsAmount" type="number" min="0" placeholder="0" class="w-full bg-slate-50 border-2 border-slate-200 rounded-lg px-4 py-2.5 pl-4 text-slate-800 font-bold focus:border-stratton-gold focus:bg-white outline-none transition-all" />
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">PLN/msc</span>
                         </div>
                     </div>
                 </div>
@@ -1872,21 +2101,25 @@ onMounted(() => {
                         </div>
                     </div>
                     
-                    <!-- Q5 Financing (Optional) -->
+                    <!-- Q5 Biggest Challenge -->
                     <div class="px-6 py-4 hover:bg-slate-50/50 transition-colors group">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                        <div class="flex flex-col gap-2 mb-2">
                             <div>
-                                <span class="text-sm font-bold text-slate-700 block group-hover:text-slate-900 transition-colors">Poszukujecie finansowania?</span>
-                                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Opcjonalne</span>
+                                <span class="text-sm font-bold text-slate-700 block group-hover:text-slate-900 transition-colors">Z czym macie Państwo na chwilę obecną największe wyzwanie?</span>
+                                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Kluczowe dla analizy</span>
                             </div>
-                            <div class="flex bg-slate-100 p-1 rounded-lg shrink-0 w-full sm:w-auto overflow-hidden">
-                                <button @click="analysis.needsFinancing = true" :class="analysis.needsFinancing === true ? 'bg-white shadow text-stratton-gold font-bold' : 'text-slate-500 font-medium'" class="px-5 py-1.5 text-xs sm:text-sm rounded-md transition-all flex-1 sm:flex-none">Tak</button>
-                                <button @click="analysis.needsFinancing = false" :class="analysis.needsFinancing === false ? 'bg-white shadow text-slate-800 font-bold' : 'text-slate-500 font-medium'" class="px-5 py-1.5 text-xs sm:text-sm rounded-md transition-all flex-1 sm:flex-none">Nie</button>
-                                <button @click="analysis.needsFinancing = null" :class="analysis.needsFinancing === null ? 'bg-white shadow text-slate-400 font-bold' : 'text-slate-400 font-normal'" class="px-5 py-1.5 text-xs sm:text-sm rounded-md transition-all flex-1 sm:flex-none truncate">Pomiń</button>
+                            
+                            <div class="mt-2 w-full animate-fade-in-down">
+                                <textarea 
+                                    v-model="analysis.clientChallenge" 
+                                    rows="3"
+                                    placeholder="Opisz krótko obecną sytuację, np. 'Wysokie koszty stałe', 'Presja płacowa'..." 
+                                    class="w-full bg-slate-50 border-2 border-slate-200 rounded-lg px-3 py-2 text-slate-800 text-sm focus:border-stratton-gold focus:bg-white outline-none transition-all placeholder:font-normal resize-none"
+                                ></textarea>
+                                <div class="flex justify-end mt-1">
+                                    <span class="text-[10px] text-slate-400 font-medium"><AppIcon name="sparkles" class="w-3 h-3 inline mr-1 text-purple-500" />Analiza AI (Gemini Flash 2.5 Pro) zostanie wygenerowana na podstawie tego opisu</span>
+                                </div>
                             </div>
-                        </div>
-                        <div v-if="analysis.needsFinancing" class="mt-3 pl-0 sm:pl-4 animate-fade-in-down">
-                            <input v-model="analysis.financingPurpose" type="text" placeholder="Na co potrzebujecie finansowania?..." class="w-full bg-slate-50 border-b-2 border-slate-200 px-2 py-2 text-slate-800 text-sm font-bold focus:border-stratton-gold focus:bg-transparent outline-none transition-all placeholder:font-normal" />
                         </div>
                     </div>
                 </div>
@@ -1903,99 +2136,85 @@ onMounted(() => {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               
               <!-- Dynamic Files -->
-              <button 
+              <div 
                   v-for="file in knowledgeFiles" 
                   :key="file.id" 
                   @click="openPresentation(file.category || 'FILE', file.name, file)" 
-                  class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                  class="crm-tile-alt group"
+                  :class="getTileColorClass(file.category)"
               >
-                 <div class="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
-                 <div class="relative z-10">
-                    <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 mb-6 group-hover:bg-stratton-gold group-hover:text-white transition-colors">
-                      <AppIcon v-if="file.fileType?.includes('pdf')" name="document-text" class="w-7 h-7" />
-                      <AppIcon v-else-if="file.fileType?.includes('video')" name="video-camera" class="w-7 h-7" />
-                      <AppIcon v-else-if="file.fileType?.includes('image')" name="photo" class="w-7 h-7" />
-                      <AppIcon v-else name="document" class="w-7 h-7" />
+                 <div class="flex items-start justify-between w-full mb-4">
+                    <div class="crm-tile-icon">
+                      <AppIcon v-if="file.fileType?.includes('pdf')" name="document-text" class="w-6 h-6" />
+                      <AppIcon v-else-if="file.fileType?.includes('video')" name="video-camera" class="w-6 h-6" />
+                      <AppIcon v-else-if="file.fileType?.includes('image')" name="photo" class="w-6 h-6" />
+                      <AppIcon v-else name="document" class="w-6 h-6" />
                     </div>
-                    <h4 class="font-bold text-xl text-slate-900 group-hover:text-stratton-gold transition-colors line-clamp-2">{{ file.name }}</h4>
-                 </div>
-                 <div class="relative z-10 flex items-center justify-between mt-auto">
-                    <p class="text-sm text-slate-500 font-medium truncate pr-4">{{ categoryNames[file.category as FileCategory] || file.category || 'Prezentacja' }}</p>
-                    <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-stratton-gold group-hover:text-white transition-colors shrink-0">
-                       <AppIcon name="arrow-right" class="w-4 h-4" />
+                    <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">
+                       <AppIcon name="arrow-right" class="w-4 h-4 text-slate-400 group-hover:text-amber-500" />
                     </div>
                  </div>
-              </button>
+                 <h4 class="crm-tile-title line-clamp-2">{{ file.name }}</h4>
+                 <p class="crm-tile-desc mt-auto">{{ categoryNames[file.category as FileCategory] || file.category || 'Prezentacja' }}</p>
+              </div>
 
               <!-- Fallback Hardcoded Tiles (only if no dynamic files) -->
               <template v-if="knowledgeFiles.length === 0">
                   <!-- Cash Flow Tile -->
-                  <button @click="openPresentation('CASH_FLOW', 'Dokumenty do pobrania')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
-                     <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
-                     <div class="relative z-10">
-                        <div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                          <AppIcon name="chart-pie" class="w-7 h-7" />
+                  <div @click="openPresentation('CASH_FLOW', 'Dokumenty do pobrania')" class="crm-tile-alt crm-tile-emerald group">
+                     <div class="flex items-start justify-between w-full mb-4">
+                        <div class="crm-tile-icon">
+                          <AppIcon name="chart-pie" class="w-6 h-6" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-emerald-700 transition-colors">Dokumenty do pobrania</h4>
-                     </div>
-                     <div class="relative z-10 flex items-center justify-between mt-auto">
-                        <p class="text-sm text-slate-500 font-medium">Analiza finansowa</p>
-                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                            <AppIcon name="arrow-right" class="w-4 h-4" />
                         </div>
                      </div>
-                  </button>
+                     <h4 class="crm-tile-title">Dokumenty do pobrania</h4>
+                     <p class="crm-tile-desc mt-auto">Analiza finansowa</p>
+                  </div>
                   
                   <!-- Legal Tile -->
-                  <button @click="openPresentation('LEGAL', 'Podstawa prawna')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
-                     <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
-                     <div class="relative z-10">
-                        <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 mb-6 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                          <AppIcon name="scale" class="w-7 h-7" />
+                  <div @click="openPresentation('LEGAL', 'Podstawa prawna')" class="crm-tile-alt crm-tile-blue group">
+                     <div class="flex items-start justify-between w-full mb-4">
+                        <div class="crm-tile-icon">
+                          <AppIcon name="scale" class="w-6 h-6" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-blue-700 transition-colors">Podstawa prawna</h4>
-                     </div>
-                     <div class="relative z-10 flex items-center justify-between mt-auto">
-                        <p class="text-sm text-slate-500 font-medium">Bezpieczeństwo i przepisy</p>
-                         <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                            <AppIcon name="arrow-right" class="w-4 h-4" />
                         </div>
                      </div>
-                  </button>
+                     <h4 class="crm-tile-title">Podstawa prawna</h4>
+                     <p class="crm-tile-desc mt-auto">Bezpieczeństwo i przepisy</p>
+                  </div>
 
                   <!-- Graphic Presentation Tile -->
-                  <button @click="openPresentation('GRAPHIC', 'Schemat działania')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
-                     <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
-                     <div class="relative z-10">
-                        <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 mb-6 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                          <AppIcon name="presentation-chart-line" class="w-7 h-7" />
+                  <div @click="openPresentation('GRAPHIC', 'Schemat działania')" class="crm-tile-alt crm-tile-indigo group">
+                     <div class="flex items-start justify-between w-full mb-4">
+                        <div class="crm-tile-icon">
+                          <AppIcon name="presentation-chart-line" class="w-6 h-6" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-indigo-700 transition-colors">Schemat działania</h4>
-                     </div>
-                     <div class="relative z-10 flex items-center justify-between mt-auto">
-                        <p class="text-sm text-slate-500 font-medium">Wizualizacja modelu</p>
-                         <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                            <AppIcon name="arrow-right" class="w-4 h-4" />
                         </div>
                      </div>
-                  </button>
+                     <h4 class="crm-tile-title">Schemat działania</h4>
+                     <p class="crm-tile-desc mt-auto">Wizualizacja modelu</p>
+                  </div>
 
                    <!-- Video Tile -->
-                  <button @click="openPresentation('VIDEO', 'Materiały wideo')" class="group relative bg-white border border-slate-200 rounded-2xl p-6 h-64 text-left shadow-sm hover:shadow-xl hover:border-stratton-gold/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col justify-between">
-                     <div class="absolute top-0 right-0 w-32 h-32 bg-red-50 rounded-bl-[100px] -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-700"></div>
-                     <div class="relative z-10">
-                        <div class="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center text-red-600 mb-6 group-hover:bg-red-600 group-hover:text-white transition-colors">
-                          <AppIcon name="video-camera" class="w-7 h-7" />
+                  <div @click="openPresentation('VIDEO', 'Materiały wideo')" class="crm-tile-alt crm-tile-rose group">
+                     <div class="flex items-start justify-between w-full mb-4">
+                        <div class="crm-tile-icon">
+                          <AppIcon name="video-camera" class="w-6 h-6" />
                         </div>
-                        <h4 class="font-bold text-xl text-slate-900 group-hover:text-red-700 transition-colors">Materiały wideo</h4>
-                     </div>
-                     <div class="relative z-10 flex items-center justify-between mt-auto">
-                        <p class="text-sm text-slate-500 font-medium">Materiał multimedialny</p>
-                         <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-colors">
+                        <div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                            <AppIcon name="arrow-right" class="w-4 h-4" />
                         </div>
                      </div>
-                  </button>
+                     <h4 class="crm-tile-title">Materiały wideo</h4>
+                     <p class="crm-tile-desc mt-auto">Materiał multimedialny</p>
+                  </div>
               </template>
             </div>
             
@@ -2021,7 +2240,7 @@ onMounted(() => {
             </button>
             <button
               type="button"
-              class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide hover:bg-indigo-700 transition flex items-center gap-3 shadow-lg shadow-indigo-200 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="bg-stratton-gold text-stratton-900 px-8 py-4 rounded-xl font-bold uppercase tracking-wide hover:bg-white transition flex items-center gap-3 shadow-lg shadow-stratton-gold/20 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="isSavingStep || isCheckingNip || isFetchingGus || !isStepValid"
               @click="nextStep"
             >
@@ -2072,12 +2291,12 @@ onMounted(() => {
         
         <div class="p-4 border-b border-slate-100">
            <div class="relative">
-              <AppIcon name="search" class="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+              <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input 
                 v-model="selectMeetingSearch" 
                 type="text" 
                 placeholder="Szukaj po nazwie firmy lub NIP..." 
-                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400"
+                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all placeholder:text-slate-400 text-right font-bold"
                 autofocus
               />
            </div>
@@ -2140,13 +2359,18 @@ onMounted(() => {
           <input v-model="contactEdit.is_decision_maker" type="checkbox" class="h-4 w-4 text-stratton-gold border-slate-300 rounded focus:ring-stratton-gold" />
           Osoba decyzyjna
         </label>
-        <div class="mt-6 flex justify-end gap-2">
-          <button type="button" class="px-4 py-2 text-sm rounded border border-slate-300 text-slate-700 hover:bg-slate-100" @click="closeContactEdit">
-            Anuluj
+        <div class="mt-6 flex justify-between items-center gap-2">
+          <button type="button" @click="deleteContact" class="px-3 py-2 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition font-medium flex items-center gap-1">
+             <AppIcon name="trash" class="w-4 h-4" /> Usuń
           </button>
-          <button type="button" class="px-4 py-2 text-sm rounded bg-slate-900 text-white hover:bg-slate-800" @click="saveContactEdit">
-            Zapisz
-          </button>
+          <div class="flex gap-2">
+            <button type="button" class="px-4 py-2 text-sm rounded border border-slate-300 text-slate-700 hover:bg-slate-100" @click="closeContactEdit">
+              Anuluj
+            </button>
+            <button type="button" class="px-4 py-2 text-sm rounded bg-slate-900 text-white hover:bg-slate-800" @click="saveContactEdit">
+              Zapisz
+            </button>
+          </div>
         </div>
       </div>
     </div>

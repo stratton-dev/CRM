@@ -64,31 +64,53 @@ const onDragStart = (e: DragEvent, act: any) => {
   }
 }
 
+
 const onDrop = async (_e: DragEvent, date: Date) => {
+  if (!draggedEvent.value) return
   const act = draggedEvent.value
   draggedEvent.value = null
-  
-  if (!act) return
 
   const u = session.currentUser
   if (!u) return 
 
   try {
-     const [hours, mins] = act.time.split(':')
-     const targetDate = new Date(date)
-     targetDate.setHours(parseInt(hours), parseInt(mins))
+     // Use originalDate for reliable time extraction instead of parsing locale string
+     let hours = 9
+     let mins = 0
      
-     // Update using clientStore
-     // @ts-ignore
-     if (clientStore.updateActivity) {
-         // @ts-ignore
-         await clientStore.updateActivity(act.clientId, {
+     if (act.originalDate) {
+         const original = new Date(act.originalDate)
+         if (!isNaN(original.getTime())) {
+             hours = original.getHours()
+             mins = original.getMinutes()
+         }
+     } else if (act.time && act.time.includes(':')) {
+         // Fallback to parsing string if originalDate missing
+         const parts = act.time.split(':')
+         hours = parseInt(parts[0]) || 9
+         mins = parseInt(parts[1]) || 0
+     }
+
+     // Construct target date preserving local time slot
+     const targetDate = new Date(date)
+     targetDate.setHours(hours, mins, 0, 0)
+     
+     // console.log('Moving event', act.id, 'to', targetDate)
+
+     const updatePayload = {
             id: act.id,
             type: act.type,
             description: act.description,
             date: targetDate.toISOString(),
-            authorId: u.id
-         })
+            authorId: u.id,
+            isCompleted: act.isCompleted
+     }
+
+     // Update using clientStore
+     // @ts-ignore
+     if (clientStore.updateActivity) {
+         // @ts-ignore
+         await clientStore.updateActivity(act.clientId, updatePayload)
          
          notifications.add({
            userId: u.id,
@@ -96,11 +118,14 @@ const onDrop = async (_e: DragEvent, date: Date) => {
            message: 'Przeniesiono wydarzenie.'
          })
          
-         // Refresh
+         // Force refresh if needed
          if (auth.enabled) {
             // @ts-ignore
             await clientStore.refreshApiData()
          }
+         
+         // Force UI update
+         updateTrigger.value++
      }
   } catch (err) {
      console.error(err)
@@ -132,23 +157,20 @@ const applyMonthPicker = () => {
   showMonthPicker.value = false
 }
 
-const getMyClients = () => {
+const updateTrigger = ref(0)
+const baseClients = computed(() => {
+  // Access updateTrigger to force re-computation if needed
+  updateTrigger.value 
+
   const u = session.currentUser
   if (!u) return []
-  const list = Array.isArray(clients.value) ? clients.value : []
-  // If list is empty, try to load from local storage or wait for fetch
-  if (list.length === 0) {
-     // console.warn('Clients list is empty')
-  }
-
-  // Debug: Check if we have clients
-  // console.log('getMyClients:', list.length)
-
+  
+  // Directly access store clients to ensure reactivity
+  const list = clientStore.clients || []
+  
   if (u.role === 'ADMIN') return list
   return list
-}
-
-const baseClients = computed(() => getMyClients())
+})
 
 const daysInMonth = computed(() => {
   const year = currentDate.value.getFullYear()
@@ -194,6 +216,7 @@ const daysInMonth = computed(() => {
                 type: act.type,
                 description: act.description,
                 time: actDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                originalDate: act.date,
                 isCompleted: !!act.isCompleted,
               })
             }
@@ -450,39 +473,39 @@ onBeforeUnmount(() => {
     <div v-if="showMonthPicker" class="fixed inset-0 z-40 bg-transparent" @click="closeMonthPicker"></div>
 
     <!-- Header Section (Navy Blue Container) -->
-    <header class="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 p-4 mb-3 flex flex-col md:flex-row justify-between items-center gap-4 shrink-0 relative group isolate z-50">
+    <header class="bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 relative group isolate z-50">
       <!-- Decor Container (clipping background effects) -->
-      <div class="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none z-0">
+      <div class="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none z-0">
          <div class="absolute top-0 right-0 w-64 h-64 bg-slate-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
       </div>
 
-      <div class="relative z-10 flex items-center gap-4">
+      <div class="relative z-10 flex items-center gap-6">
         <RouterLink 
           to="/app/dashboard" 
-          class="flex items-center justify-center w-10 h-10 bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-white hover:border-slate-600 transition-all shadow-sm group/link"
+          class="flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-white hover:border-slate-600 transition-all shadow-sm group/link"
         >
-           <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover/link:-translate-x-1" />
+           <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover/link:-translate-x-1" />
         </RouterLink>
 
         <div>
-          <h1 class="text-2xl font-serif font-bold text-white tracking-tight leading-tight">Kalendarz Pracy</h1>
-          <p class="text-slate-400 text-xs font-medium mt-0.5">Zarządzaj swoimi spotkaniami.</p>
+          <h1 class="text-3xl font-serif font-bold text-white tracking-tight leading-tight mb-2">Kalendarz Pracy</h1>
+          <p class="text-slate-400 text-sm font-medium">Zarządzaj swoimi spotkaniami.</p>
         </div>
       </div>
     
-      <div class="relative z-10 flex items-center gap-3 bg-slate-800/50 p-1 rounded-xl shadow-sm border border-slate-700 backdrop-blur-sm self-start md:self-center">
+      <div class="relative z-10 flex items-center gap-3 bg-slate-800/50 p-1.5 rounded-xl shadow-sm border border-slate-700 backdrop-blur-sm self-start md:self-center">
         <button 
           type="button" 
-          class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-colors" 
+          class="w-10 h-10 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-colors" 
           @click="changeMonth(-1)"
         >
-          <AppIcon name="chevron-left" class="w-3.5 h-3.5" />
+          <AppIcon name="chevron-left" class="w-5 h-5" />
         </button>
         
         <div class="relative z-50">
           <button 
             type="button" 
-            class="h-8 px-4 flex items-center justify-center text-[11px] font-bold uppercase tracking-widest text-stratton-gold hover:text-white rounded-lg transition-colors select-none" 
+            class="h-10 px-6 flex items-center justify-center text-sm font-bold uppercase tracking-widest text-stratton-gold hover:text-white rounded-lg transition-colors select-none" 
             @click="toggleMonthPicker"
           >
             {{ currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' }) }}
@@ -522,8 +545,8 @@ onBeforeUnmount(() => {
     <!-- Calendar Grid -->
     <div class="flex-1 bg-white shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden flex flex-col border border-slate-100 relative pointer-events-auto z-10">
       <!-- Weekday Headers -->
-      <div class="grid grid-cols-7 border-b border-slate-100 bg-white shrink-0">
-        <div v-for="day in weekDays" :key="day" class="py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+      <div class="grid grid-cols-7 border-b border-slate-100 bg-slate-50/80 backdrop-blur-sm shrink-0">
+        <div v-for="day in weekDays" :key="day" class="py-4 text-center text-[11px] font-black text-slate-500 uppercase tracking-[0.2em] font-serif">
           {{ day }}
         </div>
       </div>
@@ -534,56 +557,79 @@ onBeforeUnmount(() => {
         :style="{ gridTemplateRows: `repeat(${rowCount}, 1fr)` }"
       >
         <!-- Empty slots from previous month -->
-        <div v-for="(_, idx) in emptySlots" :key="idx" class="pattern-dots bg-slate-50/30 border-b border-r border-slate-200 min-h-0"></div>
+        <div v-for="(_, idx) in emptySlots" :key="idx" class="pattern-diagonal-lines bg-slate-50/50 border-b border-r border-slate-200 min-h-0 relative">
+            <div class="absolute inset-0 bg-slate-100/30 backdrop-blur-[1px]"></div>
+        </div>
 
         <!-- Correct Days -->
         <div
           v-for="day in daysInMonth"
           :key="day.date.toISOString()"
-          class="bg-white/80 p-2 hover:bg-white transition-all relative group flex flex-col cursor-pointer border-b border-r border-slate-200 overflow-hidden min-h-0"
+          class="bg-white p-1 hover:bg-slate-50/50 transition-all duration-300 relative group flex flex-col cursor-pointer border-b border-r border-slate-200 overflow-hidden min-h-0 hover:shadow-[inset_0_0_20px_rgba(0,0,0,0.01)]"
           @click="openAddModal(day.date)"
           @dragover.prevent
           @drop.prevent="onDrop($event, day.date)"
         >
           <!-- Date Number -->
           <div 
-            class="flex justify-end mb-1 shrink-0"
+            class="flex justify-between items-start mb-1 shrink-0 px-1 pt-1"
           >
+             <!-- Today Indicator (Dot) -->
+             <div v-if="isToday(day.date)" class="w-1.5 h-1.5 rounded-full bg-stratton-gold shadow-[0_0_8px_rgba(197,160,89,0.8)] mt-1.5 ml-1"></div>
+             <div v-else></div>
+
             <span 
-              class="w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold transition-all"
-              :class="isToday(day.date) ? 'bg-blue-500 text-white shadow-md shadow-blue-500/30 scale-110' : 'text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-100'"
+              class="w-7 h-7 flex items-center justify-center rounded-lg text-sm transition-all font-mono tracking-tight"
+              :class="isToday(day.date) ? 'bg-slate-900 text-white font-bold shadow-lg shadow-slate-900/20' : 'text-slate-400 font-medium group-hover:text-slate-700'"
             >
               {{ day.dayNumber }}
             </span>
           </div>
 
           <!-- Activities List -->
-          <div class="flex-1 flex flex-col gap-1 min-h-0 w-full overflow-hidden">
+          <div class="flex-1 flex flex-col gap-1.5 min-h-0 w-full overflow-hidden px-1 pb-1">
             <div
               v-for="act in day.activities.slice(0, 3)"
               :key="act.id"
-              class="px-2 py-1 rounded-md text-[10px] font-bold transition-all hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center gap-1.5 border shadow-sm group/ev overflow-hidden"
+              class="px-2 py-1.5 rounded bg-white border-l-[3px] shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex items-center gap-2 group/ev relative overflow-hidden"
               :class="{
-                'bg-blue-50 text-blue-700 border-blue-100 hover:border-blue-300 hover:shadow-blue-100': act.type === 'CALL',
-                'bg-purple-50 text-purple-700 border-purple-100 hover:border-purple-300 hover:shadow-purple-100': act.type === 'MEETING',
-                'bg-slate-50 text-slate-600 border-slate-100 hover:border-slate-300 hover:shadow-slate-100': act.type === 'NOTE',
-                'bg-amber-50 text-amber-700 border-amber-100 hover:border-amber-300 hover:shadow-amber-100': act.type === 'EMAIL',
+                'border-l-sky-500 shadow-sky-100/50': act.type === 'CALL',
+                'border-l-purple-500 shadow-purple-100/50': act.type === 'MEETING',
+                'border-l-slate-400 shadow-slate-100/50': act.type === 'NOTE',
+                'border-l-amber-500 shadow-amber-100/50': act.type === 'EMAIL',
               }"
               @click="openEditModal(act, day.date, $event)"
               :title="`${act.time} - ${act.clientName}: ${act.description}`"
               draggable="true"
               @dragstart="onDragStart($event, act)"
             >
-              <span class="opacity-70 font-mono text-[9px] mr-0.5 shrink-0">{{ act.time }}</span>
-              <div class="flex-1 overflow-hidden flex items-center gap-1">
-                <span v-if="act.isCompleted" class="text-green-600">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                </span>
-                <span class="scrolling-text">{{ act.clientName }}</span>
+              <!-- Type Indicator Icon (Subtle) -->
+              <div class="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
+
+              <div class="flex flex-col min-w-0 flex-1 z-0">
+                  <div class="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider opacity-60 mb-0.5 leading-none" 
+                    :class="{
+                        'text-sky-700': act.type === 'CALL',
+                        'text-purple-700': act.type === 'MEETING',
+                        'text-slate-600': act.type === 'NOTE',
+                        'text-amber-700': act.type === 'EMAIL',
+                    }">
+                      <span>{{ act.time }}</span>
+                      <span>•</span>
+                      <span>{{ act.type === 'CALL' ? 'TEL' : act.type === 'MEETING' ? 'SPOTK' : act.type === 'EMAIL' ? 'MAIL' : 'NOT' }}</span>
+                  </div>
+                  <div class="text-xs font-bold text-slate-700 truncate leading-snug" :class="{'line-through opacity-50': act.isCompleted}">
+                      {{ act.clientName }}
+                  </div>
               </div>
+
+              <!-- Complete Checkmark (if completed) -->
+               <div v-if="act.isCompleted" class="text-emerald-500 shrink-0 z-20">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+               </div>
               
               <button 
-                 class="ml-auto opacity-0 group-hover/ev:opacity-100 p-0.5 rounded hover:bg-black/5 text-slate-500 transition-opacity shrink-0"
+                 class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/ev:opacity-100 p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-all z-20 shadow-sm bg-white"
                  @click.stop="deleteEvent(act, $event)"
               >
                 <AppIcon name="trash" class="w-3 h-3" />
@@ -594,10 +640,10 @@ onBeforeUnmount(() => {
             <button
               v-if="day.activities.length > 3"
               type="button"
-              class="mt-auto w-full text-[9px] font-bold text-slate-500 hover:text-stratton-gold hover:bg-amber-50 rounded py-1 transition-colors text-center uppercase tracking-wider"
+              class="mt-auto mx-1 mb-1 text-[10px] font-bold text-slate-400 hover:text-stratton-gold hover:bg-slate-50 rounded-lg py-1.5 transition-all text-center uppercase tracking-widest border border-dashed border-slate-200 hover:border-stratton-gold/30"
               @click.stop="openDayDetails(day)"
             >
-              +{{ day.activities.length - 3 }} więcej...
+              +{{ day.activities.length - 3 }} więcej
             </button>
           </div>
 
@@ -637,7 +683,7 @@ onBeforeUnmount(() => {
               <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Klient</label>
               <div class="relative">
                 <select v-model="newEvent.clientId" class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3 pl-4 pr-10 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold transition appearance-none">
-                  <option v-for="client in getMyClients()" :key="client.id" :value="client.id">{{ client.name }}</option>
+                  <option v-for="client in baseClients" :key="client.id" :value="client.id">{{ client.name }}</option>
                 </select>
                 <AppIcon name="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>

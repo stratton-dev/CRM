@@ -71,10 +71,10 @@ const closeNewCalcModal = () => {
         Rozpocznij nową kalkulację lub wczytaj zapisaną bazę. Dane z kalkulacji synchronizujemy z CRM.
       </p>
       <div class="flex flex-wrap gap-3">
-        <button type="button" class="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold" @click="handleNew">
+        <button type="button" class="bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white px-8 py-4 rounded-xl font-extrabold uppercase tracking-widest text-xs shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] hover:brightness-110 active:scale-95 transition-all outline-none border border-white/20" @click="handleNew">
           Nowa kalkulacja
         </button>
-        <button type="button" class="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold border border-slate-700" @click="showHistory = true">
+        <button type="button" class="bg-white/10 text-white px-8 py-4 rounded-xl font-extrabold uppercase tracking-widest text-xs border border-white/20 hover:bg-white/20 transition-all outline-none backdrop-blur-sm" @click="showHistory = true">
           Baza ofert
         </button>
       </div>
@@ -123,17 +123,17 @@ const closeNewCalcModal = () => {
           </button>
         </div>
         <div class="p-6 space-y-4">
-          <p class="text-sm text-slate-600">
+          <p class="text-sm text-slate-600 font-medium">
             Masz niezapisane zmiany w bieżącej kalkulacji. Możesz zapisać postęp albo rozpocząć nową bez zapisu.
           </p>
           <div class="grid grid-cols-1 gap-3">
-            <button type="button" class="w-full bg-slate-900 text-white px-4 py-3 rounded-xl font-bold" @click="saveAndStart">
+            <button type="button" class="w-full h-14 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] border border-white/20 hover:brightness-110 active:scale-95 transition-all outline-none" @click="saveAndStart">
               Zapisz postęp i rozpocznij nową
             </button>
-            <button type="button" class="w-full border border-slate-200 text-slate-700 px-4 py-3 rounded-xl font-bold hover:border-slate-400" @click="closeNewCalcModal">
+            <button type="button" class="w-full border-2 border-slate-100 text-slate-500 px-4 py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-slate-50 transition-all" @click="closeNewCalcModal">
               Wróć do obecnej kalkulacji
             </button>
-            <button type="button" class="w-full border border-amber-200 text-amber-700 px-4 py-3 rounded-xl font-bold hover:bg-amber-50" @click="startFresh">
+            <button type="button" class="w-full bg-rose-50 text-rose-600 px-4 py-4 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-rose-100 transition-all" @click="startFresh">
               Rozpocznij nową bez zapisu
             </button>
           </div>

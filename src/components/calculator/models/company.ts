@@ -23,6 +23,8 @@ export interface Firma {
   kwotaOszczednosciDeklarowana?: string;
   zadluzenia?: string;
   ryczaltVat?: string;
+  wyzwanieKlienta?: string; // New field for client challenge
+  aiDiagnoza?: string; // New field for AI diagnosis
   kontakty?: ContactPerson[];
   kontaktIds?: string[];
   okres: string;

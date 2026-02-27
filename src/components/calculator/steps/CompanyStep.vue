@@ -186,7 +186,7 @@ watch(
             <input v-model="newContact.phone" type="text" autocomplete="new-password" name="sp_contact_phone" class="mt-2 w-full border border-slate-200 rounded-lg px-4 py-3" />
           </div>
           <div>
-            <button type="button" class="w-full bg-slate-900 text-white px-4 py-3 rounded-lg text-xs font-bold" @click="addContact">
+            <button type="button" class="w-full h-12 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-[0_8px_16px_-4px_rgba(197,160,89,0.4)] border border-white/20 active:scale-95" @click="addContact">
               Dodaj i zaznacz
             </button>
           </div>

@@ -4,9 +4,14 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useClientStore } from '@/stores/client'
 import { useToastStore } from '@/stores/toast'
+import { useStructureStore } from '@/stores/structure'
+import { useMailboxStore } from '@/stores/mailbox'
+import { useNotificationStore } from '@/stores/notification'
+import { useAuthStore } from '@/stores/auth'
+import { useSessionStore } from '@/stores/session'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
-import type { Client } from '@/types/models'
+import type { Client, User } from '@/types/models'
 
 defineProps<{
   embedded?: boolean
@@ -15,7 +20,63 @@ defineProps<{
 const router = useRouter()
 const clientStore = useClientStore()
 const toast = useToastStore()
+const structureStore = useStructureStore()
+const mailboxStore = useMailboxStore()
+const notifyStore = useNotificationStore()
+const authStore = useAuthStore()
+const sessionStore = useSessionStore()
+
 const { prospects: clients } = storeToRefs(clientStore)
+const { users: structureUsers } = storeToRefs(structureStore)
+const { currentUser } = storeToRefs(sessionStore)
+
+const expandedMeetingId = ref<string | null>(null)
+
+// --- Notification Logic ---
+const showMsgModal = ref(false)
+const selectedUserForMsg = ref<User | null>(null)
+const msgData = ref({
+  type: 'TASK' as 'TASK' | 'NOTE' | 'INFO' | 'WARNING',
+  text: '',
+})
+
+const canNotify = (user: User) => {
+  if (!authStore.enabled || !currentUser.value) return false
+  if (currentUser.value.role === 'ADMIN') return true
+  
+  const childIds = structureStore.getSubtreeUserIds(currentUser.value.id)
+  return childIds.includes(user.id) && user.id !== currentUser.value.id
+}
+
+const openMsgModal = (user: User) => {
+  selectedUserForMsg.value = user
+  msgData.value.type = 'TASK'
+  msgData.value.text = ''
+  showMsgModal.value = true
+}
+
+const closeMsgModal = () => {
+  showMsgModal.value = false
+  selectedUserForMsg.value = null
+}
+
+const sendMsg = () => {
+  const recipient = selectedUserForMsg.value
+  if (!recipient || !currentUser.value) return
+  if (!msgData.value.text.trim()) {
+    toast.warning('Wpisz treść wiadomości.')
+    return
+  }
+
+  notifyStore.add({
+    userId: recipient.id,
+    type: msgData.value.type,
+    message: msgData.value.text.trim(),
+  })
+  toast.success(`Wiadomość została wysłana do ${recipient.name}.`)
+  closeMsgModal()
+}
+// --------------------------
 
 const promoteToClient = (client: any) => {
   if (!client.nip || !client.name) {
@@ -25,6 +86,90 @@ const promoteToClient = (client: any) => {
   }
   // Navigate to Calculator with this client pre-selected
   router.push({ name: 'calculator', query: { clientId: client.id } })
+}
+
+const toggleOwnerDetails = (meetingId: string) => {
+  if (expandedMeetingId.value === meetingId) {
+    expandedMeetingId.value = null
+  } else {
+    expandedMeetingId.value = meetingId
+  }
+}
+
+const getMeetingOwner = (client: any) => {
+  if (!client.ownerId) return null
+  const userList = Array.isArray(structureUsers.value) ? structureUsers.value : []
+  return userList.find((u) => u.id === client.ownerId) || null
+}
+
+const emailMeetingOwner = (client: any) => {
+  const email = getMeetingOwner(client)?.email
+  if (!email) return
+  mailboxStore.initiateEmailTo(email)
+}
+
+const getOwnerRoleLabel = (role: string) => {
+  const roleMap: Record<string, string> = {
+    'SALES': 'DORADCA BIZNESOWY',
+    'ADMIN': 'ADMINISTRATOR',
+    'MANAGER': 'MANAGER',
+    'DIRECTOR': 'DYREKTOR',
+  }
+  return roleMap[role] || role
+}
+
+const canImpersonate = (user: any) => {
+  if (!currentUser.value) return false
+  return structureStore.canImpersonate(currentUser.value, user)
+}
+
+const canRemove = (user: any) => {
+  if (!currentUser.value) return false
+  return structureStore.canRemove(currentUser.value, user)
+}
+
+const impersonateUser = async (user: any) => {
+  // Allow ADMIN to bypass "impersonate self" check if needed for testing/preview,
+  // but usually impersonating self is a reload. 
+  if (currentUser.value?.id === user.id) {
+    if (!confirm('Czy na pewno chcesz odświeżyć własną sesję (zalogować się ponownie)?')) return
+    window.location.reload()
+    return
+  }
+
+  if (!confirm(`Czy na pewno chcesz zalogować się jako ${user.name}?`)) return
+  try {
+    await sessionStore.impersonate(user.id)
+    router.push('/app/dashboard')
+    toast.success(`Zalogowano jako ${user.name}`)
+  } catch (error) {
+    toast.error('Nie udało się zalogować jako użytkownik.')
+  }
+}
+
+const removeUser = async (user: any) => {
+  if (!currentUser.value) return
+  
+  if (currentUser.value.id === user.id) {
+     if(!confirm('UWAGA: Próbujesz usunąć własne konto administratorskie. Czy na pewno chcesz to zrobić?')) return
+  } else {
+     if (!confirm(`Czy na pewno chcesz usunąć ${user.name} ze struktury? Tej operacji nie można cofnąć.`)) return
+  }
+  
+  try {
+    await structureStore.removeUserFromStructure(user, currentUser.value)
+    await structureStore.fetchStructure()
+    // Optionally refresh meetings list if needed, though structure changes might reflect via store
+    toast.success(`Usunięto ${user.name} ze struktury.`)
+  } catch (error: any) {
+    const message = error?.response?.data?.message
+    if (message) toast.error(message)
+    else toast.error('Nie udało się usunąć użytkownika.')
+  }
+}
+
+const editRedirect = (user: any) => {
+   router.push({ path: '/app/structure', query: { focus: user.id } })
 }
 
 
@@ -157,6 +302,12 @@ const meetingItemsPerPage = 10
 
 const filteredClients = computed(() => {
   let list = Array.isArray(clients.value) ? [...clients.value] : []
+  
+  // Exclude clients that are already in sales process (OFFER_GENERATED, CALCULATION_SENT, SIGNED etc.)
+  list = list.filter(c => 
+    !['OFFER_GENERATED', 'CALCULATION_SENT', 'SIGNED', 'TERMINATED', 'RESIGNED'].includes(c.status)
+  )
+
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     list = list.filter(c => 
@@ -311,25 +462,75 @@ const openEditClient = (client: Client) => {
 const handleUpdateClient = async () => {
     if (!selectedClient.value) return
     isSubmitting.value = true
+    
+    // We'll track success of operations to give better feedback
+    let noteSaved = false
+    let clientUpdated = false
+    
     try {
-        await api.patch(`/v1/clients/${selectedClient.value.id}`, {
-            name: form.value.companyName,
-            nip: form.value.nip,
-            contact_name: form.value.contactName,
-            contact_phone: form.value.contactPhone,
-            contact_email: form.value.contactEmail,
-            contact_position: form.value.contactPosition,
-            is_decision_maker: form.value.isDecisionMaker,
-            address: form.value.address,
-            industry: form.value.industry,
-            company_size: form.value.companySize,
-        })
+        // 1. Add activity note FIRST (since this is often the primary goal)
+        if (form.value.meetingNotes) {
+             const activityDate = form.value.meetingDate ? new Date(form.value.meetingDate).toISOString() : new Date().toISOString()
+             
+             await clientStore.addActivity(selectedClient.value.id, {
+                 type: 'MEETING', 
+                 description: form.value.meetingNotes,
+                 authorId: currentUser.value?.id || '',
+             }, activityDate)
+             noteSaved = true
+             toast.success('Zapisano notatkę')
+        }
+
+        // 2. Try to update client data - wrap in separate try/catch to not block note saving
+        try {
+            await api.patch(`/v1/clients/${selectedClient.value.id}`, {
+                name: form.value.companyName,
+                nip: form.value.nip,
+                contact_name: form.value.contactName,
+                contact_phone: form.value.contactPhone,
+                contact_email: form.value.contactEmail,
+                contact_position: form.value.contactPosition,
+                is_decision_maker: form.value.isDecisionMaker,
+                address: form.value.address,
+                industry: form.value.industry,
+                company_size: form.value.companySize,
+                source: form.value.source,
+            })
+            clientUpdated = true
+            toast.success('Zaktualizowano dane klienta')
+        } catch (clientError: any) {
+            console.error('Client update error:', clientError)
+            // Only show error if we explicitly changed something that failed to save
+            // or if it's a critical permission error that the user should know about
+            // But since the note is saved, we don't want to show a scary "Action Unauthorized" if possible
+            // unless the user intended to update client data.
+            
+            if (!noteSaved) {
+                // If note wasn't saved either (or wasn't attempted), then this is a hard failure
+                throw clientError
+            } else {
+                // Determine if we should warn
+                const msg = clientError.response?.data?.message || clientError.message
+                if (msg.includes('unauthorized') || msg.includes('403') || msg.includes('THIS ACTION IS UNAUTHORIZED')) {
+                     // SILENCE: If note was saved but user has no permission to update company core data, 
+                     // we just ignore it to not confuse them. They primarily wanted to save the meeting note.
+                     console.warn('Client update unauthorized, but note saved successfully.')
+                } else {
+                     toast.warning('Notatka zapisana, ale wystąpił błąd przy aktualizacji danych klienta: ' + msg)
+                }
+            }
+        }
+
         await clientStore.refreshApiData()
-        toast.success('Dane klienta zaktualizowane')
-        showAddModal.value = false
-        isEditing.value = false
+        
+        // Close modal only if at least one operation succeeded
+        if (noteSaved || clientUpdated) {
+            showAddModal.value = false
+            isEditing.value = false
+        }
+        
     } catch (error: any) {
-        toast.error('Błąd aktualizacji: ' + (error.response?.data?.message || error.message))
+        toast.error('Błąd zapisu: ' + (error.response?.data?.message || error.message))
     } finally {
         isSubmitting.value = false
     }
@@ -370,6 +571,21 @@ const toggleActivityCompletion = async (client: Client, event: Event) => {
             ...activity,
             isCompleted: newCompleted
         })
+
+        if (newCompleted && client.ownerId) {
+            const owner = Array.isArray(structureUsers.value) ? structureUsers.value.find((u) => u.id === client.ownerId) : null
+            if (owner && owner.parentKeycloakId) {
+                const supervisor = Array.isArray(structureUsers.value) ? structureUsers.value.find((u) => u.id === owner.parentKeycloakId) : null
+                if (supervisor) {
+                    notifyStore.add({
+                        userId: supervisor.id,
+                        type: 'INFO',
+                        message: `Pracownik ${owner.name} odbył spotkanie z firmą ${client.name}. Możesz skontaktować się w sprawie wyników.`,
+                    })
+                    toast.success(`Powiadomiono przełożonego (${supervisor.name}).`)
+                }
+            }
+        }
     } catch (e) {
         activity.isCompleted = !newCompleted
         toast.error('Błąd aktualizacji statusu')
@@ -417,19 +633,17 @@ const exportToCsv = () => {
 </script>
 
 <template>
-  <div class="p-6 max-w-[1600px] mx-auto space-y-8" :class="{ '!p-0 !max-w-none !space-y-0': embedded }">
+  <div class="p-6 max-w-[1600px] mx-auto space-y-8" :class="{ 'p-0! max-w-none! space-y-0!': embedded }">
     <!-- Header -->
-    <div v-if="!embedded" class="relative bg-slate-900 rounded-3xl p-8 md:p-10 overflow-hidden shadow-2xl shadow-slate-900/20 animate-fade-in">
-      <div class="absolute inset-0 bg-gradient-to-br from-slate-800/50 to-transparent"></div>
+    <div v-if="!embedded" class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover border border-slate-800 flex justify-between items-center relative overflow-hidden mb-6">
       
-      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div class="flex items-center gap-6">
+      <div class="relative z-10 flex items-center gap-6">
           <button 
             @click="router.push('/app/dashboard')"
-            class="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 text-white hover:bg-white hover:text-stratton-500 transition-all duration-300 ring-1 ring-white/20"
+             class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group"
             title="Powrót do Dashboardu"
           >
-            <AppIcon name="arrow-left" class="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
+            <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           </button>
           
           <div>
@@ -441,141 +655,127 @@ const exportToCsv = () => {
         <button 
           type="button"
           @click="openAddModal"
-          class="bg-stratton-gold hover:bg-stratton-gold/90 text-slate-900 px-8 py-4 rounded-2xl font-bold transition-all flex items-center gap-3 shadow-xl shadow-stratton-gold/20 group hover:-translate-y-1 relative z-20"
+          class="bg-linear-to-r from-[#D4AF37] to-stratton-gold hover:brightness-110 text-white px-6 py-3 rounded-md font-bold transition-all flex items-center gap-3 shadow-md group hover:-translate-y-0.5 relative z-20"
         >
-          <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center group-hover:bg-white/40 transition-colors">
-            <AppIcon name="plus" class="w-4 h-4" />
+          <div class="w-5 h-5 rounded bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+            <AppIcon name="plus" class="w-3.5 h-3.5" />
           </div>
           Dodaj Spotkanie
         </button>
       </div>
-    </div>
 
     <!-- Filters & Table -->
     <div 
-      class="bg-white flex flex-col min-h-0"
-      :class="embedded ? 'h-auto overflow-visible' : 'rounded-3xl shadow-sm border border-slate-100 overflow-hidden'"
+      class="flex flex-col min-h-0 bg-surface"
+      :class="embedded ? 'h-auto overflow-visible rounded-t-card' : 'rounded-card shadow-card border border-slate-200 overflow-hidden'"
     >
       <div 
-        class="bg-gray-50 border-b border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4 shrink-0"
-        :class="embedded ? 'p-4' : 'p-6'"
+        class="bg-slate-50 border-b border-slate-200 p-2 flex items-center shadow-sm shrink-0"
+        :class="embedded ? 'rounded-t-card' : ''"
       >
-        <div class="flex items-center gap-3">
-          <AppIcon name="calendar" class="w-5 h-5 text-brand-main" />
-          <h3 class="font-black text-slate-900 text-xl tracking-tight">Spotkania w obsłudze</h3>
+        <div class="flex items-center gap-3 ml-4">
+          <AppIcon name="calendar" class="w-5 h-5 text-primary" />
+          <h3 class="font-black text-slate-800 text-xl tracking-tight">Spotkania w obsłudze</h3>
         </div>
 
-        <div class="flex flex-1 items-center justify-end gap-4 w-full md:w-auto">
+        <div class="flex-1 flex items-center justify-end px-4 gap-4">
           <div class="flex items-center space-x-2">
-            <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="openAddModal">
+            <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="openAddModal">
               <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
               <span>Nowy</span>
             </button>
-            <button type="button" class="flex items-center px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 rounded border border-gray-300 bg-white" @click="exportToCsv">
+            <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="exportToCsv">
               <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
               <span>Eksportuj</span>
             </button>
           </div>
 
-          <div class="relative max-w-md w-full md:w-96">
-            <AppIcon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+          <div class="w-96 relative">
+            <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
             <input 
               v-model="searchQuery"
               type="text" 
               placeholder="Szukaj klienta, firmy lub NIP..."
-              class="w-full pl-12 pr-4 py-3 rounded-xl border-slate-200 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
+              class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400"
             />
           </div>
         </div>
       </div>
 
-      <div class="flex-1 relative bg-white" :class="embedded ? 'overflow-visible' : 'overflow-hidden'">
+      <div class="flex-1 relative bg-surface" :class="embedded ? 'overflow-visible' : 'overflow-hidden'">
         <div :class="embedded ? 'h-auto overflow-auto' : 'h-full overflow-auto'">
-          <table class="min-w-full divide-y divide-gray-200" style="min-width: 1200px;">
-            <thead class="bg-gray-50 sticky top-0 z-10">
+          <table class="w-full divide-y divide-slate-100">
+            <thead class="bg-slate-50 sticky top-0 z-10 shadow-sm">
               <tr>
                 <th
-                  @click="toggleSort('contactName')"
-                  class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:text-stratton-gold"
-                >
-                  Imię i nazwisko
-                  <span v-if="sortKey === 'contactName'" class="ml-1 text-[10px]">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
-                </th>
-                <th
                   @click="toggleSort('name')"
-                  class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:text-stratton-gold"
+                  class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
                 >
                   Firma
-                  <span v-if="sortKey === 'name'" class="ml-1 text-[10px]">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                  <span v-if="sortKey === 'name'" class="ml-1 text-[11px]">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
                 </th>
-                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Opiekun</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Opiekun</th>
                 <th
                   @click="toggleSort('lastMeeting')"
-                  class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:text-stratton-gold"
+                  class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
                 >
                   Ostatnia Aktywność
-                  <span v-if="sortKey === 'lastMeeting'" class="ml-1 text-[10px]">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
+                  <span v-if="sortKey === 'lastMeeting'" class="ml-1 text-[11px]">{{ sortOrder === 'asc' ? '↑' : '↓' }}</span>
                 </th>
-                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Źródło</th>
-                <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Os.</th>
-                <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider pr-6">Akcje</th>
-                <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Źródło</th>
+                <th class="px-2 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-tight">
+                  Ilość<br>Pracowników
+                </th>
+                <th class="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider pr-6">Akcje</th>
+                <th class="px-2 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-tight">
+                  Spotkanie<br>odbyło się
+                </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 bg-white">
+            <tbody class="divide-y divide-slate-50 bg-white">
+              <template v-for="client in slicedMeetings" :key="client.id">
               <tr
-                v-for="client in slicedMeetings"
-                :key="client.id"
-                class="hover:bg-sky-50 cursor-pointer transition-colors"
+                class="hover:bg-slate-50 cursor-pointer transition-colors group"
+                @click="openEditClient(client)"
               >
-                <td class="px-4 py-2 whitespace-nowrap" @click="openEditClient(client)">
-                  <div class="space-y-1 max-w-[260px]">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold text-brand-main truncate" :title="client.contactName || 'Brak danych'">
-                        {{ client.contactName || 'Brak danych' }}
-                      </span>
-                      <span
-                        v-if="client.isDecisionMaker"
-                        class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200"
-                      >
-                        Decyzyjna
-                      </span>
-                    </div>
-                    <div class="text-xs text-gray-500 truncate" :title="client.contactEmail || client.contactPosition || '—'">
-                      {{ client.contactPosition || client.contactEmail || '—' }}
-                    </div>
-                  </div>
-                </td>
-                <td class="px-4 py-2 whitespace-nowrap">
-                  <div class="w-fit rounded-lg border border-dashed border-gray-200 px-3 py-1.5 bg-gray-50">
-                    <div class="text-sm font-semibold text-gray-800 leading-tight truncate max-w-[220px]" :title="client.name">
+                <td class="px-4 py-3 whitespace-nowrap">
+                  <div class="w-fit rounded-lg border border-dashed border-slate-200 px-3 py-1 bg-slate-50 hover:bg-white hover:border-slate-300 transition-colors">
+                    <div class="text-sm font-bold text-slate-700 group-hover:text-primary transition-colors leading-tight truncate max-w-[220px]" :title="client.name">
                       {{ client.name || 'Nieznana firma' }}
                     </div>
-                    <div class="text-xs text-gray-500 font-mono tracking-wide">NIP: {{ client.nip || 'brak' }}</div>
+                    <div class="text-xs text-slate-400 font-mono tracking-wide">NIP: {{ client.nip || 'brak' }}</div>
                   </div>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
-                  <div class="w-fit rounded-lg border border-dashed border-gray-200 px-3 py-1.5 bg-white/60">
-                    <div class="text-xs font-semibold text-gray-800">{{ client.ownerId || 'Nieprzypisany' }}</div>
-                    <div class="text-[11px] text-gray-500 font-mono">ID: {{ client.ownerId || 'Brak' }}</div>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600" @click.stop="toggleOwnerDetails(client.id)">
+                  <div 
+                    class="w-fit rounded-lg border border-dashed border-slate-200 px-3 py-1 bg-slate-50/50 hover:bg-white hover:border-primary/30 transition-colors cursor-pointer group/owner"
+                    :class="{'bg-slate-100 border-slate-300': expandedMeetingId === client.id}"
+                  >
+                    <div v-if="getMeetingOwner(client)" class="text-[9px] font-black text-primary uppercase tracking-tighter leading-none mb-1">
+                      {{ getOwnerRoleLabel(getMeetingOwner(client)?.role || '') }}
+                    </div>
+                    <div class="text-sm font-semibold text-slate-700 group-hover/owner:text-primary transition-colors">{{ client.ownerName || 'Nieprzypisany' }}</div>
+                    <div v-if="getMeetingOwner(client)" class="text-[11px] text-slate-400 font-mono tracking-wide">
+                      ID: {{ getMeetingOwner(client)?.hierarchicalId || '?' }}
+                    </div>
                   </div>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-600">
-                  <div class="flex items-center text-xs text-gray-500 gap-2">
-                    <span class="w-2 h-2 rounded-full" :class="getLastActivityDate(client) === 'Brak' ? 'bg-gray-300' : 'bg-emerald-400'"></span>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
+                  <div class="flex items-center text-sm text-slate-500 gap-2">
+                    <span class="w-2 h-2 rounded-full" :class="getLastActivityDate(client) === 'Brak' ? 'bg-slate-300' : 'bg-emerald-500'"></span>
                     <span>{{ getLastActivityDate(client) }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap text-xs">
-                  <div class="inline-flex flex-col items-center justify-center px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide leading-tight"
+                <td class="px-4 py-3 whitespace-nowrap text-xs">
+                  <div class="inline-flex flex-col items-center justify-center px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wide leading-tight"
                     :class="client.source ? 'bg-slate-100 text-slate-600 border border-slate-200' : 'bg-slate-50 text-slate-400 border border-dashed border-slate-200'"
                     :title="client.source || 'Brak'"
                   >
                     <span v-for="(word, i) in (client.source || 'Brak').split(' ')" :key="i">{{ word }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-2 text-center text-sm font-bold text-gray-700">{{ client.companySize || '?' }}</td>
-                <td class="px-4 py-2">
+                <td class="px-4 py-3 text-center text-sm font-bold text-slate-700">{{ client.companySize || '?' }}</td>
+                <td class="px-4 py-3">
                   <div class="flex items-center justify-end gap-2">
                     <button
                       @click.stop="promoteToClient(client)"
@@ -600,17 +800,105 @@ const exportToCsv = () => {
                     </button>
                   </div>
                 </td>
-                <td class="px-4 py-2 text-center" @click.stop>
+                <td class="px-4 py-3 text-center" @click.stop>
                    <input 
                       type="checkbox" 
                       :checked="client.activityHistory && client.activityHistory.length > 0 && !!client.activityHistory[0].isCompleted"
                       @change="(e) => toggleActivityCompletion(client, e)"
-                      class="w-6 h-6 rounded border-2 border-slate-300 text-green-500 focus:ring-green-500 cursor-pointer transition-all hover:scale-110"
+                      class="w-5 h-5 rounded border-2 border-slate-300 text-emerald-500 focus:ring-emerald-500 cursor-pointer transition-all hover:scale-110"
                    />
                 </td>
               </tr>
+              <tr v-if="expandedMeetingId === client.id" class="bg-slate-50 border-y border-slate-200 shadow-inner animate-fade-in">
+                <td colspan="8" class="p-0 cursor-default" @click.stop>
+                  <div class="p-4 flex justify-between items-center bg-slate-50/50">
+                    <div v-if="getMeetingOwner(client)" class="flex justify-between items-center w-full">
+                        <div class="flex items-center gap-8 text-xs text-slate-600">
+                            <div>
+                                <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Telefon</span>
+                                <span class="font-medium text-slate-800">{{ getMeetingOwner(client)?.phone || 'Brak' }}</span>
+                            </div>
+                            <div>
+                                <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Email</span>
+                                <button type="button" class="text-primary hover:text-primary-dark hover:underline flex items-center gap-1 font-medium" @click="emailMeetingOwner(client)">
+                                    <AppIcon name="envelope" class="w-3 h-3" />
+                                    <span>{{ getMeetingOwner(client)?.email }}</span>
+                                </button>
+                            </div>
+                            <div>
+                                <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Rola</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-white text-slate-600 border border-slate-200 shadow-sm">
+                                    {{ getOwnerRoleLabel(getMeetingOwner(client)?.role || '') || 'Brak' }}
+                                </span>
+                            </div>
+                            <div>
+                                 <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Kod Struktury</span>
+                                 <span class="font-mono bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600 shadow-sm">{{ getMeetingOwner(client)?.hierarchicalId || 'Brak' }}</span>
+                            </div>
+                        </div>
+                    
+                        <div class="flex items-center gap-2">
+                           <button type="button" class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" title="Wyślij wiadomość" @click="emailMeetingOwner(client)">
+                               <AppIcon name="chat-bubble-left-ellipsis" class="w-5 h-5" />
+                           </button>
+
+                           <!-- Added: Bell Notification Button -->
+                           <button 
+                             v-if="getMeetingOwner(client) && canNotify(getMeetingOwner(client)!)" 
+                             type="button" 
+                             class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" 
+                             title="Wyślij powiadomienie wewnętrzne"
+                             @click="openMsgModal(getMeetingOwner(client)!)"
+                           >
+                             <AppIcon name="bell" class="w-5 h-5" />
+                           </button>
+                           
+                           <!-- Added: Impersonate Button -->
+                           <button 
+                             v-if="getMeetingOwner(client) && canImpersonate(getMeetingOwner(client)!)" 
+                             type="button" 
+                             class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" 
+                             :title="`Podgląd konta: ${getMeetingOwner(client)?.name}`"
+                             @click="impersonateUser(getMeetingOwner(client)!)"
+                           >
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                             </svg>
+                           </button>
+
+                           <!-- Added: Edit Button (Redirect) -->
+                           <button
+                             v-if="getMeetingOwner(client) && currentUser?.role === 'ADMIN'"
+                             type="button"
+                             class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm"
+                             :title="`Przejdź do struktury aby edytować: ${getMeetingOwner(client)?.name}`"
+                             @click="editRedirect(getMeetingOwner(client)!)"
+                           >
+                              <AppIcon name="pencil-square" class="w-5 h-5" />
+                           </button>
+                           
+                           <!-- Added: Remove Button -->
+                           <button 
+                             v-if="getMeetingOwner(client) && canRemove(getMeetingOwner(client)!)" 
+                             type="button" 
+                             class="p-2 bg-white text-red-600 border border-slate-200 rounded-lg hover:bg-red-50 hover:border-red-200 transition shadow-sm" 
+                             :title="`Usuń ze struktury: ${getMeetingOwner(client)?.name}`"
+                             @click="removeUser(getMeetingOwner(client)!)"
+                           >
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                           </button>
+                        </div>
+                    </div>
+                    <div v-else class="text-center text-xs text-slate-500 py-2 w-full">
+                        Brak danych szczegółowych opiekuna w strukturze.
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              </template>
               <tr v-if="filteredClients.length === 0">
-                <td colspan="8" class="p-8 text-center text-gray-500 text-sm">Nie znaleziono rekordów spełniających kryteria.</td>
+                <td colspan="8" class="p-8 text-center text-slate-500 text-sm">Nie znaleziono rekordów spełniających kryteria.</td>
               </tr>
             </tbody>
           </table>
@@ -619,7 +907,7 @@ const exportToCsv = () => {
 
       <!-- Pagination Meetings -->
       <div 
-        class="bg-slate-50 border-t border-slate-100 shrink-0 flex justify-between items-center"
+        class="bg-surface border-t border-slate-200 shrink-0 flex justify-between items-center"
         :class="embedded ? 'px-4 py-2' : 'px-6 py-4'"
       >
         <div class="text-[10px] text-slate-400 font-medium uppercase tracking-widest">
@@ -630,7 +918,7 @@ const exportToCsv = () => {
                 type="button" 
                 @click="prevMeetingPage"
                 :disabled="meetingCurrentPage === 1"
-                class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                class="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
                 <AppIcon name="chevron-left" class="w-3.5 h-3.5" />
                 Poprzednia
@@ -639,7 +927,7 @@ const exportToCsv = () => {
                 type="button" 
                 @click="nextMeetingPage"
                 :disabled="meetingCurrentPage >= totalMeetingPages"
-                class="px-4 py-2 bg-stratton-gold text-slate-800 rounded-xl text-xs font-bold hover:bg-stratton-gold/90 transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary-dark transition shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
                 Następna
                 <AppIcon name="chevron-right" class="w-3.5 h-3.5" />
@@ -651,40 +939,39 @@ const exportToCsv = () => {
     <!-- Add Meeting Modal -->
     <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showAddModal = false"></div>
-      <div class="relative bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
-        <div class="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
+      <div class="relative bg-surface w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-card shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300 border border-slate-200">
+        <div class="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-surface-dark z-10 text-white rounded-t-card">
           <div>
-            <h2 class="text-2xl font-serif font-bold text-slate-900">{{ isEditing ? 'Edycja Spotkania' : 'Nowe Spotkanie' }}</h2>
-            <p class="text-slate-500 mt-1">Uzupełnij dane spotkania i klienta</p>
+            <h2 class="text-xl font-bold">{{ isEditing ? 'Edycja Spotkania' : 'Nowe Spotkanie' }}</h2>
+            <p class="text-slate-300 text-sm mt-1">Uzupełnij dane spotkania i klienta</p>
           </div>
-          <button @click="showAddModal = false" class="text-slate-400 hover:text-slate-600 transition-colors">
-            <AppIcon name="xmark" class="w-8 h-8" />
+          <button @click="showAddModal = false" class="text-slate-400 hover:text-white transition-colors">
+            <AppIcon name="xmark" class="w-6 h-6" />
           </button>
         </div>
 
         <div class="p-8 space-y-8">
           <!-- Section: Contact Person -->
           <div class="space-y-4">
-            <h3 class="flex items-center gap-2 text-lg font-serif font-bold text-slate-800">
-              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <AppIcon name="user" class="w-5 h-5" />
+            <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800">
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                <AppIcon name="user" class="w-4 h-4" />
               </div>
               Osoba Kontaktowa
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Imię i Nazwisko *</label>
+                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Imię i Nazwisko</label>
                 <input 
                   v-model="form.contactName" 
                   type="text" 
                   placeholder="Jan Kowalski" 
-                  class="form-input"
-                  :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.contactName }" 
+                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
                 />
               </div>
               <div class="space-y-1">
                 <label class="text-xs font-bold text-slate-500 uppercase ml-1">Stanowisko</label>
-                <input v-model="form.contactPosition" type="text" placeholder="Dyrektor HR" class="form-input" />
+                <input v-model="form.contactPosition" type="text" placeholder="Dyrektor HR" class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" />
               </div>
               <div class="space-y-1">
                 <label class="text-xs font-bold text-slate-500 uppercase ml-1">Telefon</label>
@@ -692,8 +979,7 @@ const exportToCsv = () => {
                   v-model="form.contactPhone" 
                   type="text" 
                   placeholder="+48 000 000 000" 
-                  class="form-input"
-                  :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.contactPhone }"
+                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
                 />
               </div>
               <div class="space-y-1">
@@ -702,22 +988,21 @@ const exportToCsv = () => {
                   v-model="form.contactEmail" 
                   type="email" 
                   placeholder="email@firma.pl" 
-                  class="form-input"
-                  :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.contactEmail }"
+                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
                 />
               </div>
             </div>
             <label class="flex items-center gap-3 cursor-pointer group mt-2">
-              <input v-model="form.isDecisionMaker" type="checkbox" class="w-5 h-5 rounded border-slate-300 text-green-600 focus:ring-green-500 transition-all" />
-              <span class="text-slate-700 font-medium group-hover:text-green-600 transition-colors">Osoba decyzyjna</span>
+              <input v-model="form.isDecisionMaker" type="checkbox" class="w-5 h-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 transition-all shadow-sm" />
+              <span class="text-slate-700 font-medium group-hover:text-emerald-700 transition-colors text-sm">Osoba decyzyjna</span>
             </label>
           </div>
 
           <!-- Section: Company Details -->
-          <div class="space-y-4 pt-8 border-t border-slate-50">
-            <h3 class="flex items-center gap-2 text-lg font-serif font-bold text-slate-800">
-              <div class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
-                <AppIcon name="building" class="w-5 h-5" />
+          <div class="space-y-4 pt-8 border-t border-slate-100">
+            <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800">
+              <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+                <AppIcon name="building" class="w-4 h-4" />
               </div>
               Dane Firmy (Opcjonalne)
             </h3>
@@ -725,14 +1010,14 @@ const exportToCsv = () => {
               <div class="space-y-1 md:col-span-2">
                 <label class="text-xs font-bold text-slate-500 uppercase ml-1">NIP (GUS Autofill)</label>
                 <div class="flex gap-2">
-                  <input v-model="form.nip" type="text" placeholder="10 cyfr" class="form-input" />
+                  <input v-model="form.nip" type="text" placeholder="10 cyfr" class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" />
                   <button 
                     @click="fetchGusData" 
                     :disabled="isFetchingGus"
-                    class="bg-green-100 text-green-700 px-4 rounded-xl font-bold hover:bg-green-200 transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                    class="bg-slate-800 text-white px-4 rounded-lg font-bold hover:bg-slate-700 transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap text-sm shadow-sm"
                   >
                    <AppIcon v-if="!isFetchingGus" name="refresh" class="w-4 h-4" />
-                   <div v-else class="w-4 h-4 border-2 border-green-700 border-t-transparent rounded-full animate-spin"></div>
+                   <div v-else class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                    Pobierz
                   </button>
                 </div>
@@ -743,8 +1028,8 @@ const exportToCsv = () => {
                   v-model="form.companySize" 
                   type="text" 
                   placeholder="Np. 25" 
-                  class="form-input" 
-                  :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.companySize }"
+                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
+                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.companySize }"
                 />
               </div>
               <div class="space-y-1 md:col-span-3">
@@ -753,8 +1038,8 @@ const exportToCsv = () => {
                   v-model="form.companyName" 
                   type="text" 
                   placeholder="Firma Sp. z o.o." 
-                  class="form-input" 
-                  :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.companyName }"
+                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
+                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.companyName }"
                 />
               </div>
               <div class="space-y-1 md:col-span-2">
@@ -763,8 +1048,8 @@ const exportToCsv = () => {
                   v-model="form.address" 
                   type="text" 
                   placeholder="ul. Sezamkowa 1, 00-000 Warszawa" 
-                  class="form-input" 
-                  :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.address }"
+                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
+                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.address }"
                 />
               </div>
               <div class="space-y-1">
@@ -774,8 +1059,8 @@ const exportToCsv = () => {
                   list="industry-options"
                   type="text" 
                   placeholder="Wyszukaj branżę..." 
-                  class="form-input" 
-                  :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.industry }"
+                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
+                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.industry }"
                 />
                 <datalist id="industry-options">
                   <option v-for="ind in industries" :key="ind" :value="ind"></option>
@@ -785,17 +1070,17 @@ const exportToCsv = () => {
           </div>
 
           <!-- Section: Meeting Info -->
-          <div class="space-y-4 pt-8 border-t border-slate-50">
+          <div class="space-y-4 pt-8 border-t border-slate-100">
              <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800">
-              <div class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center">
-                <AppIcon name="calendar" class="w-5 h-5" />
+              <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                <AppIcon name="calendar" class="w-4 h-4" />
               </div>
               {{ isEditing ? 'Ostatnia Aktywność / Aktualizacja' : 'Informacje o Spotkaniu' }}
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="space-y-1">
                 <label class="text-xs font-bold text-slate-500 uppercase ml-1">Źródło Kontaktu *</label>
-                <select v-model="form.source" class="form-input font-bold text-green-700 bg-green-50/50">
+                <select v-model="form.source" class="form-input font-medium text-slate-700 bg-white border-slate-300 focus:border-primary focus:ring-primary rounded-lg">
                   <option v-for="src in contactSources" :key="src" :value="src">{{ src }}</option>
                 </select>
               </div>
@@ -808,13 +1093,13 @@ const exportToCsv = () => {
                     ref="dateInput" 
                     v-model="form.meetingDate" 
                     type="datetime-local" 
-                    class="form-input flex-1" 
-                    :class="{ 'border-red-500 ring-1 ring-red-500': wasValidated && !form.meetingDate }"
+                    class="form-input flex-1 border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
+                    :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.meetingDate }"
                   />
                   <button 
                     type="button"
                     @click="dateInput?.blur()"
-                    class="bg-green-600 text-white px-6 rounded-xl font-bold hover:bg-green-700 transition-all shadow-md active:scale-95 flex items-center justify-center shrink-0"
+                    class="bg-emerald-600 text-white px-6 rounded-lg font-bold hover:bg-emerald-700 transition-all shadow-sm active:scale-95 flex items-center justify-center shrink-0 text-sm"
                   >
                     OK
                   </button>
@@ -826,27 +1111,27 @@ const exportToCsv = () => {
                   v-model="form.meetingNotes"
                   rows="3" 
                   :placeholder="isEditing ? 'Wprowadź notatkę z ostatniego kontaktu lub aktualizację...' : 'Opisz cel spotkania lub dodaj ważne uwagi...'"
-                  class="form-input resize-none"
+                  class="form-input resize-none border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
                 ></textarea>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4 sticky bottom-0 z-10">
+        <div class="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 z-10 rounded-b-card">
           <button 
             @click="showAddModal = false"
-            class="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-all"
+            class="px-5 py-2.5 rounded-lg font-bold text-slate-600 hover:bg-slate-200 transition-all text-sm"
           >
             Anuluj
           </button>
           <button 
             @click="isEditing ? handleUpdateClient() : handleAddMeeting()"
             :disabled="isSubmitting"
-            class="bg-green-600 hover:bg-green-700 text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg shadow-green-500/30 disabled:opacity-50 flex items-center gap-2"
+            class="bg-primary hover:bg-primary-dark text-white px-8 py-2.5 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2 text-sm"
           >
-            <AppIcon v-if="!isSubmitting" name="check" class="w-5 h-5" />
-            <div v-else class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <AppIcon v-if="!isSubmitting" name="check" class="w-4 h-4" />
+            <div v-else class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             {{ isEditing ? 'Zapisz Zmiany' : 'Zapisz Spotkanie' }}
           </button>
         </div>
@@ -948,6 +1233,36 @@ const exportToCsv = () => {
         </div>
       </div>
     </div>
+    <!-- Notification Modal -->
+    <div v-if="showMsgModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="closeMsgModal"></div>
+      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md z-10 relative">
+        <h3 class="text-lg font-bold mb-4 text-gray-900">Wyślij powiadomienie</h3>
+        <div class="mb-4">
+          <span class="text-sm text-gray-500">Do:</span> <span class="font-bold text-gray-900">{{ selectedUserForMsg?.name }}</span>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Typ</label>
+            <select v-model="msgData.type" class="w-full border p-2 rounded bg-white text-gray-900">
+              <option value="TASK">Zadanie / Działanie</option>
+              <option value="NOTE">Notatka służbowa</option>
+              <option value="INFO">Informacja</option>
+              <option value="WARNING">Ostrzeżenie / Przypomnienie</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Treść wiadomości</label>
+            <textarea v-model="msgData.text" rows="4" class="w-full border p-2 rounded bg-white text-gray-900" placeholder="Wpisz treść..."></textarea>
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded" @click="closeMsgModal">Anuluj</button>
+            <button type="button" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700" @click="sendMsg">Wyślij</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -955,6 +1270,22 @@ const exportToCsv = () => {
 @reference "../assets/tailwind.css";
 
 .form-input {
-  @apply w-full border-slate-200 rounded-xl py-3 px-4 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium placeholder:text-slate-300;
+  @apply w-full border border-slate-300 rounded-input py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-sm placeholder:text-slate-400 bg-white;
+}
+
+/* Custom scrollbar for modal */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 </style>

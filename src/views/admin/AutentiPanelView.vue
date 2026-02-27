@@ -660,9 +660,12 @@ onBeforeUnmount(() => {
               </option>
             </select>
           </div>
-          <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Klient</label>
-            <input v-model="testClientSearch" type="text" class="w-full border rounded px-3 py-2 text-sm mb-2" placeholder="Szukaj klienta po nazwie lub NIP..." />
+          <div class="md:col-span-2 space-y-2">
+            <label class="block text-xs font-semibold text-gray-600">Klient</label>
+            <div class="relative">
+              <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input v-model="testClientSearch" type="text" class="w-full border rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-100 outline-none text-right font-bold transition-all" placeholder="Szukaj klienta po nazwie lub NIP..." />
+            </div>
             <select v-model="testClientId" class="w-full border rounded px-3 py-2 text-sm">
               <option value="">Wybierz klienta</option>
               <option v-for="client in filteredClients" :key="client.id" :value="client.id">
@@ -690,11 +693,11 @@ onBeforeUnmount(() => {
         <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
           <div class="md:col-span-2">
             <label class="block text-xs font-semibold text-gray-600 mb-1">Szukaj</label>
-            <input v-model="filterQuery" type="text" class="w-full border rounded px-3 py-2 text-sm" placeholder="Odbiorca, email, proces..." />
+            <input v-model="filterQuery" type="text" class="crm-input" placeholder="Odbiorca, email, proces..." />
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-            <select v-model="filterStatus" class="w-full border rounded px-3 py-2 text-sm">
+            <select v-model="filterStatus" class="crm-select">
               <option value="">Wszystkie</option>
               <option value="DRAFT">Wersja robocza</option>
               <option value="SENT">Wysłano</option>
@@ -705,7 +708,7 @@ onBeforeUnmount(() => {
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Na stronę</label>
-            <select v-model.number="perPage" class="w-full border rounded px-3 py-2 text-sm">
+            <select v-model.number="perPage" class="crm-select">
               <option :value="10">10</option>
               <option :value="25">25</option>
               <option :value="50">50</option>
@@ -725,24 +728,24 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+        <table class="crm-table divide-y divide-gray-200">
+          <thead class="crm-table-head">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Odbiorca</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dokumenty</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proces</th>
-              <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{{ auth.enabled ? 'Akcje' : 'Akcje (Symulacja)' }}</th>
+              <th class="crm-table-th crm-table-th-xs">Odbiorca</th>
+              <th class="crm-table-th crm-table-th-xs">Dokumenty</th>
+              <th class="crm-table-th crm-table-th-xs">Proces</th>
+              <th class="crm-table-th crm-table-th-xs text-center">Status</th>
+              <th class="crm-table-th crm-table-th-xs text-right">{{ auth.enabled ? 'Akcje' : 'Akcje (Symulacja)' }}</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="doc in documents" :key="doc.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="crm-table-td whitespace-nowrap">
                 <div class="text-sm font-medium text-gray-900">{{ doc.recipientName }}</div>
                 <div class="text-xs text-gray-500">{{ doc.recipientEmail }}</div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-600 max-w-xs truncate" :title="doc.documentList">{{ doc.documentList }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-xs text-gray-600">
+              <td class="crm-table-td whitespace-nowrap text-xs text-gray-600 max-w-xs truncate" :title="doc.documentList">{{ doc.documentList }}</td>
+              <td class="crm-table-td whitespace-nowrap text-xs text-gray-600">
                 <div v-if="doc.autentiProcessId" class="flex flex-col gap-1">
                   <span class="font-mono text-[11px]" :title="doc.autentiProcessId">{{ doc.autentiProcessId }}</span>
                   <a v-if="doc.status !== 'SIGNED' && buildAutentiProcessLink(doc)" :href="buildAutentiProcessLink(doc)" target="_blank" rel="noreferrer" class="text-indigo-600 hover:underline">
@@ -751,13 +754,13 @@ onBeforeUnmount(() => {
                 </div>
                 <span v-else class="text-gray-400">Brak</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-center">
-                <span class="px-2 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full" :class="getAutentiStatusTone(doc.status).className">
+              <td class="crm-table-td whitespace-nowrap text-center">
+                <span class="crm-badge inline-flex items-center gap-1" :class="getAutentiStatusTone(doc.status).className">
                   <AppIcon :name="getAutentiStatusTone(doc.status).icon" class="w-3.5 h-3.5" />
                   {{ getAutentiStatusTone(doc.status).label }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+              <td class="crm-table-td whitespace-nowrap text-right text-sm font-medium space-x-2">
                 <button v-if="!auth.enabled && doc.status === 'SENT'" type="button" class="px-3 py-1.5 text-xs font-medium text-yellow-800 bg-yellow-100 border border-yellow-200 rounded hover:bg-yellow-200" @click="markAsViewed(doc)">
                   Oznacz jako Obejrzany
                 </button>
@@ -782,7 +785,7 @@ onBeforeUnmount(() => {
               </td>
             </tr>
             <tr v-if="documents.length === 0">
-              <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">Brak dokumentów w procesie Autenti.</td>
+              <td colspan="5" class="crm-table-empty text-center">Brak dokumentów w procesie Autenti.</td>
             </tr>
           </tbody>
         </table>
@@ -848,7 +851,10 @@ onBeforeUnmount(() => {
           </div>
           <div class="space-y-2">
             <div class="flex items-center gap-3">
-              <input v-model="fieldSearch" type="text" class="w-full border rounded px-3 py-2 text-sm" placeholder="Szukaj pola..." />
+              <div class="relative flex-1">
+                <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input v-model="fieldSearch" type="text" class="w-full border rounded-lg pl-10 pr-4 py-2 text-sm text-right font-bold outline-none focus:ring-2 focus:ring-indigo-50" placeholder="Szukaj pola..." />
+              </div>
               <span class="text-xs text-gray-500">{{ filterFields(newTagGroup).length }}</span>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -860,26 +866,26 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="border rounded-lg overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+          <table class="crm-table divide-y divide-gray-200">
+            <thead class="crm-table-head">
               <tr>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nazwa</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Slug</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Typ</th>
-                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sync</th>
-                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Akcje</th>
+                <th class="crm-table-th crm-table-th-xs">Nazwa</th>
+                <th class="crm-table-th crm-table-th-xs">Slug</th>
+                <th class="crm-table-th crm-table-th-xs">Typ</th>
+                <th class="crm-table-th crm-table-th-xs">Sync</th>
+                <th class="crm-table-th crm-table-th-xs text-right">Akcje</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
               <tr v-for="template in templates" :key="template.id">
-                <td class="px-4 py-2 text-sm text-gray-700">{{ template.name }}</td>
-                <td class="px-4 py-2 text-xs text-gray-500">{{ template.slug }}</td>
-                <td class="px-4 py-2 text-xs text-gray-500">{{ (template.type || 'pdf').toUpperCase() }}</td>
-                <td class="px-4 py-2 text-xs text-gray-600">
+                <td class="crm-table-td text-sm text-gray-700">{{ template.name }}</td>
+                <td class="crm-table-td text-xs text-gray-500">{{ template.slug }}</td>
+                <td class="crm-table-td text-xs text-gray-500">{{ (template.type || 'pdf').toUpperCase() }}</td>
+                <td class="crm-table-td text-xs text-gray-600">
                   <span v-if="template.autenti_mapped" class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Autenti</span>
                   <span v-else class="px-2 py-1 rounded-full bg-gray-100 text-gray-600">Lokalny</span>
                 </td>
-                <td class="px-4 py-2 text-right text-sm space-x-3">
+                <td class="crm-table-td text-right text-sm space-x-3">
                   <button type="button" class="text-slate-700 hover:underline" @click="previewTemplate(template)">Podgląd PDF</button>
                   <button type="button" class="text-slate-700 hover:underline" @click="downloadTemplate(template)">Pobierz</button>
                   <button type="button" class="text-indigo-600 hover:underline" @click="startEditTemplate(template)">Edytuj</button>
@@ -887,7 +893,7 @@ onBeforeUnmount(() => {
                 </td>
               </tr>
               <tr v-if="templates.length === 0">
-                <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">Brak szablonów.</td>
+                <td colspan="5" class="crm-table-empty text-center">Brak szablonów.</td>
               </tr>
             </tbody>
           </table>
@@ -944,7 +950,10 @@ onBeforeUnmount(() => {
           </div>
           <div class="space-y-2">
             <div class="flex items-center gap-3">
-              <input v-model="fieldSearch" type="text" class="w-full border rounded px-3 py-2 text-sm" placeholder="Szukaj pola..." />
+                <div class="relative flex-1">
+                  <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input v-model="fieldSearch" type="text" class="w-full border rounded-lg pl-10 pr-4 py-2 text-sm text-right font-bold outline-none focus:ring-2 focus:ring-indigo-50" placeholder="Szukaj pola..." />
+                </div>
               <span class="text-xs text-gray-500">{{ filterFields(editTagGroup).length }}</span>
             </div>
             <div class="flex flex-wrap gap-2">

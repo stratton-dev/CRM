@@ -37,6 +37,9 @@ const initialContractType = computed(() => {
 
 store.setContext({ meetingId: meetingId.value, clientId: clientId.value, source: 'quick' });
 
+// Ensure we start fresh when entering Quick Calculator
+store.resetSession();
+
 const goToDetails = () => {
   void router.push({
     path: '/app/calculator',

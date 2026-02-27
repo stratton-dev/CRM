@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import AppIcon from '@/components/AppIcon.vue';
 import { parseExcelData, ImportRow } from '../utils/excelParser';
 import { useCalculatorStore } from '../store/useCalculatorStore';
@@ -26,19 +26,30 @@ const filteredRows = computed(() => {
   return importRows.value.map((row, idx) => ({ row, originalIdx: idx })).filter((item) => !item.row.isValid);
 });
 
-const handleFile = (file: File) => {
+const handleFile = async (file: File) => {
   fileName.value = file.name;
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    const bstr = evt.target?.result;
-    if (!bstr) return;
-    const wb = XLSX.read(bstr, { type: 'binary' });
-    const wsname = wb.SheetNames[0];
-    const ws = wb.Sheets[wsname];
-    const data = XLSX.utils.sheet_to_json(ws, { header: 1, range: 0 });
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+    
+    const worksheet = workbook.worksheets[0];
+    const data: any[][] = [];
+    
+    // ExcelJS rows are 1-based
+    worksheet.eachRow({ includeEmpty: true }, (row, _rowNumber) => {
+      // row.values is 1-based (index 0 is undefined/null usually), so we slice(1)
+      // to get a 0-based array for our parser
+      const rowValues = Array.isArray(row.values) ? row.values.slice(1) : [];
+      data.push(rowValues);
+    });
+
     importRows.value = parseExcelData(data, store.config);
-  };
-  reader.readAsBinaryString(file);
+  } catch (error) {
+    console.error('Error reading excel file:', error);
+    // You might want to show an error message to the user here
+  }
 };
 
 const handleUpload = (event: Event) => {
@@ -266,14 +277,14 @@ const updateRow = (rowIndex: number, patch: Record<string, any>) => {
         </div>
       </div>
       <div class="flex items-center justify-between px-6 py-4 border-t border-slate-200">
-        <button type="button" class="text-xs font-bold text-slate-500" @click="store.generateImportTemplate(20)">
+        <button type="button" class="text-xs font-extrabold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest" @click="store.generateImportTemplate(20)">
           Pobierz szablon
         </button>
         <div class="flex gap-2">
-          <button type="button" class="px-4 py-2 text-xs font-bold border border-slate-200 rounded-lg" @click="emit('close')">
+          <button type="button" class="px-6 py-2.5 text-xs font-bold border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition-all active:scale-95 shadow-sm uppercase" @click="emit('close')">
             Anuluj
           </button>
-          <button type="button" class="px-4 py-2 text-xs font-bold bg-slate-900 text-white rounded-lg" :disabled="stats.valid === 0" @click="confirmImport">
+          <button type="button" class="px-8 py-2.5 text-xs font-extrabold bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white rounded-xl disabled:opacity-50 hover:brightness-110 transition-all shadow-[0_4px_12px_-2px_rgba(197,160,89,0.3)] border border-white/10 active:scale-95 uppercase tracking-widest" :disabled="stats.valid === 0" @click="confirmImport">
             Importuj
           </button>
         </div>

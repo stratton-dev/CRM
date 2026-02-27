@@ -77,11 +77,8 @@ const funnelClients = computed(() => {
 const funnelEstimate = computed(() => {
   const weights: Record<string, number> = {
     NEW: 0.1,
-    IN_TALKS: 0.25,
     OFFER_PREPARING: 0.5,
-    OFFER_GENERATED: 0.7,
     CALCULATION_SENT: 0.85,
-    SPECIAL_OFFER: 0.9,
     SIGNED: 1,
     RESIGNED: 0,
     TERMINATED: 0,

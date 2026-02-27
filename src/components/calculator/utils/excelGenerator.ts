@@ -73,6 +73,9 @@ export const excelGenerator = {
       inputFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF000' } } as ExcelJS.Fill,
     };
 
+    // Eksport zawsze generuje wariant Eliton Prime PLUS niezależnie od wyboru w kroku 5
+    const effectiveProwizjaProc = 26;
+
     const wsSummary = workbook.addWorksheet('Podsumowanie Menadżerskie', { views: [{ showGridLines: false }] });
 
     wsSummary.mergeCells('B2:E2');
@@ -160,7 +163,7 @@ export const excelGenerator = {
           const isStudent = w.pracownik.trybSkladek === 'STUDENT_UZ';
           if (isStudent) return acc;
           return acc + round(w.podzial.swiadczenie.brutto);
-        }, 0) * (prowizjaProc / 100),
+        }, 0) * (effectiveProwizjaProc / 100),
       ),
     };
 
@@ -188,7 +191,7 @@ export const excelGenerator = {
     wsSummary.getColumn('E').width = 25;
 
     const wsDetails = workbook.addWorksheet('Kalkulator Podwyżek');
-    const isPlusVariant = prowizjaProc === 26;
+    const isPlusVariant = true;
     const dataStartRow = 5;
     const dataEndRow = dataStartRow + wyniki.szczegoly.length - 1;
 
@@ -278,7 +281,8 @@ export const excelGenerator = {
         wsDetails.getCell(`G${rowIndex}`).value = adminBonus;
         wsDetails.getCell(`G${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } };
 
-        wsDetails.getCell(`H${rowIndex}`).value = { formula: `D${rowIndex}*$K$2` };
+        // Dodatkowa podwyżka liczona od obecnego netto (kolumna C)
+        wsDetails.getCell(`H${rowIndex}`).value = { formula: `$C${rowIndex}*$K$2` };
         wsDetails.getCell(`H${rowIndex}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFBEB' } };
       }
 

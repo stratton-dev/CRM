@@ -153,21 +153,27 @@ const getTypeLabel = (type: string) => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-between items-center border-b pb-4">
-        <div class="flex items-center space-x-4">
-            <h1 class="text-2xl font-bold text-gray-900">Powiadomienia</h1>
+  <div class="space-y-6 p-6">
+    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border border-slate-800">
+        <div class="relative z-10 flex items-center gap-6">
+            <RouterLink to="/app/dashboard" class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
+                <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            </RouterLink>
+            <div>
+                <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Powiadomienia</h1>
+                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Centrum wiadomości</p>
+            </div>
         </div>
-      <div class="flex space-x-2">
+      <div class="flex space-x-2 relative z-10">
         <button 
             v-if="canSend"
             @click="activeTab = 'SENT'"
-            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors', activeTab === 'SENT' ? 'bg-sky-100 text-sky-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50']">
+            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors', activeTab === 'SENT' ? 'bg-stratton-gold text-white shadow-sm' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700']">
             Wysłane
         </button>
         <button 
             @click="activeTab = 'INBOX'"
-            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors', activeTab === 'INBOX' ? 'bg-sky-100 text-sky-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50']">
+            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors', activeTab === 'INBOX' ? 'bg-stratton-gold text-white shadow-sm' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700']">
             Odebrane
             <span v-if="inboxList.filter(n => !n.read).length > 0" class="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
                 {{ inboxList.filter(n => !n.read).length }}
@@ -176,143 +182,178 @@ const getTypeLabel = (type: string) => {
         <button 
             v-if="canSend"
             @click="activeTab = 'COMPOSE'"
-            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors border', activeTab === 'COMPOSE' ? 'bg-purple-700 text-white border-purple-800 shadow-inner' : 'bg-purple-600 text-white hover:bg-purple-700 border-purple-600 shadow-sm']">
+            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors border', activeTab === 'COMPOSE' ? 'bg-stratton-gold text-white border-stratton-gold shadow-inner' : 'text-stratton-gold border-stratton-gold hover:bg-stratton-gold hover:text-white shadow-sm bg-slate-800']">
             Nowe Powiadomienie
         </button>
       </div>
     </div>
 
     <!-- INBOX TAB -->
-    <div v-if="activeTab === 'INBOX'" class="bg-white shadow overflow-hidden rounded-lg">
-        <div class="px-6 py-4 border-b flex justify-end bg-gray-50">
-            <button type="button" class="text-sm text-sky-600 hover:text-sky-800 font-medium" @click="markAllRead">
+    <div v-if="activeTab === 'INBOX'" class="bg-white rounded-card shadow-card-hover overflow-hidden border border-slate-100">
+        <div class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-surface-subtle">
+            <h2 class="text-xl font-bold text-slate-800">Skrzynka odbiorcza</h2>
+            <button type="button" class="text-sm text-stratton-gold hover:text-stratton-500 font-bold uppercase tracking-wide transition-colors" @click="markAllRead">
                 Oznacz wszystkie jako przeczytane
             </button>
         </div>
-      <ul class="divide-y divide-gray-200">
-        <li v-for="notif in inboxList" :key="notif.id" class="p-6 hover:bg-gray-50 transition" :class="{ 'bg-blue-50': !notif.read }">
-          <div class="flex items-center space-x-4">
-            <div class="flex-shrink-0">
-              <AppIcon :name="getNotificationTone(notif.type).icon" class="w-6 h-6" :class="getNotificationTone(notif.type).className" />
+      <ul class="divide-y divide-slate-100">
+        <li v-for="notif in inboxList" :key="notif.id" class="p-6 hover:bg-slate-50 transition-colors group" :class="{ 'bg-blue-50/30': !notif.read }">
+          <div class="flex items-start gap-5">
+            <div class="flex-shrink-0 mt-1">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-sm" :class="getNotificationTone(notif.type).className.replace('text-', 'bg-').replace('600', '100') + ' ' + getNotificationTone(notif.type).className">
+                    <AppIcon :name="getNotificationTone(notif.type).icon" class="w-5 h-5" />
+                </div>
             </div>
             <div class="flex-1 min-w-0">
-              <p class="text-sm text-gray-900" :class="{ 'font-bold': !notif.read, 'font-medium': notif.read }">
-                {{ notif.message }}
-              </p>
-              <p class="text-xs text-gray-500 mt-1">{{ new Date(notif.date).toLocaleString() }} • {{ getTypeLabel(notif.type) }}</p>
+                <div class="flex justify-between items-start">
+                    <p class="text-sm text-slate-900 leading-snug" :class="{ 'font-bold': !notif.read, 'font-medium': notif.read }">
+                        {{ notif.message }}
+                    </p>
+                    <span class="text-[10px] uppercase font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded ml-3 whitespace-nowrap">{{ getTypeLabel(notif.type) }}</span>
+                </div>
+              <p class="text-xs text-slate-500 mt-2 font-mono">{{ new Date(notif.date).toLocaleString() }}</p>
             </div>
-            <div>
-              <button v-if="!notif.read" type="button" class="text-xs bg-white border border-gray-300 px-2 py-1 rounded text-gray-700 hover:bg-gray-100" @click="markOne(notif.id)">
-                OK
+            <div class="self-center pl-4">
+              <button v-if="!notif.read" type="button" class="text-xs font-bold bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all shadow-sm" @click="markOne(notif.id)">
+                ODZNACZ
               </button>
             </div>
           </div>
         </li>
-        <li v-if="inboxList.length === 0" class="p-10 text-center text-gray-500">Brak powiadomień.</li>
+        <li v-if="inboxList.length === 0" class="p-16 text-center text-slate-400 flex flex-col items-center">
+            <AppIcon name="inbox" class="w-12 h-12 mb-4 text-slate-200" />
+            <span class="font-medium">Wszystkie powiadomienia przeczytane</span>
+        </li>
       </ul>
     </div>
 
     <!-- SENT TAB -->
-    <div v-if="activeTab === 'SENT'" class="bg-white shadow overflow-hidden rounded-lg p-6">
+    <div v-if="activeTab === 'SENT'" class="bg-white rounded-card shadow-card-hover overflow-hidden border border-slate-100 p-0">
+        <div class="px-8 py-6 border-b border-slate-100 bg-surface-subtle">
+             <h2 class="text-xl font-bold text-slate-800">Historia wysłanych</h2>
+        </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Do kogo</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Treść</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <tr v-for="notif in paginatedSentHistory" :key="notif.id" class="hover:bg-gray-50">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ new Date(notif.date).toLocaleString() }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium truncate max-w-xs" :title="notif.userId">{{ notif.userId }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                             <div class="flex items-center">
-                                <AppIcon :name="getNotificationTone(notif.type).icon" class="w-4 h-4 mr-2" :class="getNotificationTone(notif.type).className" />
-                                {{ getTypeLabel(notif.type) }}
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-50">
+            <tr>
+              <th scope="col" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Data</th>
+              <th scope="col" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Odbiorca</th>
+              <th scope="col" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Typ</th>
+              <th scope="col" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 w-1/2">Treść</th>
+              <th scope="col" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-slate-100">
+                    <tr v-for="notif in paginatedSentHistory" :key="notif.id" class="hover:bg-slate-50 transition-colors group">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">{{ new Date(notif.date).toLocaleString() }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-bold truncate max-w-xs" :title="notif.userId">
+                  <div class="flex items-center gap-2">
+                       <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">{{ notif.userId.substring(0,2).toUpperCase() }}</div>
+                       {{ notif.userId }}
+                  </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                             <div class="flex items-center gap-2">
+                                <AppIcon :name="getNotificationTone(notif.type).icon" class="w-4 h-4" :class="getNotificationTone(notif.type).className" />
+                                <span class="font-medium text-xs uppercase tracking-wide">{{ getTypeLabel(notif.type) }}</span>
                              </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs" :title="notif.message">{{ notif.message }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Wysłano
-                             </span>
-                        </td>
+              <td class="px-6 py-4 text-sm text-slate-600 max-w-lg leading-snug" :title="notif.message">{{ notif.message }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                    Wysłano
+                 </span>
+              </td>
                     </tr>
                     <tr v-if="paginatedSentHistory.length === 0">
-                        <td colspan="5" class="px-6 py-10 text-center text-gray-500">Brak wysłanych powiadomień.</td>
+              <td colspan="5" class="px-16 py-12 text-center text-slate-400">
+                  Brak historii wysłanych powiadomień.
+              </td>
                     </tr>
                 </tbody>
             </table>
         </div>
         <!-- Pagination -->
-        <div v-if="totalSentPages > 1" class="flex justify-between items-center mt-4">
-            <button @click="sentPage--" :disabled="sentPage === 1" class="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">Poprzednia</button>
-            <span class="text-sm text-gray-600">Strona {{ sentPage }} z {{ totalSentPages }}</span>
-            <button @click="sentPage++" :disabled="sentPage === totalSentPages" class="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">Następna</button>
+        <div v-if="totalSentPages > 1" class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+            <button @click="sentPage--" :disabled="sentPage === 1" class="px-4 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 hover:text-slate-900 transition-colors">Poprzednia</button>
+            <span class="text-sm font-mono text-slate-500">Strona <span class="font-bold text-slate-900">{{ sentPage }}</span> z {{ totalSentPages }}</span>
+            <button @click="sentPage++" :disabled="sentPage === totalSentPages" class="px-4 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 hover:text-slate-900 transition-colors">Następna</button>
         </div>
     </div>
 
     <!-- COMPOSE TAB -->
-    <div v-if="activeTab === 'COMPOSE' && canSend" class="bg-white shadow rounded-lg p-6 max-w-4xl mx-auto">
-        <form @submit.prevent="sendNotification" class="space-y-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Odbiorca</label>
-                <div class="mt-2 flex space-x-4">
-                    <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" v-model="composeForm.recipientType" value="INDIVIDUAL" class="form-radio text-sky-600">
-                        <span class="ml-2">Osoba</span>
-                    </label>
-                    <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" v-model="composeForm.recipientType" value="GROUP" class="form-radio text-sky-600">
-                        <span class="ml-2">Grupa</span>
-                    </label>
-                    <label class="inline-flex items-center cursor-pointer">
-                        <input type="radio" v-model="composeForm.recipientType" value="ALL" class="form-radio text-sky-600">
-                        <span class="ml-2">Wszyscy</span>
-                    </label>
-                </div>
-            </div>
+    <div v-if="activeTab === 'COMPOSE' && canSend" class="bg-white rounded-card shadow-card-hover p-8 max-w-5xl mx-auto border border-slate-100">
+        <div class="mb-8 border-b border-slate-100 pb-4">
+            <h2 class="text-2xl font-bold text-slate-800">Nowa Wiadomość</h2>
+            <p class="text-slate-500 mt-1">Wypełnij formularz, aby wysłać powiadomienie do pracowników.</p>
+        </div>
 
-            <div v-if="composeForm.recipientType !== 'ALL'">
-                <label class="block text-sm font-medium text-gray-700 mt-4">Wybierz {{ composeForm.recipientType === 'GROUP' ? 'Grupę' : 'Osobę' }}</label>
-                <select v-model="composeForm.recipientId" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md border">
-                    <option value="" disabled>Wybierz...</option>
-                    <option v-for="opt in filteredRecipients" :key="opt.id" :value="opt.id">{{ opt.label }}</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mt-4 mb-2">Typ Powiadomienia</label>
-                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    <label v-for="type in ['REMINDER', 'CONTACT', 'ATTENTION', 'REPRIMAND', 'INFO', 'TASK']" :key="type"
-                        class="relative rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm flex items-center space-x-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                        :class="composeForm.type === type ? 'ring-2 ring-sky-500 border-sky-500 bg-sky-50' : ''">
-                        <input type="radio" name="notification-type" :value="type" v-model="composeForm.type" class="sr-only">
-                        <div class="flex-shrink-0">
-                             <AppIcon :name="getNotificationTone(type).icon" class="h-6 w-6" :class="getNotificationTone(type).className" />
+        <form @submit.prevent="sendNotification" class="space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Odbiorca</label>
+                        <div class="flex p-1 bg-slate-100 rounded-lg border border-slate-200">
+                            <label class="flex-1 text-center cursor-pointer">
+                                <input type="radio" v-model="composeForm.recipientType" value="INDIVIDUAL" class="sr-only peer">
+                                <span class="block py-2 text-sm font-medium rounded-md text-slate-500 peer-checked:bg-white peer-checked:text-stratton-gold peer-checked:shadow-sm transition-all hover:text-slate-700">Osoba</span>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer">
+                                <input type="radio" v-model="composeForm.recipientType" value="GROUP" class="sr-only peer">
+                                <span class="block py-2 text-sm font-medium rounded-md text-slate-500 peer-checked:bg-white peer-checked:text-stratton-gold peer-checked:shadow-sm transition-all hover:text-slate-700">Grupa</span>
+                            </label>
+                            <label class="flex-1 text-center cursor-pointer">
+                                <input type="radio" v-model="composeForm.recipientType" value="ALL" class="sr-only peer">
+                                <span class="block py-2 text-sm font-medium rounded-md text-slate-500 peer-checked:bg-white peer-checked:text-stratton-gold peer-checked:shadow-sm transition-all hover:text-slate-700">Wszyscy</span>
+                            </label>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <span class="absolute inset-0" aria-hidden="true"></span>
-                            <p class="text-sm font-medium text-gray-900">{{ getTypeLabel(type) }}</p>
+                    </div>
+
+                    <div v-if="composeForm.recipientType !== 'ALL'" class="transition-all duration-300 ease-in-out">
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Wybierz {{ composeForm.recipientType === 'GROUP' ? 'Grupę' : 'Osobę' }}</label>
+                        <div class="relative">
+                            <select v-model="composeForm.recipientId" required class="block w-full pl-4 pr-10 py-3 text-base border-slate-300 focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold sm:text-sm rounded-lg border shadow-sm bg-white appearance-none">
+                                <option value="" disabled>Kliknij, aby wybrać z listy...</option>
+                                <option v-for="opt in filteredRecipients" :key="opt.id" :value="opt.id">{{ opt.label }}</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
                         </div>
-                    </label>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div>
+                     <label class="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">Typ Powiadomienia</label>
+                     <div class="grid grid-cols-2 gap-3">
+                        <label v-for="type in ['REMINDER', 'CONTACT', 'ATTENTION', 'REPRIMAND', 'INFO', 'TASK']" :key="type"
+                            class="relative rounded-xl border px-3 py-3 shadow-sm flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition-all group"
+                            :class="composeForm.type === type ? 'ring-2 ring-stratton-gold border-stratton-gold bg-amber-50/50' : 'border-slate-200 hover:border-slate-300'">
+                            <input type="radio" name="notification-type" :value="type" v-model="composeForm.type" class="sr-only">
+                            <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors" :class="composeForm.type === type ? 'bg-white' : 'bg-slate-100 group-hover:bg-white'">
+                                 <AppIcon :name="getNotificationTone(type).icon" class="h-4 w-4" :class="getNotificationTone(type).className" />
+                            </div>
+                            <span class="text-sm font-bold" :class="composeForm.type === type ? 'text-slate-900' : 'text-slate-600'">{{ getTypeLabel(type) }}</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mt-4">Treść Wiadomości</label>
-                <div class="mt-1">
-                    <textarea v-model="composeForm.message" rows="4" required class="shadow-sm focus:ring-sky-500 focus:border-sky-500 block w-full sm:text-sm border-gray-300 rounded-md border p-2" placeholder="Wpisz treść powiadomienia..."></textarea>
+                <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Treść Wiadomości</label>
+                <div class="relative">
+                    <textarea v-model="composeForm.message" rows="5" required class="shadow-sm focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold block w-full sm:text-sm border-slate-300 rounded-lg border p-4 resize-none placeholder-slate-400 transition-all" placeholder="Wpisz treść powiadomienia..."></textarea>
+                    <div class="absolute bottom-3 right-3 text-xs text-slate-400 pointer-events-none">
+                        {{ composeForm.message.length }} znaków
+                    </div>
                 </div>
             </div>
 
-            <div class="pt-5 border-t border-gray-200 flex justify-end">
-                <button type="submit" :disabled="isSending" class="ml-3 inline-flex justify-center py-2 px-6 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 transition-colors">
-                    <AppIcon name="paper-airplane" class="w-4 h-4 mr-2" />
+            <div class="pt-6 border-t border-slate-100 flex justify-end">
+                <button type="submit" :disabled="isSending" class="flex items-center gap-3 px-8 py-3 text-base font-bold text-white rounded-lg shadow-lg shadow-stratton-gold/20 bg-stratton-gold hover:bg-[#B08D55] hover:scale-[1.02] active:scale-[0.98] transition-all transform disabled:opacity-50 disabled:cursor-not-allowed">
+                    <AppIcon name="paper-airplane" class="w-5 h-5" />
                     {{ isSending ? 'Wysyłanie...' : 'Wyślij Powiadomienie' }}
                 </button>
             </div>

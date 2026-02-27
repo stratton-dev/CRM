@@ -96,7 +96,7 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
     <div class="flex flex-col gap-2">
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-3">
-          <div class="p-2 bg-blue-50 rounded-lg text-blue-700">
+          <div class="p-2 bg-amber-50 rounded-lg text-amber-700">
             <AppIcon name="arrow-trending-up" class="w-5 h-5" />
           </div>
           <h2 class="text-2xl font-bold text-slate-900">Wybierz Eliton Prime<sup class="text-[8px] ml-0.5">TM</sup> i pokaż pełną ilustrację oszczędności!</h2>
@@ -113,29 +113,29 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
       <div
-        class="lg:col-span-5 relative p-6 rounded-2xl flex flex-col border-2 cursor-pointer transition-all duration-300"
+        class="lg:col-span-5 relative p-6 rounded-3xl flex flex-col border-3 cursor-pointer transition-all duration-300"
         :class="store.comparisonState.activeCard === 'STANDARD'
-          ? 'bg-white border-blue-500 ring-4 ring-blue-500/10 shadow-xl scale-[1.01] z-10'
-          : 'bg-white border-slate-200 hover:border-blue-200 shadow-sm opacity-80 hover:opacity-100 hover:scale-[1.005]'"
+          ? 'bg-white border-stratton-gold shadow-[0_20px_40px_-15px_rgba(197,160,89,0.3)] scale-[1.02] z-10'
+          : 'bg-white border-slate-100 opacity-60 hover:opacity-100 hover:border-slate-300 shadow-sm'"
         @click="handleSelectStandard"
       >
-        <div v-if="store.comparisonState.activeCard === 'STANDARD'" class="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
-          <AppIcon name="check-circle" class="w-3 h-3" /> Wybrany Model
+        <div v-if="store.comparisonState.activeCard === 'STANDARD'" class="absolute -top-4 left-1/2 -translate-x-1/2 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-[0_4px_12px_rgba(197,160,89,0.5)] flex items-center gap-1.5 z-20">
+          <AppIcon name="check-circle" class="w-3.5 h-3.5" /> Wybrany Model
         </div>
 
         <div class="flex justify-between items-start mb-4">
           <div>
             <div class="flex items-center gap-2 mb-1">
-              <AppIcon name="shield-check" class="w-4 h-4" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-blue-500' : 'text-slate-400'" />
-              <span class="text-xs font-bold uppercase tracking-wider" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-blue-600' : 'text-slate-400'">Wariant Standard</span>
+              <AppIcon name="shield-check" class="w-4 h-4" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-stratton-gold' : 'text-slate-300'" />
+              <span class="text-[10px] font-black uppercase tracking-widest" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-stratton-gold' : 'text-slate-400'">Wariant Standard</span>
             </div>
-            <h3 class="text-xl font-bold" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-slate-900' : 'text-slate-700'">
-              Eliton Prime<sup class="text-[8px] ml-0.5">TM</sup> <span class="text-blue-600">STANDARD</span>
+            <h3 class="text-xl font-black" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-slate-900' : 'text-slate-700'">
+              Eliton Prime<sup class="text-[8px] ml-0.5">TM</sup> <span class="text-stratton-gold">STANDARD</span>
             </h3>
           </div>
 
           <div class="flex flex-col items-end" @click.stop>
-            <div class="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 flex items-baseline gap-0.5">
+            <div class="bg-slate-50 border border-slate-100 rounded-2xl px-4 py-2 flex items-baseline gap-0.5 shadow-inner">
               <span class="text-3xl font-black text-emerald-600 tracking-tighter">{{ store.comparisonState.customStandardRate }}</span>
               <span class="text-xs font-bold text-emerald-500">%</span>
             </div>
@@ -143,7 +143,7 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
         </div>
 
         <div class="flex-1">
-          <ul class="space-y-3 text-sm text-slate-500">
+          <ul class="space-y-3 text-sm text-slate-600">
             <li class="flex gap-3 items-start">
               <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
               <span>Opłata serwisowa od 28% do 31%</span>
@@ -160,42 +160,40 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
         </div>
 
         <div class="mt-6 pt-4 border-t border-slate-100">
-          <div class="text-xs text-slate-400 mb-1 font-medium">Miesięczna oszczędność firmy po opłaceniu usługi Stratton Prime</div>
-          <div class="text-2xl font-bold" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-blue-600' : 'text-slate-400 grayscale'">
+          <div class="text-[10px] text-slate-400 mb-1 font-bold uppercase tracking-widest">Miesięczna oszczędność firmy</div>
+          <div class="text-2xl font-black" :class="store.comparisonState.activeCard === 'STANDARD' ? 'text-slate-900' : 'text-slate-400 grayscale'">
             {{ formatPLN(profitStandardCalc) }}
           </div>
         </div>
       </div>
 
       <div
-        class="lg:col-span-7 relative rounded-2xl flex flex-col border-2 cursor-pointer transition-all duration-300 overflow-visible"
+        class="lg:col-span-7 relative rounded-3xl flex flex-col border-3 cursor-pointer transition-all duration-300 overflow-visible"
         :class="store.comparisonState.activeCard === 'PRIME'
-          ? 'bg-gradient-to-b from-white to-[#FFF9E5] border-amber-400 ring-4 ring-amber-400/20 shadow-2xl scale-[1.01] z-10'
-          : 'bg-white border-slate-200 hover:border-amber-200 shadow-sm opacity-80 hover:opacity-100 hover:scale-[1.005]'"
+          ? 'bg-linear-to-b from-white to-[#FFF9E5] border-stratton-gold shadow-[0_25px_50px_-12px_rgba(197,160,89,0.4)] scale-[1.02] z-10'
+          : 'bg-white border-slate-100 opacity-60 hover:opacity-100 hover:border-slate-300 shadow-sm'"
         @click="handleSelectPrime"
       >
-        <div v-if="store.comparisonState.activeCard === 'PRIME'" class="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 z-20">
-          <AppIcon name="check-circle" class="w-3 h-3" /> Rekomendowany Wybór
+        <div v-if="store.comparisonState.activeCard === 'PRIME'" class="absolute -top-4 left-1/2 -translate-x-1/2 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-[0_4px_12px_rgba(197,160,89,0.5)] flex items-center gap-1.5 z-20">
+          <AppIcon name="trophy" class="w-3.5 h-3.5" /> Rekomendowany Wybór
         </div>
 
         <div class="h-full w-full p-6 flex flex-col relative z-10">
-          <div v-if="store.comparisonState.activeCard === 'PRIME'" class="absolute -top-20 -right-20 w-64 h-64 bg-amber-200/30 blur-[60px] rounded-full pointer-events-none"></div>
-
           <div class="flex justify-between items-start mb-6">
             <div>
               <div class="flex items-center gap-2 mb-1">
-                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider shadow-sm border"
-                  :class="store.comparisonState.activeCard === 'PRIME' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200'">
-                  <AppIcon name="trophy" class="w-3 h-3" /> Rekomendowany
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm border"
+                  :class="store.comparisonState.activeCard === 'PRIME' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-50 text-slate-400 border-slate-200'">
+                  <AppIcon name="star" class="w-3 h-3" /> Rekomendowany
                 </div>
               </div>
-              <h3 class="text-2xl font-extrabold text-slate-900">
-                Eliton Prime<sup class="text-[8px] ml-0.5">TM</sup> <span class="text-amber-600">PLUS</span>
+              <h3 class="text-2xl font-black text-slate-900">
+                Eliton Prime<sup class="text-[8px] ml-0.5">TM</sup> <span class="text-stratton-gold uppercase">Plus</span>
               </h3>
             </div>
 
             <div class="flex flex-col items-end z-20" @click.stop>
-              <div class="bg-slate-50 border border-slate-100 rounded-xl px-4 py-2 flex items-baseline gap-0.5">
+              <div class="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-2.5 flex items-baseline gap-0.5 shadow-inner">
                 <span class="text-4xl font-black text-emerald-600 tracking-tighter">{{ store.comparisonState.customPrimeRate }}</span>
                 <span class="text-sm font-bold text-emerald-500">%</span>
               </div>

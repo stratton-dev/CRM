@@ -48,41 +48,43 @@ function renderChart() {
       .nodeContent((d: any) => {
         if (d.data._expanded) {
           return `
-            <div class="p-4 bg-white rounded-lg shadow-md border border-gray-200" style="width: 300px;">
+            <div class="p-4 bg-surface rounded-card shadow-card-hover border border-slate-200" style="width: 300px;">
               <div class="flex items-center mb-4">
-                <img src="${d.data.avatar_url || 'https://cdn.vectorstock.com/i/1000x1000/30/97/flat-business-man-user-profile-avatar-icon-vector-4333097.jpg'}" class="w-16 h-16 rounded-full mr-4" alt="Avatar">
+                <img src="${d.data.avatar_url || 'https://ui-avatars.com/api/?name=' + d.data.name}" class="w-16 h-16 rounded-full mr-4" alt="Avatar">
                 <div>
-                  <div class="font-bold text-lg">${d.data.name}</div>
-                  <div class="text-gray-500">${d.data.position}</div>
+                  <div class="font-bold text-lg text-slate-900">${d.data.name}</div>
+                  <div class="text-slate-500 text-sm">${d.data.role}</div>
                 </div>
               </div>
-              <div class="space-y-2 text-sm">
-                <div><strong>ID Hier.:</strong> ${d.data.id_hier}</div>
-                <div><strong>Email:</strong> ${d.data.email}</div>
-                <div><strong>Telefon:</strong> ${d.data.phone_number}</div>
-                <div><strong>Status:</strong> <span class="px-2 py-1 text-xs font-semibold rounded-full ${d.data.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${d.data.is_active ? 'Aktywny' : 'Nieaktywny'}</span></div>
-              </div>
-              <div class="mt-4 flex justify-end space-x-2">
-                <button class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm">Zarządzaj</button>
-                <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-md text-sm">Zobacz profil</button>
+              <div class="space-y-2 text-sm text-slate-600">
+                <div><strong class="text-slate-500">ID Hier.:</strong> ${d.data.hierarchicalId || '-'}</div>
+                <div><strong class="text-slate-500">Email:</strong> ${d.data.email}</div>
+                <div><strong class="text-slate-500">Telefon:</strong> ${d.data.phone || '-'}</div>
+                <div>
+                  <strong class="text-slate-500">Status:</strong> 
+                  <span class="px-2 py-0.5 text-xs font-semibold rounded-full ${d.data.enabled !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                    ${d.data.enabled !== false ? 'Aktywny' : 'Nieaktywny'}
+                  </span>
+                </div>
               </div>
             </div>
           `
         }
         return `
-          <div class="px-6 py-3 bg-gray-800 text-white rounded-lg shadow-lg">
-            <div class="font-semibold text-center">${d.data.id_hier}</div>
+          <div class="px-3 py-2 bg-surface-dark text-white rounded-card shadow-card border border-slate-700 min-w-[120px] text-center">
+            <div class="font-bold text-sm">${d.data.name}</div>
+            <div class="text-xs text-slate-400 font-mono mt-1">${d.data.hierarchicalId || d.data.role}</div>
           </div>
         `
       })
       .onNodeClick((d: any) => {
-        // In d3-org-chart, you might need to manually trigger a re-render
-        // by slightly modifying the data or calling the render method again.
         const clickedId = typeof d === 'object' ? d?.id ?? d?.data?.id : d
         const node = data.value.find((n) => n.id === clickedId)
         if (node) {
           node._expanded = !node._expanded
-          chart?.render()
+          if (chart) {
+            chart.render()
+          }
         }
       })
       .render()

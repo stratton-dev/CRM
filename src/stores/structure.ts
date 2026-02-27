@@ -430,8 +430,10 @@ export const useStructureStore = defineStore('structure', () => {
   }
 
   const canImpersonate = (currentUser: User, targetNode: User) => {
-    if (targetNode.id === currentUser.id) return false
+    // Super Admin / Admin has full access, can impersonate anyone including self/other admins
     if (currentUser.role === 'ADMIN') return true
+
+    if (targetNode.id === currentUser.id) return false
     if (targetNode.role === 'CLIENT_HR') return false
 
     const myLevel = getRoleLevel(currentUser.role)
@@ -440,7 +442,9 @@ export const useStructureStore = defineStore('structure', () => {
   }
 
   const canRemove = (currentUser: User, targetNode: User) => {
-    if (currentUser.role === 'ADMIN') return targetNode.id !== currentUser.id
+    // Super Admin / Admin has full access
+    if (currentUser.role === 'ADMIN') return true
+    
     if (currentUser.role === 'DIRECTOR') {
       const descendants = getSubtreeUserIds(currentUser.id)
       return descendants.includes(targetNode.id)

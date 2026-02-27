@@ -100,10 +100,10 @@ export const useClientStore = defineStore('client', () => {
   const mapMeetingToStatus = (meeting?: ApiMeeting): Client['status'] => {
     if (!meeting) return 'NEW'
     if (meeting.offer_status === 'preparing') return 'OFFER_PREPARING'
-    if (meeting.offer_status === 'generated') return 'OFFER_GENERATED'
+    if (meeting.offer_status === 'generated') return 'OFFER_PREPARING'
     if (meeting.offer_status === 'sent') return 'CALCULATION_SENT'
-    if (meeting.status === 'open') return 'IN_TALKS'
-    if (meeting.status === 'completed') return meeting.calculation_shown ? 'CALCULATION_SENT' : 'IN_TALKS'
+    if (meeting.status === 'open') return 'NEW'
+    if (meeting.status === 'completed') return meeting.calculation_shown ? 'CALCULATION_SENT' : 'OFFER_PREPARING'
     if (meeting.status === 'expired') return 'RESIGNED'
     return 'NEW'
   }
@@ -140,6 +140,7 @@ export const useClientStore = defineStore('client', () => {
 
       const profile = (client as any).crm_profile || {}
       const profileOwnerKeycloak = profile.owner?.keycloak_id ? String(profile.owner.keycloak_id) : null
+      const ownerName = profile.owner?.name || latestMeeting?.user?.name || ''
 
       const savedOffers = apiSavedOffers.value
         .filter((offer) => String(offer.client_id) === String(client.id))
@@ -167,6 +168,7 @@ export const useClientStore = defineStore('client', () => {
             : latestMeeting?.user_id
               ? String(latestMeeting.user_id)
               : '',
+        ownerName,
         meetingId: latestMeeting?.id ? String(latestMeeting.id) : undefined,
         meetingStatus: latestMeeting?.status,
         meetingValidUntil: latestMeeting?.valid_until || null,
@@ -675,13 +677,37 @@ export const useClientStore = defineStore('client', () => {
           const id = idStr.replace('meeting-', '')
           const updatePayload: any = {
              resume_at: activity.date,
+             // Force refresh valid_until if moved significantly (optional, but good practice)
           }
           if (activity.isCompleted !== undefined) {
              updatePayload.status = activity.isCompleted ? 'completed' : 'open'
           }
+          
+          // Optimistic update
+          const meetingIdx = apiMeetings.value.findIndex((m: any) => String(m.id) === id)
+          if (meetingIdx !== -1) {
+            // Force new array reference and new object reference for deep reactivity
+            const newArr = [...apiMeetings.value]
+            newArr[meetingIdx] = { ...newArr[meetingIdx], resume_at: activity.date }
+            apiMeetings.value = newArr
+          }
+          
           await api.patch(`/v1/meetings/${id}`, updatePayload)
+          // Force immediate refresh to reflect new date
+          await refreshApiData() 
         } else if (idStr.startsWith('activity-')) {
           const id = idStr.replace('activity-', '')
+          
+          // Optimistic update
+          const activityIdx = apiActivities.value.findIndex((a: any) => String(a.id) === id)
+          if (activityIdx !== -1) {
+            // Force new array reference and new object reference for deep reactivity
+            const newArr = [...apiActivities.value]
+            newArr[activityIdx] = { ...newArr[activityIdx], occurred_at: activity.date }
+            apiActivities.value = newArr
+            console.log('Optimistic update applied:', apiActivities.value[activityIdx])
+          }
+
           await api.patch(`/v1/crm-client-activities/${id}`, {
             type: activity.type,
             description: activity.description,
@@ -689,8 +715,9 @@ export const useClientStore = defineStore('client', () => {
             user_id: activity.authorId,
             is_completed: activity.isCompleted
           })
+
+          await refreshApiData()
         }
-        await refreshApiData()
         toast.success('Zaktualizowano zdarzenie')
       } catch (e) {
         console.error('Update activity error:', e)

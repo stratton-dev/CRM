@@ -333,34 +333,34 @@ const sendEmail = async () => {
   <div class="max-w-4xl mx-auto p-6 animate-fade-in-up">
     <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
       <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-gray-800 flex items-center">
-          <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+        <h2 class="text-xl font-bold text-gray-800 flex items-center">
+          <svg class="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
           Nowa Wiadomość
         </h2>
         <button type="button" class="text-gray-400 hover:text-gray-600" @click="cancel">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
 
       <div class="p-6 space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-gray-500 mb-1">Do:</label>
+            <label class="block text-sm font-semibold text-gray-500 mb-1">Do:</label>
             <div class="relative">
-              <input v-model="emailTo" type="email" class="w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 pl-8 text-sm py-2" />
-              <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+              <input v-model="emailTo" type="email" class="w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 pl-8 text-base py-3" />
+              <svg class="w-5 h-5 absolute left-2.5 top-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
             </div>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-1">Temat:</label>
-          <input v-model="subject" type="text" class="w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-gray-50 focus:bg-white transition-colors py-2" />
+          <label class="block text-sm font-semibold text-gray-500 mb-1">Temat:</label>
+          <input v-model="subject" type="text" class="w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 font-medium text-gray-700 bg-gray-50 focus:bg-white transition-colors py-3 text-base" />
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-2">Załączniki:</label>
-          <div class="text-xs text-gray-500">
+          <label class="block text-sm font-semibold text-gray-500 mb-2">Załączniki:</label>
+          <div class="text-sm text-gray-500">
             <template v-if="attachmentSummary.length">
               <ul class="list-disc pl-4">
                 <li v-for="file in attachmentSummary" :key="file.name">{{ file.name }}</li>
@@ -373,17 +373,17 @@ const sendEmail = async () => {
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-500 mb-1">Treść wiadomości:</label>
-          <textarea v-model="content" rows="12" class="w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm leading-relaxed p-4 font-sans text-gray-700"></textarea>
+          <label class="block text-sm font-semibold text-gray-500 mb-1">Treść wiadomości:</label>
+          <textarea v-model="content" rows="12" class="w-full border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-base leading-relaxed p-4 font-sans text-gray-700"></textarea>
         </div>
       </div>
 
       <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
-        <button type="button" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors" @click="cancel">
+        <button type="button" class="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors text-base" @click="cancel">
           Anuluj
         </button>
-        <button type="button" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-md hover:bg-indigo-700 hover:shadow-lg transition-all flex items-center" @click="sendEmail">
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+        <button type="button" class="px-8 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#C5A059] text-white rounded-xl font-bold shadow-md hover:brightness-110 hover:shadow-lg transition-all flex items-center text-base uppercase tracking-wider" @click="sendEmail">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
           Wyślij Ofertę
         </button>
       </div>

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildOfferPdfHtml } from '../src/components/calculator/utils/offerPdfGenerator.js';
+import { buildOfferPdfHtml } from '../src/components/calculator/utils/offer-generator/index.js';
 import { DEFAULT_CONFIG } from '../src/components/calculator/tax-engine/constants.js';
 import type { ZapisanaKalkulacja } from '../src/components/calculator/models/history.js';
 import type { Pracownik } from '../src/components/calculator/models/employee.js';

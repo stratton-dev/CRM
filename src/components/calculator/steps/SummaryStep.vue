@@ -3,14 +3,19 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppIcon from '@/components/AppIcon.vue';
 import { useCalculatorStore } from '../store/useCalculatorStore';
+import { useMailboxStore } from '@/stores/mailbox';
 import { formatPLN } from '../utils/formatters';
 import { ZapisanaKalkulacja } from '../models/history';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
 
+import { useToastStore } from '@/stores/toast';
+
 const emit = defineEmits<{ (event: 'backToDashboard'): void }>();
 const store = useCalculatorStore();
+const mailboxStore = useMailboxStore();
 const auth = useAuthStore();
+const toast = useToastStore();
 const router = useRouter();
 const isSaving = ref(false);
 const showOfferModal = ref(false);
@@ -47,7 +52,7 @@ const yAxisTicks = computed(() => {
   return ticks.reverse();
 });
 
-const offerButtonLabel = computed(() => (isOfferLocked.value ? 'Oferta gotowa' : 'Generuj ofertę'));
+const offerButtonLabel = computed(() => (isOfferLocked.value ? 'Wygeneruj ponownie' : 'Generuj ofertę'));
 
 const buildSnapshot = (): ZapisanaKalkulacja | null => {
   if (!store.wyniki) return null;
@@ -87,6 +92,12 @@ const handlePreviewOffer = async (layout: 'horizontal' | 'vertical') => {
   const snapshot = buildSnapshot();
   if (!snapshot) return;
   await store.generateOfferPdf(snapshot, { documentLayout: layout });
+};
+
+const handleTestOffer = async () => {
+  const snapshot = buildSnapshot();
+  if (!snapshot) return;
+  await store.generateTestOfferPdf(snapshot, { documentLayout: 'vertical' });
 };
 
 const handleGenerateOffer = async (layout: 'horizontal' | 'vertical') => {
@@ -131,17 +142,58 @@ const confirmGenerateOffer = async () => {
   await handleGenerateOffer(documentLayout.value);
 };
 
-const openOfferEmail = () => {
-  const meetingId = store.context.meetingId ? String(store.context.meetingId) : '';
-  const clientId = store.context.clientId ? String(store.context.clientId) : '';
-  router.push({
-    path: '/app/sales/email-compose',
-    query: {
-      meetingId,
-      clientId,
-      template: 'offer-calculator',
-    },
-  });
+const openOfferEmail = async (force: boolean | Event = false) => {
+  const shouldForce = typeof force === 'boolean' ? force : false;
+  if (isSaving.value && !shouldForce) return;
+  isSaving.value = true;
+  try {
+    const attachmentsData = await store.buildOfferEmailAttachments();
+    if (!attachmentsData) {
+      toast.error('Nie znaleziono danych oferty. Proszę wygenerować ofertę ponownie.');
+      return;
+    }
+
+    const { offerHtml, offerFileName, excelBase64, excelFileName } = attachmentsData;
+
+    const attachments: Array<{
+      filename: string;
+      content?: string;
+      content_type?: string;
+      encoding?: string;
+      html?: string;
+      convert_to_pdf?: boolean;
+    }> = [
+      {
+        filename: offerFileName,
+        html: offerHtml,
+        convert_to_pdf: true
+      }
+    ];
+
+    if (excelBase64) {
+      attachments.push({
+        filename: excelFileName,
+        content: excelBase64,
+        content_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        encoding: 'base64'
+      });
+    }
+
+    mailboxStore.composeState = {
+      open: true,
+      to: store.firma.email,
+      subject: `Propozycja współpracy - Stratton Prime - ${store.firma.nazwa}`,
+      body: '<p>Szanowni Państwo,</p><p>W załączeniu przesyłam przygotowaną ofertę oraz kalkulację oszczędności.</p><br><p>Z poważaniem,</p>',
+      attachments
+    };
+    
+    await router.push('/app/mailbox');
+  } catch (error) {
+    console.error(error);
+    toast.error('Wystąpił błąd podczas przygotowywania wiadomości.');
+  } finally {
+    isSaving.value = false;
+  }
 };
 
 onMounted(async () => {
@@ -166,10 +218,11 @@ onMounted(async () => {
 <template>
   <div class="space-y-6">
     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-slate-900">Podsumowanie</h3>
-        <button type="button" class="text-xs font-bold text-slate-500" @click="emit('backToDashboard')">
-          Wroc do pulpitu
+      <div class="flex items-center justify-between mb-8">
+        <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight">Podsumowanie</h3>
+        <button type="button" class="group flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest" @click="emit('backToDashboard')">
+          <AppIcon name="arrow-left" class="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
+          Wróć do pulpitu
         </button>
       </div>
 
@@ -221,7 +274,7 @@ onMounted(async () => {
             >
               <!-- Bar -->
               <div 
-                class="w-full max-w-[24px] bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t-lg transition-all duration-300 group-hover:scale-x-110 group-hover:brightness-110 cursor-pointer shadow-lg shadow-emerald-500/10"
+                class="w-full max-w-6 bg-linear-to-t from-emerald-600 to-emerald-400 rounded-t-lg transition-all duration-300 group-hover:scale-x-110 group-hover:brightness-110 cursor-pointer shadow-lg shadow-emerald-500/10"
                 :style="{ height: `${(item.value / maxChartValue) * 100}%` }"
               >
                 <!-- Tooltip Overlay -->
@@ -244,24 +297,28 @@ onMounted(async () => {
     </div>
 
     <div class="flex flex-wrap gap-3">
-      <button type="button" class="px-6 py-3 rounded-xl bg-slate-900 text-white text-sm font-bold" @click="handleSave">
+      <button type="button" class="h-12 px-8 rounded-xl bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white text-xs font-black uppercase tracking-widest shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] border border-white/20 hover:brightness-110 transition-all active:scale-95" @click="handleSave">
         Zapisz lokalnie
       </button>
-      <button type="button" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-bold" @click="handleExcel">
+      <button type="button" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-bold hover:bg-slate-50 transition-all active:scale-95 shadow-sm" @click="handleExcel">
         Eksportuj Excel
       </button>
-      <button type="button" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-bold" @click="handleDetailedExcel">
+      <button type="button" class="px-6 py-3 rounded-xl border border-slate-200 text-sm font-bold hover:bg-slate-50 transition-all active:scale-95 shadow-sm" @click="handleDetailedExcel">
         Eksportuj Excel szczegółowy
       </button>
-      <button type="button" class="px-6 py-3 rounded-xl bg-indigo-600 text-white text-sm font-bold flex items-center gap-2 hover:bg-indigo-700 disabled:opacity-50" :disabled="isSaving" @click="openOfferModal">
+      <button type="button" class="px-6 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-sm font-bold hover:bg-rose-100 transition-all active:scale-95" @click="handleTestOffer">
+        Test PDF
+      </button>
+      <button type="button" class="px-8 py-3 rounded-xl bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white text-xs font-black flex items-center gap-2 hover:brightness-110 transition-all shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] border border-white/20 active:scale-95 disabled:opacity-50 uppercase tracking-widest h-14" :disabled="isSaving" @click="openOfferModal">
         <AppIcon name="document-text" class="w-4 h-4" />
-        {{ isSaving ? 'Przygotowywanie oferty...' : offerButtonLabel }}
+        {{ isSaving ? 'Przygotowywanie...' : offerButtonLabel }}
       </button>
-      <button v-if="isOfferLocked" type="button" class="px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold flex items-center gap-2 hover:bg-emerald-700" @click="openOfferEmail">
-        <AppIcon name="envelope" class="w-4 h-4" />
-        Wyślij ofertę
+      <button v-if="isOfferLocked" type="button" class="px-8 py-3 rounded-xl bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white text-xs font-black flex items-center gap-2 hover:brightness-110 transition-all shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] border border-white/20 active:scale-95 uppercase tracking-widest h-14" :disabled="isSaving" @click="openOfferEmail">
+        <AppIcon v-if="!isSaving" name="envelope" class="w-4 h-4" />
+        <AppIcon v-else name="arrow-path" class="w-4 h-4 animate-spin" />
+        {{ isSaving ? 'Wysyłanie...' : 'Wyślij ofertę' }}
       </button>
-      <p v-if="isOfferLocked" class="text-xs text-slate-500 self-center">Oferta została już wygenerowana — możesz otworzyć podgląd.</p>
+      <p v-if="isOfferLocked" class="text-xs text-slate-500 self-center font-medium italic">Oferta została już wygenerowana — możesz otworzyć podgląd.</p>
     </div>
 
     <div v-if="showOfferModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click="showOfferModal = false">
@@ -282,11 +339,13 @@ onMounted(async () => {
           </div>
         </div>
         <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
-          <button type="button" class="px-4 py-2 text-xs font-bold border border-slate-200 rounded-lg" @click="showOfferModal = false">
+          <button type="button" class="px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 transition-colors" @click="showOfferModal = false">
             Anuluj
           </button>
-          <button type="button" class="px-4 py-2 text-xs font-bold bg-slate-900 text-white rounded-lg" :disabled="isSaving" @click="confirmGenerateOffer">
-            {{ offerAction === 'preview' ? 'Pokaż' : 'Generuj' }}
+          <button type="button" class="px-8 h-12 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white rounded-xl shadow-[0_8px_16px_-4px_rgba(197,160,89,0.4)] transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 border border-white/20 disabled:opacity-50" :disabled="isSaving" @click="confirmGenerateOffer">
+            <AppIcon v-if="offerAction === 'preview'" name="eye" class="w-4 h-4" />
+            <AppIcon v-else name="bolt" class="w-4 h-4" />
+            <span>{{ offerAction === 'preview' ? 'Pokaż' : 'Generuj' }}</span>
           </button>
         </div>
       </div>

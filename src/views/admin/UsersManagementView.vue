@@ -62,30 +62,30 @@ const saveConfig = () => {
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="lg:col-span-2 crm-card">
         <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
           <h3 class="font-bold text-slate-700">Użytkownicy Systemu</h3>
-          <input v-model="userSearchQuery" type="text" placeholder="Filtruj użytkowników..." class="w-64 text-sm px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-stratton-gold" />
+          <input v-model="userSearchQuery" type="text" placeholder="Filtruj użytkowników..." class="w-64 crm-input" />
         </div>
         <div class="max-h-[600px] overflow-y-auto">
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-slate-50">
+          <table class="crm-table divide-y divide-slate-200">
+            <thead class="crm-table-head">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Użytkownik</th>
-                <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Rola</th>
-                <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Akcje</th>
+                <th class="crm-table-th crm-table-th-xs">Użytkownik</th>
+                <th class="crm-table-th crm-table-th-xs">Rola</th>
+                <th class="crm-table-th crm-table-th-xs text-right">Akcje</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">
               <tr v-for="u in filteredUsers" :key="u.id" class="hover:bg-slate-50 transition">
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="crm-table-td whitespace-nowrap">
                   <div class="text-sm font-bold text-slate-900">{{ u.name }}</div>
                   <div class="text-xs text-slate-500">{{ u.email }}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                <td class="crm-table-td whitespace-nowrap text-sm text-slate-500">
                   <span class="px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-slate-100 text-slate-600 border border-slate-200">{{ u.role }}</span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td class="crm-table-td whitespace-nowrap text-right text-sm font-medium">
                   <button type="button" class="text-indigo-600 hover:text-indigo-900 mr-3 font-bold" @click="editUser(u)">Edytuj</button>
                   <button v-if="u.isBlocked" type="button" class="text-green-600 hover:text-green-900 font-bold" @click="toggleBlock(u)">Odblokuj</button>
                   <button v-else type="button" class="text-red-500 hover:text-red-700 font-bold" @click="toggleBlock(u)">Zablokuj</button>

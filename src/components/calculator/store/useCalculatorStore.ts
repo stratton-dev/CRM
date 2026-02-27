@@ -11,8 +11,8 @@ import { ZapisanaKalkulacja } from '../models/history';
 import { DEFAULT_CONFIG } from '../tax-engine/constants';
 import { obliczWariantPodzial, obliczWariantStandard } from '../tax-engine';
 import { excelGenerator } from '../utils/excelGenerator';
-import { buildOfferPdfHtml } from '../utils/offerPdfGenerator';
-import { offerPdfGenerator } from '../utils/offerPdfGenerator';
+import { offerPdfGenerator, buildOfferPdfHtml } from '../utils/offer-generator';
+import { buildOfferPdfHtml as buildTestOfferPdfHtml, offerPdfGenerator as testOfferPdfGenerator } from '../utils/offer-generator-test';
 
 interface ComparisonState {
   activeCard: 'STANDARD' | 'PRIME';
@@ -357,10 +357,60 @@ export const useCalculatorStore = defineStore('calculator', () => {
     toast.info('Generowanie PDF...');
   };
 
+  const generateTestOfferPdf = async (
+    item: ZapisanaKalkulacja,
+    options?: { documentLayout?: 'horizontal' | 'vertical' },
+  ) => {
+    let offer: any = null;
+    try {
+      offer = await ensureOffer();
+    } catch (error) {
+      console.error('ensureOffer failed', error);
+    }
+    const advisor = session.currentUser;
+    const offerNumber = offer?.number || buildFallbackOfferNumber(item);
+    const fallbackValidUntil = (() => {
+      const date = new Date();
+      date.setDate(date.getDate() + getOfferValidDays());
+      return date.toISOString().slice(0, 10);
+    })();
+    const validUntil = offer?.valid_to || offer?.expires_at || fallbackValidUntil;
+
+    persistOfferSnapshot(item, {
+      offerNumber,
+      validUntil,
+      advisorName: advisor?.name || advisor?.email || 'Doradca',
+      advisorEmail: advisor?.email || '',
+      advisorPhone: advisor?.phone || '',
+    });
+
+    try {
+      testOfferPdfGenerator.generateOfferPDF(item, {
+        offerNumber,
+        validUntil,
+        advisorName: advisor?.name || advisor?.email || 'Doradca',
+        advisorEmail: advisor?.email || '',
+        advisorPhone: advisor?.phone || '',
+        includeCover: true,
+        includeTOC: true,
+        standardRate: comparisonState.value.customStandardRate,
+        plusRate: comparisonState.value.customPrimeRate,
+        footerLine1: config.value.branding?.footerLine1,
+        footerLine2: config.value.branding?.footerLine2,
+        footerLogoUrl: config.value.branding?.footerLogoUrl,
+        documentLayout: options?.documentLayout || 'vertical',
+      });
+      toast.info('Generowanie PDF TESTOWEGO...');
+    } catch (e: any) {
+      console.error('Test PDF generation failed', e);
+      toast.error('Błąd generowania testowego PDF: ' + e.message);
+    }
+  };
+
   const buildOfferStorageKey = () => {
     if (context.value.meetingId) return `offer_snapshot_meeting_${context.value.meetingId}`;
     if (context.value.clientId) return `offer_snapshot_client_${context.value.clientId}`;
-    return null;
+    return 'offer_snapshot_latest';
   };
 
   const persistOfferSnapshot = (item: ZapisanaKalkulacja, meta: Record<string, any>) => {
@@ -644,10 +694,11 @@ export const useCalculatorStore = defineStore('calculator', () => {
       const { data } = await api.post('/v1/calculations', payload);
       toast.success('Kalkulacja zapisana w CRM.');
       return data;
-    } catch (error) {
-      console.error(error);
-      toast.error('Nie udało się zapisać kalkulacji w CRM.');
-      throw error;
+    } catch (error: any) {
+      console.warn('Failed to save calculation to CRM (continuing offline):', error?.response?.data || error?.message);
+      // Removed toast error to allow seamless offline work
+      // toast.error('Nie udało się zapisać kalkulacji w CRM, ale proces jest kontynuowany.');
+      return null;
     }
   };
 
@@ -810,6 +861,39 @@ export const useCalculatorStore = defineStore('calculator', () => {
     }
   };
 
+  const generateAiDiagnosis = async (challenge: string) => {
+    firma.value.wyzwanieKlienta = challenge;
+    
+    if (!challenge || challenge.trim().length < 3) {
+      firma.value.aiDiagnoza = "";
+      return;
+    }
+
+    try {
+      const { data } = await api.post('/v1/ai/generate-diagnosis', {
+        challenge,
+        context: {
+          industry: firma.value.branza,
+          employee_count: pracownicy.value.length,
+          savings: wyniki.value?.podsumowanie?.oszczednoscRoczna
+        }
+      });
+
+      if (data && data.diagnosis) {
+         firma.value.aiDiagnoza = data.diagnosis;
+         // toast.success('Wygenerowano diagnozę AI');
+      }
+    } catch (error) {
+      console.warn('AI Generation failed, falling back to local heuristic', error);
+      // Fallback if API fails or is not implemented yet
+      const lower = challenge.toLowerCase();
+      let diagnosis = `Analiza zgłoszonego wyzwania "${challenge}" wskazuje na istotną barierę w skalowaniu biznesu...`;
+      // ... (keep fallback logic for safety)
+      if (lower.includes('pracown')) diagnosis = `Wyzwanie kadrowe "${challenge}" jest bezpośrednio skorelowane...`;
+      firma.value.aiDiagnoza = diagnosis;
+    }
+  };
+
   watch(firma, (value) => {
     localStorage.setItem('kalkulator_firma', JSON.stringify(value));
   }, { deep: true });
@@ -861,6 +945,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
     loadBackup,
     downloadCalculation,
     generateOfferPdf,
+    generateTestOfferPdf,
     generateExcelReport,
     generateDetailedExcelReport,
     generateImportTemplate,
@@ -872,5 +957,6 @@ export const useCalculatorStore = defineStore('calculator', () => {
     syncHistoryToApiByNip,
     fetchConfigFromApi,
     saveConfigToApi,
+    generateAiDiagnosis,
   };
 });

@@ -1,0 +1,28 @@
+@layer components {
+  .crm-section { @apply space-y-4; }
+  .crm-section-header { @apply flex items-center justify-between; }
+  .crm-heading { @apply text-2xl font-semibold textstratton700; }
+  .crm-action-btn { @apply px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg bg-white hover:bg-gray-50 transition-colors; }
+
+  .crm-card { @apply bg-white rounded-card border border-border shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden; }
+  .crm-table-wrapper { @apply overflow-x-auto; }
+  .crm-table { @apply min-w-full text-sm; }
+  .crm-table-head { @apply bg-gray-50 text-left; }
+  .crm-table-th { @apply px-4 py-2 font-semibold text-slate-700; }
+  .crm-table-th-xs { @apply px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-500; }
+  .crm-table-td { @apply px-4 py-2 text-slate-700; }
+  .crm-table-row { @apply border-t border-slate-200; }
+  .crm-table-empty { @apply px-4 py-3 text-gray-500; }
+  .crm-table-error { @apply px-4 py-3 text-red-600; }
+  .crm-loading { @apply flex items-center gap-2; }
+
+  .crm-input { @apply w-full rounded-input border border-slate-300 px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary; }
+  .crm-select { @apply w-full rounded-input border border-slate-300 px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary; }
+
+  /* Tailwind v4 does not allow @apply of custom classes, so keep the base utilities inline */
+  .crm-badge { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full; }
+  .crm-badge-success { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700; }
+  .crm-badge-warn { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-700; }
+  .crm-badge-info { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800; }
+  .crm-badge-neutral { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700; }
+}

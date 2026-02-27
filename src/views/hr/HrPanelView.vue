@@ -247,25 +247,25 @@ const parseCsv = (file: File) => {
         <h3 class="text-lg font-medium text-gray-900">Lista Pracowników</h3>
         <button type="button" class="px-3 py-2 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700" @click="openAddModal">+ Dodaj Pracownika</button>
       </div>
-      <table v-if="myEmployees.length > 0" class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+      <table v-if="myEmployees.length > 0" class="crm-table divide-y divide-gray-200">
+        <thead class="crm-table-head">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imię Nazwisko</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PESEL (Fragment)</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Umowa</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kwota Benefitu</th>
+            <th class="crm-table-th crm-table-th-xs">Imię Nazwisko</th>
+            <th class="crm-table-th crm-table-th-xs">PESEL (Fragment)</th>
+            <th class="crm-table-th crm-table-th-xs">Umowa</th>
+            <th class="crm-table-th crm-table-th-xs">Kwota Benefitu</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-for="emp in myEmployees" :key="emp.id">
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ emp.name }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">******{{ emp.pesel?.slice(-4) || '0000' }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <td class="crm-table-td whitespace-nowrap text-sm font-medium text-gray-900">{{ emp.name }}</td>
+            <td class="crm-table-td whitespace-nowrap text-sm text-gray-500">******{{ emp.pesel?.slice(-4) || '0000' }}</td>
+            <td class="crm-table-td whitespace-nowrap text-sm">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="emp.contractType === 'UoP' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'">
                 {{ emp.contractType }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ emp.benefitAmount }} PLN</td>
+            <td class="crm-table-td whitespace-nowrap text-sm font-medium text-gray-900">{{ emp.benefitAmount }} PLN</td>
           </tr>
         </tbody>
       </table>
@@ -311,22 +311,22 @@ const parseCsv = (file: File) => {
         <form class="space-y-4" @submit.prevent="saveEmployee">
           <div>
             <label class="block text-xs font-medium text-gray-500 uppercase">Imię i Nazwisko</label>
-            <input v-model="newEmp.name" type="text" required class="w-full border p-2 rounded mt-1" />
+            <input v-model="newEmp.name" type="text" required class="crm-input mt-1" />
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-500 uppercase">PESEL</label>
-            <input v-model="newEmp.pesel" type="text" required class="w-full border p-2 rounded mt-1" />
+            <input v-model="newEmp.pesel" type="text" required class="crm-input mt-1" />
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-500 uppercase">Typ Umowy</label>
-            <select v-model="newEmp.contractType" class="w-full border p-2 rounded mt-1">
+            <select v-model="newEmp.contractType" class="crm-select mt-1">
               <option value="UoP">Umowa o Pracę</option>
               <option value="UZ">Umowa Zlecenie</option>
             </select>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-500 uppercase">Kwota Benefitu (Netto)</label>
-            <input v-model.number="newEmp.benefitAmount" type="number" required class="w-full border p-2 rounded mt-1" />
+            <input v-model.number="newEmp.benefitAmount" type="number" required class="crm-input mt-1" />
           </div>
           <div class="mt-6 flex justify-end space-x-3">
             <button type="button" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded" @click="closeModal">Anuluj</button>

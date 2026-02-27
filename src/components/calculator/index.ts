@@ -8,5 +8,5 @@ export * from './utils/validators';
 export * from './utils/dates';
 export * from './utils/excelParser';
 export * from './utils/excelGenerator';
-export * from './utils/offerPdfGenerator';
+export * from './utils/offer-generator';
 export * from './store/useCalculatorStore';

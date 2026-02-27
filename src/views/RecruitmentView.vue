@@ -460,9 +460,9 @@ const sendMissingDocuments = () => {
                     v-model="searchQuery" 
                     type="text" 
                     placeholder="Szukaj handlowca..." 
-                    class="w-64 pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold/50 transition-all text-lg font-medium"
+                    class="w-64 pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold/50 transition-all text-lg font-bold text-right"
                 />
-                <AppIcon name="search" class="absolute left-3 top-3.5 w-4 h-4 text-slate-500 group-focus-within/search:text-stratton-gold transition-colors" />
+                <AppIcon name="search" class="absolute left-3 top-4 w-4 h-4 text-slate-500 group-focus-within/search:text-stratton-gold transition-colors" />
             </div>
 
             <button 

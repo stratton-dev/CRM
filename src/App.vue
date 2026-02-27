@@ -63,7 +63,7 @@ const navLinks = computed(() => {
   const role = currentUser.value?.role || authRole.value || fallbackRole
   const links: Array<{ label: string; path: string; icon: string; viewKey: string }> = []
 
-  links.push({ label: 'Centrum Zarządzania', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
+  links.push({ label: 'Główny Pulpit', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
 
   if (role === 'ADMIN') {
     links.push(
@@ -134,15 +134,23 @@ const navLinks = computed(() => {
   return dashboardLink ? [dashboardLink, ...otherLinks] : otherLinks
 })
 
+const notificationsClearedAt = ref<number | null>(null)
+
 const myNotifications = computed(() => {
   const user = currentUser.value
   if (!user) return []
   return notifications.value
     .filter((notif) => notif.userId === user.id)
+    .filter((notif) => !notificationsClearedAt.value || new Date(notif.date).getTime() > notificationsClearedAt.value)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 })
 
 const unreadCount = computed(() => myNotifications.value.filter((notif) => !notif.read).length)
+
+const clearAllNotifications = () => {
+    notificationsClearedAt.value = Date.now()
+}
+
 
 const predefinedActions = [
   { label: 'Pulpit', category: 'Akcje', execute: () => router.push('/app/dashboard') },
@@ -259,12 +267,12 @@ onBeforeUnmount(() => {
         <span v-else class="text-stratton-gold font-bold text-xl">P</span>
       </div>
 
-      <nav class="flex-1 overflow-y-auto py-4 space-y-1 px-3">
+      <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 px-3">
         <RouterLink
           v-for="link in navLinks"
           :key="link.path"
           :to="link.path"
-          class="group flex items-center px-3 py-2 rounded-xl transition-all duration-200"
+          class="group flex items-center px-3 py-1.5 rounded-xl transition-all duration-200"
           :class="route.path.startsWith(link.path) ? 'bg-stratton-gold text-slate-900 shadow-md font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
           :title="link.label"
         >
@@ -313,7 +321,7 @@ onBeforeUnmount(() => {
                @click="toggleCommandPalette"
              >
                <AppIcon name="search" class="w-4 h-4 text-slate-400 mr-2 group-hover:text-stratton-gold transition shrink-0" />
-               <span class="text-slate-500 text-xs font-bold truncate uppercase tracking-wider">Szukaj (Ctrl+F)</span>
+               <span class="text-slate-500 text-[10px] font-bold truncate uppercase tracking-wider flex-1 text-right">Szukaj (Ctrl+F)</span>
              </div>
 
              <!-- Lines -->
@@ -323,7 +331,7 @@ onBeforeUnmount(() => {
              </div>
              
              <!-- Text -->
-             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-serif">
+             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
               STRATTON
              </span>
           </div>
@@ -363,7 +371,7 @@ onBeforeUnmount(() => {
              </div>
              
              <!-- Text -->
-             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-serif">
+             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
               PRIME
              </span>
           </div>
@@ -396,7 +404,12 @@ onBeforeUnmount(() => {
 
     <div v-if="showNotifications" class="absolute right-8 top-24 w-96 bg-white rounded-xl shadow-xl border border-slate-100 py-0 z-50 text-sm overflow-hidden animate-fade-in-up" @click.stop>
       <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 font-bold text-slate-700 flex justify-between items-center">
-        <span>Powiadomienia</span>
+        <div class="flex items-center gap-3">
+            <span>Powiadomienia</span>
+            <button v-if="myNotifications.length > 0" @click="clearAllNotifications" class="text-[10px] text-red-500 hover:text-red-700 uppercase tracking-wider font-bold bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors" title="Wyczyść widok powiadomień (nie usuwa z historii)">
+                Wyczyść
+            </button>
+        </div>
         <button type="button" class="text-slate-400 hover:text-slate-600" @click="toggleNotifications">
           <AppIcon name="xmark" class="w-4 h-4" />
         </button>

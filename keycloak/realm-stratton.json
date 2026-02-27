@@ -29,12 +29,14 @@
 
       "redirectUris": [
         "http://localhost:1420/*",
+        "http://localhost:3003/*",
         "https://crm.stratton-prime.pl/*",
         "https://crm.stratton.loc/*",
         "tauri://localhost/*"
       ],
       "webOrigins": [
         "http://localhost:1420",
+        "http://localhost:3003",
         "https://crm.stratton-prime.pl",
         "https://crm.stratton.loc",
         "tauri://localhost"

@@ -34,7 +34,20 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   const { emails: localEmails, users } = storeToRefs(data)
   const emails = ref<Email[]>([])
-  const composeState = ref<{ open: boolean; to?: string; subject?: string; body?: string }>({ open: false })
+  const composeState = ref<{
+    open: boolean
+    to?: string
+    subject?: string
+    body?: string
+    attachments?: Array<{
+      filename: string
+      content?: string
+      content_type?: string
+      encoding?: string
+      html?: string
+      convert_to_pdf?: boolean
+    }>
+  }>({ open: false })
   const mailSettings = ref<MailSettings | null>(null)
   const mailSettingsLoaded = ref(false)
   const refreshIntervalMsRaw = import.meta.env.VITE_MAIL_POLL_MS

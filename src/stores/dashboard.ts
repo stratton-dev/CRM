@@ -37,6 +37,8 @@ const fallbackKpis: DashboardKpi[] = [
   { id: 1, title: 'Jednostki rozliczeniowe', value: '4 500', score: 45, min_target: '10 000', subtitle: 'Początek miesiąca', missing: '5 500' },
   { id: 2, title: 'Kalkulacje wysłane', value: '12', score: 60, min_target: '20', subtitle: 'Status READY / SENT', missing: '8' },
   { id: 3, title: 'Nowe spotkania', value: '15', score: 50, min_target: '30', subtitle: 'Status NEW', missing: '15' },
+  { id: 4, title: 'Wskaźnik utrzymania umów', value: '75%', score: 75, min_target: '80%', subtitle: 'Konwersja', missing: '5%' },
+  { id: 5, title: 'Oszczędności (ZUS)', value: '12 450 PLN', score: 85, min_target: '15 000 PLN', subtitle: 'Bieżący miesiąc', missing: '2 550 PLN' },
 ]
 const fallbackCalculations: DashboardCalculation[] = [
   { id: 1, company: 'MegaBud S.A.', nip: '555-666-77-88', meeting_id: 'M-2044/01', calculation_date: new Date().toISOString(), valid_until: new Date().toISOString(), status: 'OFERTA' },
