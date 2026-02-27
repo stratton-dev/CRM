@@ -55,31 +55,14 @@ class CrmClientActivitiesController extends Controller
     public function update(Request $request, CrmClientActivity $activity)
     {
         $data = $request->validate([
-            'description' => 'nullable|string',
-            'occurred_at' => 'nullable|date',
+            'type' => 'sometimes|required|in:CALL,MEETING,EMAIL,NOTE',
+            'description' => 'sometimes|required|string',
+            'occurred_at' => 'sometimes|required|date',
             'is_completed' => 'nullable|boolean',
         ]);
 
         $activity->update($data);
         return $activity->refresh()->load(['client:id,name', 'user:id,name,keycloak_id']);
-    }
-
-    private function resolveUserId($userId)
-    {
-        if (!$userId) {
-            return null;
-        }
-    }
-
-    public function update(Request $request, CrmClientActivity $crmClientActivity)
-    {
-        $data = $request->validate([
-            'type' => 'sometimes|required|in:CALL,MEETING,EMAIL,NOTE',
-            'description' => 'sometimes|required|string',
-            'occurred_at' => 'sometimes|required|date',
-        ]);
-        $crmClientActivity->update($data);
-        return $crmClientActivity->load(['client:id,name', 'user:id,name,keycloak_id']);
     }
 
     public function destroy(CrmClientActivity $crmClientActivity)
@@ -97,6 +80,7 @@ class CrmClientActivitiesController extends Controller
         } else {
             $query->where('keycloak_id', (string) $value);
         }
-        return $query->first()?->id;
+        $u = $query->first();
+        return $u ? $u->id : null;
     }
 }

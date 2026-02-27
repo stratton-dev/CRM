@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\OfferVerificationsController;
 use App\Http\Controllers\Api\OfferItemsController;
 use App\Http\Controllers\Api\PublicOffersController;
 use App\Http\Controllers\Api\PayrollsController;
+use App\Http\Controllers\Api\PayrollSpreadsheetController;
 use App\Http\Controllers\Api\PayrollItemsController;
 use App\Http\Controllers\Api\CalculationsController;
 use App\Http\Controllers\Api\PayrollCalculationsController;
@@ -61,6 +62,8 @@ use App\Http\Controllers\Api\StructureController;
 use App\Http\Controllers\Api\StructureUsersController;
 use App\Http\Controllers\Api\UsersController;
 use App\Http\Controllers\Api\CandidatesController;
+use App\Http\Controllers\Api\LeadsController;
+use App\Http\Controllers\Api\AiController;
 
 Route::get('offers/{token}', PublicOffersController::class);
 Route::post('autenti/webhook', AutentiWebhookController::class);
@@ -75,6 +78,10 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::get('me', MeController::class);
 
     Route::get('structure', [StructureController::class, 'index']);
+
+    // AI Integration
+    Route::post('ai/generate-diagnosis', [AiController::class, 'generateDiagnosis']);
+
     Route::post('structure/move', [StructureController::class, 'move']);
     Route::post('structure/remove', [StructureController::class, 'remove']);
     Route::post('structure/restore', [StructureController::class, 'restore']);
@@ -169,6 +176,10 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::apiResource('crm-events', CrmEventsController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::apiResource('crm-event-logs', CrmEventLogsController::class)->only(['index', 'store']);
     Route::apiResource('crm-broadcasts', CrmBroadcastsController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Leads Management
+    Route::apiResource('leads', LeadsController::class);
+    Route::post('leads/{lead}/convert', [LeadsController::class, 'convert']);
 
     // Candidates
     Route::apiResource('candidates', CandidatesController::class);
@@ -374,6 +385,10 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
             'verifications' => 'verification',
         ]);
 
+    // Payroll Spreadsheets
+    Route::post('payroll-spreadsheets', [PayrollSpreadsheetController::class, 'store']);
+    Route::apiResource('payroll-spreadsheets', PayrollSpreadsheetController::class)->except(['store']);
+
     // Payrolls
     Route::apiResource('payrolls', PayrollsController::class)
         ->only(['index', 'show'])
@@ -533,6 +548,13 @@ Route::prefix('v1')->middleware('keycloak')->group(function () {
     Route::get('announcements', [\App\Http\Controllers\AnnouncementController::class, 'index']);
     Route::get('announcements/manage', [\App\Http\Controllers\AnnouncementController::class, 'manage']);
     Route::post('announcements', [\App\Http\Controllers\AnnouncementController::class, 'store']);
-    Route::put('announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'update']);
+    Route::match(['put', 'patch'], 'announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'update']);
     Route::delete('announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'destroy']);
 });
+
+Route::options('/{any}', function() {
+    return response('OK', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, X-Auth-Token, Origin, Authorization');
+})->where('any', '.*');

@@ -14,20 +14,28 @@ class ClientsController extends Controller
 {
     public function index(Request $request, TokenContext $context, StructureService $structure)
     {
-        $q = Client::query()->with(['crmProfile', 'crmProfile.owner:id,keycloak_id']);
-        /*
+        $q = Client::query()->with(['crmProfile', 'crmProfile.owner:id,keycloak_id,name']);
+
         $role = $context->primaryRole();
         if ($role !== 'ADMIN') {
-            $userIds = $structure->listUsers($context)->pluck('id')->all();
-            if (!$userIds) {
+            $users = $structure->listUsers($context);
+            $userIds = collect($users)->pluck('id')->unique()->values()->all();
+
+            if (empty($userIds)) {
+                 // If no users found in scope (should not happen for valid users), return empty
                 $q->whereRaw('1 = 0');
             } else {
-                $q->whereHas('meetings', function ($m) use ($userIds) {
-                    $m->whereIn('user_id', $userIds);
+                // Filter clients owned by users in the subtree OR having meetings with users in the subtree
+                $q->where(function ($query) use ($userIds) {
+                    $query->whereHas('crmProfile', function ($p) use ($userIds) {
+                        $p->whereIn('owner_user_id', $userIds);
+                    })->orWhereHas('meetings', function ($m) use ($userIds) {
+                        $m->whereIn('user_id', $userIds);
+                    });
                 });
             }
         }
-        */
+
         if ($organizationId = $request->integer('organization_id')) {
             $q->where('organization_id', $organizationId);
         }
@@ -50,35 +58,42 @@ class ClientsController extends Controller
             return response()->json(['reserved' => false]);
         }
 
-        $client = Client::query()->where('nip', $nip)->first();
+        $client = Client::where('nip', $nip)->first();
+
+        // 1. Jeśli klienta nie ma w ogóle w bazie -> NIP wolny
         if (!$client) {
             return response()->json(['reserved' => false]);
         }
 
-        $hasConsents = $client->consents()
-            ->whereNotNull('accepted_at')
-            ->whereNull('denied_at')
-            ->exists();
-        if (!$hasConsents) {
-            return response()->json(['reserved' => false, 'client_id' => $client->id]);
-        }
+        // 2. Pobieramy ID zalogowanego usera (z keycloak/sanctum)
+        $currentUser = $request->user();
 
-        $meeting = $client->meetings()
+        // 3. Sprawdzamy czy istnieje aktywna rezerwacja (spotkanie w statusie 'open')
+        // WAŻNE: Dodajemy warunek, że rezerwacja blokuje TYLKO jeśli należy do KOGOŚ INNEGO.
+        // Jeśli należy do mnie ($currentUser->id), to mogę działać dalej.
+        $meetingQuery = $client->meetings()
             ->where('status', 'open')
-            ->whereDate('valid_until', '>=', now()->toDateString())
-            ->with('user')
-            ->orderByDesc('valid_until')
-            ->first();
-        if (!$meeting) {
+            ->where('valid_until', '>=', now())
+            ->orderByDesc('created_at');
+
+        if ($currentUser) {
+            $meetingQuery->where('user_id', '!=', $currentUser->id);
+        }
+
+        $activeReservation = $meetingQuery->with('user')->first();
+
+        if (!$activeReservation) {
+            // Brak aktywnej rezerwacji innej osoby -> Wolne (nawet jeśli mam własną, to dla mnie jest wolne)
             return response()->json(['reserved' => false, 'client_id' => $client->id]);
         }
 
+        // Jest aktywna rezerwacja kogoś innego -> ZABLOKOWANE
         return response()->json([
             'reserved' => true,
             'client_id' => $client->id,
-            'meeting_id' => $meeting->id,
-            'valid_until' => optional($meeting->valid_until)->toDateString(),
-            'owner_name' => optional($meeting->user)->name,
+            'meeting_id' => $activeReservation->id,
+            'valid_until' => optional($activeReservation->valid_until)->toDateString(),
+            'owner_name' => optional($activeReservation->user)->name,
         ]);
     }
 

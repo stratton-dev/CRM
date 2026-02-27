@@ -4,14 +4,30 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Calculation;
+use App\Services\Structure\StructureService;
+use App\Services\Auth\TokenContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class CalculationsController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, TokenContext $context, StructureService $structure)
     {
         $q = Calculation::query()->with('meeting:id,client_id,user_id');
+
+        $role = $context->primaryRole();
+        if ($role !== 'ADMIN') {
+            $users = $structure->listUsers($context);
+            $userIds = collect($users)->pluck('id')->unique()->values()->all();
+
+            if (empty($userIds)) {
+                $q->whereRaw('1 = 0');
+            } else {
+                $q->whereHas('meeting', function ($m) use ($userIds) {
+                    $m->whereIn('user_id', $userIds);
+                });
+            }
+        }
 
         if ($meetingId = $request->integer('meeting_id')) {
             $q->where('meeting_id', $meetingId);

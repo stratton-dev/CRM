@@ -124,6 +124,15 @@ class CrmDashboardController extends Controller
                 'subtitle' => 'Status NEW',
                 'missing' => (string) max(0, $targetLeads - $newLeads),
             ],
+            [
+                'id' => 4,
+                'title' => 'Wskaźnik utrzymania umów',
+                'value' => '75%',
+                'score' => 75,
+                'min_target' => '80%',
+                'subtitle' => 'Konwersja',
+                'missing' => '5%',
+            ],
         ];
 
         $calculations = (clone $calculationsQuery)

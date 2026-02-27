@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="/var/www/html/phpunit.xml" tests="19" assertions="23" errors="3" failures="1" skipped="0" time="30.453061">
+    <testsuite name="Unit" tests="4" assertions="4" errors="0" failures="0" skipped="0" time="18.995812">
+      <testsuite name="Tests\Unit\ExampleTest" file="/var/www/html/tests/Unit/ExampleTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.222352">
+        <testcase name="test_that_true_is_true" file="/var/www/html/tests/Unit/ExampleTest.php" line="12" class="Tests\Unit\ExampleTest" classname="Tests.Unit.ExampleTest" assertions="1" time="0.222352"/>
+      </testsuite>
+      <testsuite name="Tests\Unit\GenerateCalculationActionTest" file="/var/www/html/tests/Unit/GenerateCalculationActionTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="17.845849">
+        <testcase name="test_blocks_calculation_generation_when_meeting_is_expired" file="/var/www/html/tests/Unit/GenerateCalculationActionTest.php" line="16" class="Tests\Unit\GenerateCalculationActionTest" classname="Tests.Unit.GenerateCalculationActionTest" assertions="1" time="17.845849"/>
+      </testsuite>
+      <testsuite name="Tests\Unit\MeetingRulesTest" file="/var/www/html/tests/Unit/MeetingRulesTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.385540">
+        <testcase name="test_throws_when_meeting_is_expired" file="/var/www/html/tests/Unit/MeetingRulesTest.php" line="16" class="Tests\Unit\MeetingRulesTest" classname="Tests.Unit.MeetingRulesTest" assertions="1" time="0.385540"/>
+      </testsuite>
+      <testsuite name="Tests\Unit\Offer\OfferRulesTest" file="/var/www/html/tests/Unit/Offer/OfferRulesTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.542071">
+        <testcase name="test_blocks_creating_a_second_offer_for_the_same_meeting" file="/var/www/html/tests/Unit/Offer/OfferRulesTest.php" line="17" class="Tests\Unit\Offer\OfferRulesTest" classname="Tests.Unit.Offer.OfferRulesTest" assertions="1" time="0.542071"/>
+      </testsuite>
+    </testsuite>
+    <testsuite name="Feature" tests="15" assertions="19" errors="3" failures="1" skipped="0" time="11.457249">
+      <testsuite name="Tests\Feature\Auth\MeetingPermissionsTest" file="/var/www/html/tests/Feature/Auth/MeetingPermissionsTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="2.033973">
+        <testcase name="test_forbidden_without_meetings_create_permission" file="/var/www/html/tests/Feature/Auth/MeetingPermissionsTest.php" line="15" class="Tests\Feature\Auth\MeetingPermissionsTest" classname="Tests.Feature.Auth.MeetingPermissionsTest" assertions="1" time="2.033973"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\Auth\RouteAuthorizationTest" file="/var/www/html/tests/Feature/Auth/RouteAuthorizationTest.php" tests="1" assertions="1" errors="0" failures="1" skipped="0" time="1.691058">
+        <testcase name="test_forbidden_without_clients_view_permission" file="/var/www/html/tests/Feature/Auth/RouteAuthorizationTest.php" line="15" class="Tests\Feature\Auth\RouteAuthorizationTest" classname="Tests.Feature.Auth.RouteAuthorizationTest" assertions="1" time="1.691058">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">Tests\Feature\Auth\RouteAuthorizationTest::test_forbidden_without_clients_view_permission
+Expected response status code [403] but received 200.
+Failed asserting that 200 is identical to 403.
+
+/var/www/html/vendor/laravel/framework/src/Illuminate/Testing/TestResponseAssert.php:45
+/var/www/html/vendor/laravel/framework/src/Illuminate/Testing/TestResponse.php:174
+/var/www/html/tests/Feature/Auth/RouteAuthorizationTest.php:32</failure>
+        </testcase>
+      </testsuite>
+      <testsuite name="Tests\Feature\ClientConsentsTest" file="/var/www/html/tests/Feature/ClientConsentsTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.700002">
+        <testcase name="test_blocks_meeting_creation_when_required_consents_are_missing" file="/var/www/html/tests/Feature/ClientConsentsTest.php" line="16" class="Tests\Feature\ClientConsentsTest" classname="Tests.Feature.ClientConsentsTest" assertions="1" time="0.700002"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\ExampleTest" file="/var/www/html/tests/Feature/ExampleTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.793237">
+        <testcase name="test_the_application_returns_a_successful_response" file="/var/www/html/tests/Feature/ExampleTest.php" line="13" class="Tests\Feature\ExampleTest" classname="Tests.Feature.ExampleTest" assertions="1" time="0.793237"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\KeycloakSyncTest" file="/var/www/html/tests/Feature/KeycloakSyncTest.php" tests="4" assertions="1" errors="3" failures="0" skipped="0" time="1.599089">
+        <testcase name="test_sync_endpoint_requires_admin" file="/var/www/html/tests/Feature/KeycloakSyncTest.php" line="18" class="Tests\Feature\KeycloakSyncTest" classname="Tests.Feature.KeycloakSyncTest" assertions="1" time="0.389012"/>
+        <testcase name="test_sync_does_not_overwrite_structure_fields" file="/var/www/html/tests/Feature/KeycloakSyncTest.php" line="29" class="Tests\Feature\KeycloakSyncTest" classname="Tests.Feature.KeycloakSyncTest" assertions="0" time="0.547878">
+          <error type="ArgumentCountError">Tests\Feature\KeycloakSyncTest::test_sync_does_not_overwrite_structure_fields
+ArgumentCountError: Too few arguments to function App\Services\Keycloak\KeycloakSyncService::__construct(), 1 passed in /var/www/html/tests/Feature/KeycloakSyncTest.php on line 43 and exactly 2 expected
+
+/var/www/html/app/Services/Keycloak/KeycloakSyncService.php:15
+/var/www/html/tests/Feature/KeycloakSyncTest.php:43</error>
+        </testcase>
+        <testcase name="test_extract_team_group_path_returns_first_team" file="/var/www/html/tests/Feature/KeycloakSyncTest.php" line="90" class="Tests\Feature\KeycloakSyncTest" classname="Tests.Feature.KeycloakSyncTest" assertions="0" time="0.332479">
+          <error type="ArgumentCountError">Tests\Feature\KeycloakSyncTest::test_extract_team_group_path_returns_first_team
+ArgumentCountError: Too few arguments to function App\Services\Keycloak\KeycloakSyncService::__construct(), 1 passed in /var/www/html/tests/Feature/KeycloakSyncTest.php on line 92 and exactly 2 expected
+
+/var/www/html/app/Services/Keycloak/KeycloakSyncService.php:15
+/var/www/html/tests/Feature/KeycloakSyncTest.php:92</error>
+        </testcase>
+        <testcase name="test_lock_prevents_parallel_sync" file="/var/www/html/tests/Feature/KeycloakSyncTest.php" line="107" class="Tests\Feature\KeycloakSyncTest" classname="Tests.Feature.KeycloakSyncTest" assertions="0" time="0.329720">
+          <error type="ArgumentCountError">Tests\Feature\KeycloakSyncTest::test_lock_prevents_parallel_sync
+ArgumentCountError: Too few arguments to function App\Services\Keycloak\KeycloakSyncService::__construct(), 1 passed in /var/www/html/tests/Feature/KeycloakSyncTest.php on line 109 and exactly 2 expected
+
+/var/www/html/app/Services/Keycloak/KeycloakSyncService.php:15
+/var/www/html/tests/Feature/KeycloakSyncTest.php:109</error>
+        </testcase>
+      </testsuite>
+      <testsuite name="Tests\Feature\MeetingCreationTest" file="/var/www/html/tests/Feature/MeetingCreationTest.php" tests="1" assertions="4" errors="0" failures="0" skipped="0" time="0.455418">
+        <testcase name="test_creates_a_meeting_when_required_consents_are_present" file="/var/www/html/tests/Feature/MeetingCreationTest.php" line="19" class="Tests\Feature\MeetingCreationTest" classname="Tests.Feature.MeetingCreationTest" assertions="4" time="0.455418"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\Offer\GenerateOfferTest" file="/var/www/html/tests/Feature/Offer/GenerateOfferTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.510664">
+        <testcase name="test_blocks_offer_generation_when_calculation_is_expired" file="/var/www/html/tests/Feature/Offer/GenerateOfferTest.php" line="17" class="Tests\Feature\Offer\GenerateOfferTest" classname="Tests.Feature.Offer.GenerateOfferTest" assertions="1" time="0.510664"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\Offer\OfferOpenedEventTest" file="/var/www/html/tests/Feature/Offer/OfferOpenedEventTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.543593">
+        <testcase name="test_dispatches_the_offer_opened_event" file="/var/www/html/tests/Feature/Offer/OfferOpenedEventTest.php" line="16" class="Tests\Feature\Offer\OfferOpenedEventTest" classname="Tests.Feature.Offer.OfferOpenedEventTest" assertions="1" time="0.543593"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\Offer\PublicOfferAccessTest" file="/var/www/html/tests/Feature/Offer/PublicOfferAccessTest.php" tests="1" assertions="1" errors="0" failures="0" skipped="0" time="0.507945">
+        <testcase name="test_expired_offer_access_is_blocked" file="/var/www/html/tests/Feature/Offer/PublicOfferAccessTest.php" line="14" class="Tests\Feature\Offer\PublicOfferAccessTest" classname="Tests.Feature.Offer.PublicOfferAccessTest" assertions="1" time="0.507945"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\Structure\StructureEndpointsTest" file="/var/www/html/tests/Feature/Structure/StructureEndpointsTest.php" tests="3" assertions="7" errors="0" failures="0" skipped="0" time="2.622269">
+        <testcase name="test_creates_users_idempotently_with_the_same_idempotency_key" file="/var/www/html/tests/Feature/Structure/StructureEndpointsTest.php" line="15" class="Tests\Feature\Structure\StructureEndpointsTest" classname="Tests.Feature.Structure.StructureEndpointsTest" assertions="4" time="1.510365"/>
+        <testcase name="test_increments_hierarchical_code_counters_within_a_scope" file="/var/www/html/tests/Feature/Structure/StructureEndpointsTest.php" line="45" class="Tests\Feature\Structure\StructureEndpointsTest" classname="Tests.Feature.Structure.StructureEndpointsTest" assertions="2" time="0.498580"/>
+        <testcase name="test_prevents_moving_a_user_under_its_descendant" file="/var/www/html/tests/Feature/Structure/StructureEndpointsTest.php" line="56" class="Tests\Feature\Structure\StructureEndpointsTest" classname="Tests.Feature.Structure.StructureEndpointsTest" assertions="1" time="0.613323"/>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

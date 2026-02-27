@@ -34,6 +34,10 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+
+    'google' => [
+        'gemini_key' => env('GEMINI_API_KEY'),
+    ],
     'gus'=>[
         'bir'=> env('GUS_BIR')
     ]

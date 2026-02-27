@@ -45,9 +45,17 @@ class StructureService
         }
 
         if ($role === 'DIRECTOR') {
-            return $query->where('team_group_path', $teamPath)
-                ->whereIn('role_cached', ['DIRECTOR', 'MANAGER', 'SALES'])
-                ->get();
+             $actor = User::query()->where('keycloak_id', $context->actorKeycloakId())->first();
+            if (!$actor) {
+                return $query->whereRaw('1 = 0')->get();
+            }
+
+            // Using subtree traversal ensures Director sees all descendants regardless of team path
+            $subtree = collect($this->collectSubtreeUsers($actor))
+                ->filter(fn (User $user) => in_array($user->role_cached, ['DIRECTOR', 'MANAGER', 'SALES'], true))
+                ->values();
+
+            return $subtree;
         }
 
         if ($role === 'MANAGER') {

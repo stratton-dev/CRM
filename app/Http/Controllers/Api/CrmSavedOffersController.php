@@ -4,13 +4,37 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CrmSavedOffer;
+use App\Services\Structure\StructureService;
+use App\Services\Auth\TokenContext;
 use Illuminate\Http\Request;
 
 class CrmSavedOffersController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, TokenContext $context, StructureService $structure)
     {
         $q = CrmSavedOffer::query();
+
+        $role = $context->primaryRole();
+        if ($role !== 'ADMIN') {
+            $users = $structure->listUsers($context);
+            $userIds = collect($users)->pluck('id')->unique()->values()->all();
+
+            if (empty($userIds)) {
+                $q->whereRaw('1 = 0');
+            } else {
+                // Filter offers for clients that are visible to the user
+                $q->whereHas('client', function ($cq) use ($userIds) {
+                    $cq->where(function ($w) use ($userIds) {
+                        $w->whereHas('crmProfile', function ($p) use ($userIds) {
+                             $p->whereIn('owner_user_id', $userIds);
+                        })->orWhereHas('meetings', function ($m) use ($userIds) {
+                             $m->whereIn('user_id', $userIds);
+                        });
+                    });
+                });
+            }
+        }
+
         if ($clientId = $request->integer('client_id')) {
             $q->where('client_id', $clientId);
         }
