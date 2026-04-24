@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\Auth\TokenContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -89,42 +90,66 @@ class UsersController extends Controller
         return response()->json($this->formatUser($user), 201);
     }
 
-    public function update(Request $request, User $user)
+    public function update(Request $request, User $user, TokenContext $context)
     {
-        $data = $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|email|max:255',
-            'phone' => 'nullable|string|max:255',
-            'role' => 'nullable|string|max:100',
-            'role_id' => 'nullable|integer|exists:roles,id',
-            'parent_id' => 'nullable|integer|exists:users,id',
-            'hierarchical_id' => 'nullable|string|max:255',
-            'crm_number' => 'nullable|string|max:255',
-            'rank' => 'nullable|string|max:255',
-            'contract_status' => 'nullable|string|max:255',
-            'type' => 'nullable|string|max:255',
-            'address_json' => 'nullable|array',
-            'documents_json' => 'nullable|array',
-            'is_removed_from_structure' => 'nullable|boolean',
-            'is_blocked' => 'nullable|boolean',
-            'points' => 'nullable|integer',
-            'renewal_commission_rate' => 'nullable|numeric|min:0|max:1',
-            'override_commission_rate' => 'nullable|numeric|min:0|max:1',
-            'active' => 'nullable|boolean',
-        ]);
+        $roleCode   = $context->primaryRole();
+        $actorUuid  = $context->actorKeycloakId();
+        $isAdmin    = in_array($roleCode, ['ADMIN', 'DIRECTOR'], true);
+        $isSelf     = $actorUuid !== '' && $user->keycloak_id === $actorUuid;
+        $isManagerOfUser = $roleCode === 'MANAGER'
+            && $request->user()?->team_id !== null
+            && $user->team_id === $request->user()->team_id;
 
-        if (!isset($data['role_id']) && isset($data['role'])) {
-            $role = $this->resolveRole($data['role']);
-            $data['role_id'] = $role?->id;
-            $data['role_cached'] = $role?->code;
+        // Only ADMIN/DIRECTOR, the user themselves, or a MANAGER of the same team may update.
+        if (!$isAdmin && !$isSelf && !$isManagerOfUser) {
+            return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        if (!isset($data['role_cached']) && isset($data['role_id'])) {
-            $role = Role::query()->find($data['role_id']);
-            $data['role_cached'] = $role?->code;
-        }
+        if ($isAdmin) {
+            // Admins and directors may update every field.
+            $data = $request->validate([
+                'name'                        => 'sometimes|required|string|max:255',
+                'email'                       => 'sometimes|required|email|max:255',
+                'phone'                       => 'nullable|string|max:255',
+                'role'                        => 'nullable|string|max:100',
+                'role_id'                     => 'nullable|integer|exists:roles,id',
+                'parent_id'                   => 'nullable|integer|exists:users,id',
+                'hierarchical_id'             => 'nullable|string|max:255',
+                'crm_number'                  => 'nullable|string|max:255',
+                'rank'                        => 'nullable|string|max:255',
+                'contract_status'             => 'nullable|string|max:255',
+                'type'                        => 'nullable|string|max:255',
+                'address_json'                => 'nullable|array',
+                'documents_json'              => 'nullable|array',
+                'is_removed_from_structure'   => 'nullable|boolean',
+                'is_blocked'                  => 'nullable|boolean',
+                'points'                      => 'nullable|integer',
+                'renewal_commission_rate'     => 'nullable|numeric|min:0|max:1',
+                'override_commission_rate'    => 'nullable|numeric|min:0|max:1',
+                'active'                      => 'nullable|boolean',
+            ]);
 
-        unset($data['role']);
+            if (!isset($data['role_id']) && isset($data['role'])) {
+                $role = $this->resolveRole($data['role']);
+                $data['role_id']     = $role?->id;
+                $data['role_cached'] = $role?->code;
+            }
+
+            if (!isset($data['role_cached']) && isset($data['role_id'])) {
+                $role = Role::query()->find($data['role_id']);
+                $data['role_cached'] = $role?->code;
+            }
+
+            unset($data['role']);
+        } else {
+            // Non-admins may only update basic profile fields — no role, status, or financial fields.
+            $data = $request->validate([
+                'name'         => 'sometimes|required|string|max:255',
+                'phone'        => 'nullable|string|max:255',
+                'address_json' => 'nullable|array',
+                'rank'         => 'nullable|string|max:255',
+            ]);
+        }
 
         $user->fill($data)->save();
         $user->load('role:id,code,name');
