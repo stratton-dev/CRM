@@ -49,14 +49,22 @@ class CalculationsController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'meeting_id' => 'required|exists:meetings,id',
+            'meeting_id' => 'nullable|exists:meetings,id',
+            'client_id'  => 'nullable|exists:companies,id',
             'employee_count' => 'required|integer|min:0',
             'savings_amount' => 'required|integer|min:0',
             'valid_until' => 'required|date',
             'status' => 'nullable|string|max:50',
+            'offer_type' => 'nullable|in:QUICK_SIMULATION,DETAILED',
         ]);
+        if (!$data['meeting_id'] && !$data['client_id']) {
+            return response()->json(['error' => 'Wymagane meeting_id lub client_id.'], 422);
+        }
         if (!Schema::hasColumn('calculations', 'status')) {
             unset($data['status']);
+        }
+        if (!Schema::hasColumn('calculations', 'offer_type')) {
+            unset($data['offer_type']);
         }
         $calculation = Calculation::create($data);
         return response()->json($calculation, 201);
@@ -65,14 +73,19 @@ class CalculationsController extends Controller
     public function update(Request $request, Calculation $calculation)
     {
         $data = $request->validate([
-            'meeting_id' => 'sometimes|exists:meetings,id',
+            'meeting_id'     => 'sometimes|nullable|exists:meetings,id',
+            'client_id'      => 'sometimes|nullable|exists:companies,id',
             'employee_count' => 'sometimes|integer|min:0',
             'savings_amount' => 'sometimes|integer|min:0',
-            'valid_until' => 'sometimes|date',
-            'status' => 'nullable|string|max:50',
+            'valid_until'    => 'sometimes|date',
+            'status'         => 'nullable|string|max:50',
+            'offer_type'     => 'nullable|in:QUICK_SIMULATION,DETAILED',
         ]);
         if (!Schema::hasColumn('calculations', 'status')) {
             unset($data['status']);
+        }
+        if (!Schema::hasColumn('calculations', 'offer_type')) {
+            unset($data['offer_type']);
         }
         $calculation->update($data);
         return $calculation;

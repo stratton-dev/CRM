@@ -56,8 +56,6 @@ use App\Http\Controllers\Api\DocumentTemplatesController;
 use App\Http\Controllers\Api\MetricsController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\GusController;
-use App\Http\Controllers\Api\Admin\KeycloakSyncController;
-use App\Http\Controllers\Api\Admin\KeycloakTeamsController;
 use App\Http\Controllers\Api\Admin\SupabaseSyncController;
 use App\Http\Controllers\Api\Admin\StructureTeamsController;
 use App\Http\Controllers\Api\StructureController;

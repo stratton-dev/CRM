@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\CrmClientProfile;
 
 class Company extends Model
 {
@@ -42,6 +44,11 @@ class Company extends Model
     public function payrollCalculations(): HasMany
     {
         return $this->hasMany(PayrollCalculation::class);
+    }
+
+    public function crmProfile(): HasOne
+    {
+        return $this->hasOne(CrmClientProfile::class, 'client_id');
     }
 
     protected static function booted()

@@ -13,4 +13,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# PHP-FPM pool config with increased worker limit
+COPY php/www.conf /usr/local/etc/php-fpm.d/www.conf
+
 WORKDIR /var/www/html

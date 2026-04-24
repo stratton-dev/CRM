@@ -12,10 +12,12 @@ class Calculation extends Model
 
     protected $fillable = [
         'meeting_id',
+        'client_id',
         'employee_count',
         'savings_amount',
         'valid_until',
         'status',
+        'offer_type',
     ];
 
     protected $casts = [

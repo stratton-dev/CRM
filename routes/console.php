@@ -3,7 +3,6 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
-use App\Jobs\KeycloakSyncJob;
 use App\Models\OrgCounter;
 use App\Models\User;
 use App\Models\Role;
@@ -590,7 +589,3 @@ Artisan::command('structure:regenerate-codes {--reset-counters} {--dry-run}', fu
 
     $this->info('Regeneration completed.');
 })->purpose('Regenerate hierarchical codes for structure users.');
-
-Schedule::job(new KeycloakSyncJob())
-    ->everyThirtyMinutes()
-    ->when(fn () => (bool) config('keycloak.sync_enabled'));

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Models\CrmClientProfile;
 
 class Client extends Company
 {
@@ -32,11 +31,6 @@ class Client extends Company
     public function documents(): HasMany
     {
         return $this->hasMany(Document::class, 'client_id');
-    }
-
-    public function crmProfile()
-    {
-        return $this->hasOne(CrmClientProfile::class, 'client_id');
     }
 
     public function activities(): HasMany
