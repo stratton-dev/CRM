@@ -94,7 +94,7 @@ export interface Client {
   id: string
   name: string
   nip: string
-  status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED'
+  status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED' | 'IN_TALKS' | 'OFFER_GENERATED' | 'SPECIAL_OFFER'
   ownerId: string
   ownerName?: string
   meetingId?: string

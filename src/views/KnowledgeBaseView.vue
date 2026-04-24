@@ -182,7 +182,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card p-8 mb-4 shadow-card-hover border border-slate-800 relative overflow-hidden group">
+    <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card p-8 mb-4 shadow-card-hover border border-slate-800 relative overflow-hidden group">
       <!-- Decor -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
@@ -227,7 +227,7 @@ onMounted(() => {
       >
          <div class="absolute inset-0 z-0">
              <img :src="(tile as any).image" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" :alt="tile.title" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
          </div>
 
          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">

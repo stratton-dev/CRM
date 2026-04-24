@@ -591,6 +591,9 @@ export const useClientStore = defineStore('client', () => {
     }
   }
 
+  // Session-level dedup: prevents re-creating the same SLA notification before fetchNotifications completes
+  const _slaFiredKeys = new Set<string>()
+
   const checkSla = () => {
     const now = new Date()
     const threeDaysMs = 3 * 24 * 60 * 60 * 1000
@@ -600,10 +603,12 @@ export const useClientStore = defineStore('client', () => {
       if (client.status === 'NEW' || client.status === 'IN_TALKS') {
         const lastAction = new Date(client.lastActionDate).getTime()
         if (now.getTime() - lastAction > threeDaysMs) {
-          const exists = notifications.value.some(
+          const key = `${client.ownerId}:${client.name}`
+          const existsLocal = notifications.value.some(
             (n) => n.userId === client.ownerId && n.type === 'CRITICAL' && n.message.includes(client.name)
           )
-          if (!exists) {
+          if (!existsLocal && !_slaFiredKeys.has(key)) {
+            _slaFiredKeys.add(key)
             notify.add({ userId: client.ownerId, type: 'CRITICAL', message: `Brak działania na kliencie ${client.name} od 3 dni!` })
           }
         }

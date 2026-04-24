@@ -102,6 +102,14 @@ const updateRow = (rowIndex: number, patch: Record<string, any>) => {
       data.pitMode = 'FLAT_0';
       data.pit2 = '0';
     }
+    if (patch.typUmowy && patch.kupTyp === undefined) {
+      data.kupTyp = patch.typUmowy === 'UZ' ? 'PROC_20' : 'STANDARD';
+    }
+    if (patch.typUmowy && patch.nettoZasadnicza === undefined) {
+      data.nettoZasadnicza = patch.typUmowy === 'UZ'
+        ? store.config.minimalnaKwotaUZ.zasadniczaNetto
+        : store.config.placaMinimalna.netto;
+    }
 
     const isExemptByAge = czyZwolnionyZFpFgsp(data.dataUrodzenia, data.plec, store.config);
     let skladkaFP = !isExemptByAge;
@@ -284,7 +292,7 @@ const updateRow = (rowIndex: number, patch: Record<string, any>) => {
           <button type="button" class="px-6 py-2.5 text-xs font-bold border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 transition-all active:scale-95 shadow-sm uppercase" @click="emit('close')">
             Anuluj
           </button>
-          <button type="button" class="px-8 py-2.5 text-xs font-extrabold bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white rounded-xl disabled:opacity-50 hover:brightness-110 transition-all shadow-[0_4px_12px_-2px_rgba(197,160,89,0.3)] border border-white/10 active:scale-95 uppercase tracking-widest" :disabled="stats.valid === 0" @click="confirmImport">
+          <button type="button" class="px-8 py-2.5 text-xs font-extrabold bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white rounded-xl disabled:opacity-50 hover:brightness-110 transition-all shadow-[0_4px_12px_-2px_rgba(197,160,89,0.3)] border border-white/10 active:scale-95 uppercase tracking-widest" :disabled="stats.valid === 0" @click="confirmImport">
             Importuj
           </button>
         </div>

@@ -7,6 +7,7 @@ import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore'
 import { useSessionStore } from '@/stores/session'
 import { useClientStore } from '@/stores/client'
+import { useRoute, useRouter } from 'vue-router'
 import { DEFAULT_CONFIG } from '@/components/calculator/tax-engine/constants'
 import type { UserRole } from '@/types/models'
 
@@ -25,6 +26,8 @@ const auth = useAuthStore()
 const toast = useToastStore()
 const viewPermissions = useViewPermissionsStore()
 const session = useSessionStore()
+const route = useRoute()
+const router = useRouter()
 
 const modeLabel = computed(() => auth.enabled ? 'Keycloak (PROD)' : 'DEV (auth wyłączony)')
 const currentUser = computed(() => auth.user || null)
@@ -44,6 +47,9 @@ const settingsTabs = [
   { key: 'statuses', label: 'Statusy', permissionKey: 'settings-statuses' },
   { key: 'broadcasts', label: 'Broadcasty', permissionKey: 'settings-broadcasts' },
 ] as const
+type SettingsTabKey = typeof settingsTabs[number]['key']
+const settingsTabKeys = settingsTabs.map((tab) => tab.key) as SettingsTabKey[]
+const isSettingsTabKey = (value: string): value is SettingsTabKey => settingsTabKeys.includes(value as SettingsTabKey)
 const canAccessSettingsTab = (permissionKey?: string) => {
   if (!permissionKey) return false
   if (permissionKey === 'settings-crm-permissions') return isSuperAdmin.value
@@ -55,6 +61,7 @@ const firstAllowedSettingsTab = computed(() => {
 })
 const visibleSettingsTabs = computed(() => settingsTabs.filter((tab) => tab && canAccessSettingsTab(tab.permissionKey)))
 const isSuperAdmin = computed(() => currentRole.value === 'ADMIN')
+const isMailServerAdmin = computed(() => isSuperAdmin.value)
 const calculatorStore = useCalculatorStore()
 const calculatorSaving = ref(false)
 const calculatorError = ref<string | null>(null)
@@ -1006,7 +1013,14 @@ const saveMailSettings = async () => {
   mailSettingsSaving.value = true
   mailSettingsError.value = null
   try {
-    const payload = { ...mailSettings.value }
+    const payload = isMailServerAdmin.value
+      ? { ...mailSettings.value }
+      : {
+          imap_username: mailSettings.value.imap_username,
+          imap_password: mailSettings.value.imap_password,
+          smtp_username: mailSettings.value.smtp_username,
+          smtp_password: mailSettings.value.smtp_password,
+        }
     const { data } = await api.put('/v1/crm-mail-settings', payload)
     const saved = data?.data ?? null
     if (saved) applyMailSettings(saved)
@@ -1115,8 +1129,31 @@ watch(
 )
 
 watch(
+  () => [route.query.tab, viewPermissions.resolvedPermissions, currentRole.value],
+  () => {
+    const requestedTabRaw = route.query.tab
+    const requestedTab = typeof requestedTabRaw === 'string' && isSettingsTabKey(requestedTabRaw) ? requestedTabRaw : null
+    if (requestedTab && canAccessSettingsTab(`settings-${requestedTab}`)) {
+      if (activeTab.value !== requestedTab) activeTab.value = requestedTab
+      return
+    }
+    const allowedKey = firstAllowedSettingsTab.value as SettingsTabKey
+    if (activeTab.value !== allowedKey && !canAccessSettingsTab(`settings-${activeTab.value}`)) {
+      activeTab.value = allowedKey
+    }
+    if (requestedTab && requestedTab !== allowedKey) {
+      router.replace({ query: { ...route.query, tab: allowedKey } }).catch(() => {})
+    }
+  },
+  { immediate: true }
+)
+
+watch(
   () => activeTab.value,
   (tab) => {
+    if (route.query.tab !== tab) {
+      router.replace({ query: { ...route.query, tab } }).catch(() => {})
+    }
     if (tab !== 'mail' || mailTabLoaded.value) return
     mailTabLoaded.value = true
     fetchMailSettings()
@@ -1274,7 +1311,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
           <h3 class="font-semibold">Poczta (IMAP/SMTP)</h3>
           <div class="flex items-center gap-2">
             <button
-              v-if="isSuperAdmin"
+              v-if="isMailServerAdmin"
               type="button"
               class="text-xs px-3 py-1.5 rounded border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
               :disabled="!auth.enabled || mailTestLoading"
@@ -1283,6 +1320,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
               Test IMAP
             </button>
             <button
+              v-if="isMailServerAdmin"
               type="button"
               class="text-xs px-3 py-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-60"
               :disabled="!auth.enabled || mailFoldersLoading"
@@ -1304,11 +1342,11 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
         <div v-if="!auth.enabled" class="text-sm text-gray-500">Tryb DEV: konfiguracja poczty jest dostępna tylko w trybie API.</div>
         <div v-else class="space-y-5">
           <div v-if="mailSettingsError" class="text-sm text-red-600">{{ mailSettingsError }}</div>
-          <div v-if="isSuperAdmin" class="space-y-2">
+          <div v-if="isMailServerAdmin" class="space-y-2">
             <div v-if="mailTestError" class="text-xs text-red-600">{{ mailTestError }}</div>
             <pre v-if="mailTestResult" class="text-[11px] bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap">{{ JSON.stringify(mailTestResult, null, 2) }}</pre>
           </div>
-          <div v-if="isSuperAdmin" class="border rounded p-4 space-y-3">
+          <div v-if="isMailServerAdmin" class="border rounded p-4 space-y-3">
             <div class="flex items-center justify-between">
               <h4 class="font-semibold text-sm">IMAP Debug (Node)</h4>
               <div class="flex items-center gap-2">
@@ -1359,7 +1397,11 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-if="!isMailServerAdmin" class="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+            Serwer IMAP/SMTP jest zarządzany centralnie przez administratora. Tutaj ustawiasz tylko własny login i hasło.
+          </div>
+
+          <div v-if="isMailServerAdmin" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="text-xs font-semibold text-gray-500">Nazwa nadawcy</label>
               <input v-model="mailSettings.from_name" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="np. Jan Kowalski" />
@@ -1370,7 +1412,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
             </div>
           </div>
 
-          <div class="border rounded p-4 space-y-4">
+          <div v-if="isMailServerAdmin" class="border rounded p-4 space-y-4">
             <h4 class="font-semibold text-sm">IMAP (pobieranie)</h4>
             <div v-if="mailFoldersError" class="text-xs text-red-600">{{ mailFoldersError }}</div>
             <datalist v-if="mailFolders.length" id="imap-folder-options">
@@ -1392,17 +1434,6 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
                 </label>
               </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="text-xs font-semibold text-gray-500">Użytkownik</label>
-                <input v-model="mailSettings.imap_username" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" />
-              </div>
-              <div>
-                <label class="text-xs font-semibold text-gray-500">Hasło</label>
-                <input v-model="mailSettings.imap_password" type="password" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="••••••••" />
-                <p v-if="imapPasswordSet" class="mt-1 text-[11px] text-gray-500">Hasło zapisane. Zostaw puste, aby nie zmieniać.</p>
-              </div>
-            </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label class="text-xs font-semibold text-gray-500">Folder INBOX</label>
@@ -1419,7 +1450,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
             </div>
           </div>
 
-          <div class="border rounded p-4 space-y-4">
+          <div v-if="isMailServerAdmin" class="border rounded p-4 space-y-4">
             <h4 class="font-semibold text-sm">SMTP (wysyłka)</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -1437,13 +1468,28 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
                 </label>
               </div>
             </div>
+          </div>
+
+          <div class="border rounded p-4 space-y-4">
+            <h4 class="font-semibold text-sm">Twoje dane logowania</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="text-xs font-semibold text-gray-500">Użytkownik</label>
+                <label class="text-xs font-semibold text-gray-500">IMAP - użytkownik</label>
+                <input v-model="mailSettings.imap_username" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" />
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-gray-500">IMAP - hasło</label>
+                <input v-model="mailSettings.imap_password" type="password" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="••••••••" />
+                <p v-if="imapPasswordSet" class="mt-1 text-[11px] text-gray-500">Hasło zapisane. Zostaw puste, aby nie zmieniać.</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-semibold text-gray-500">SMTP - użytkownik</label>
                 <input v-model="mailSettings.smtp_username" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" />
               </div>
               <div>
-                <label class="text-xs font-semibold text-gray-500">Hasło</label>
+                <label class="text-xs font-semibold text-gray-500">SMTP - hasło</label>
                 <input v-model="mailSettings.smtp_password" type="password" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="••••••••" />
                 <p v-if="smtpPasswordSet" class="mt-1 text-[11px] text-gray-500">Hasło zapisane. Zostaw puste, aby nie zmieniać.</p>
               </div>

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed, shallowRef, markRaw } from 'vue'
-import Keycloak from 'keycloak-js'
+import { ref, computed } from 'vue'
+import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js'
 
 type UserProfile = {
   username?: string
@@ -13,38 +13,37 @@ type UserProfile = {
   crmNumber?: string
 }
 
-type AuthConfig = {
-  enabled: boolean
-  url: string | null
-  realm: string | null
-  clientId: string | null
+function buildSupabaseClient(): SupabaseClient {
+  const url = import.meta.env.VITE_SUPABASE_URL as string
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+  if (!url || !key) {
+    console.warn('[AUTH] Brak VITE_SUPABASE_URL lub VITE_SUPABASE_ANON_KEY w .env')
+  }
+  return createClient(url || '', key || '')
 }
 
-function readConfig(): AuthConfig {
-  const enabled = String(import.meta.env.VITE_AUTH_ENABLED || 'false') === 'true'
+const supabase = buildSupabaseClient()
+
+function mapSupabaseUser(sbUser: SupabaseUser): UserProfile {
+  const meta = (sbUser.user_metadata || {}) as Record<string, any>
+  const appMeta = (sbUser.app_metadata || {}) as Record<string, any>
+  const role = appMeta.role || meta.role
   return {
-    enabled,
-    url: import.meta.env.VITE_KEYCLOAK_URL ?? null,
-    realm: import.meta.env.VITE_KEYCLOAK_REALM ?? null,
-    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? null,
+    id: sbUser.id,
+    email: sbUser.email,
+    username: meta.username || sbUser.email,
+    firstName: meta.first_name || meta.firstName,
+    lastName: meta.last_name || meta.lastName,
+    roles: role ? [role] : [],
   }
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const config = readConfig()
-
-  const debugEnabled = String(import.meta.env.VITE_AUTH_DEBUG || 'false') === 'true'
-  const dbg = (...args: any[]) => {
-    if (debugEnabled) console.debug('[AUTH]', ...args)
-  }
-
   const initializing = ref(false)
   const isAuthenticated = ref(false)
-  const token = ref<string | null>(localStorage.getItem('crm_token'))
+  const token = ref<string | null>(null)
   const user = ref<UserProfile | null>(null)
   const error = ref<string | null>(null)
-
-  const keycloak = shallowRef<Keycloak | null>(null)
   const initAttempted = ref(false)
 
   const fullName = computed(() => {
@@ -53,137 +52,70 @@ export const useAuthStore = defineStore('auth', () => {
     return fn || user.value.username || user.value.email || ''
   })
 
-  function validateConfig(): string | null {
-    if (!config.enabled) return null
-    if (!config.url) return 'Brak VITE_KEYCLOAK_URL'
-    if (!config.realm) return 'Brak VITE_KEYCLOAK_REALM'
-    if (!config.clientId) return 'Brak VITE_KEYCLOAK_CLIENT_ID'
-    return null
-  }
+  // Always enabled – Supabase doesn't require env toggle
+  const enabled = computed(() => true)
 
-  function saveToken(t: string | undefined | null) {
-    token.value = t || null
+  function saveToken(t: string | null) {
+    token.value = t
     if (t) localStorage.setItem('crm_token', t)
     else localStorage.removeItem('crm_token')
   }
 
   async function init() {
-    if (!config.enabled) return
     if (initializing.value) return
-    // Already initialized? Just return. login() will use existing instance.
-    if (keycloak.value && initAttempted.value) return
-
+    if (initAttempted.value) return
     initializing.value = true
     error.value = null
     try {
-      const cfgErr = validateConfig()
-      if (cfgErr) {
-        error.value = `Konfiguracja logowania niepełna: ${cfgErr}`
-        return
+      const { data, error: sbError } = await supabase.auth.getSession()
+      if (sbError) throw sbError
+      const session = data.session
+      if (session) {
+        isAuthenticated.value = true
+        saveToken(session.access_token)
+        user.value = mapSupabaseUser(session.user)
       }
-      const kc = new Keycloak({
-        url: config.url!,
-        realm: config.realm!,
-        clientId: config.clientId!
-      })
-      keycloak.value = markRaw(kc)
-
-            const initOptions = {
-        onLoad: 'check-sso',
-        pkceMethod: 'S256',
-        checkLoginIframe: false,
-        enableLogging: true
-      }
-      
-      console.log('[AUTH] Starting Keycloak init with options:', initOptions)
-
-      try {
-        const authenticated = await kc.init(initOptions as any)
-        dbg('kc.init authenticated =', authenticated)
-        isAuthenticated.value = authenticated
-        saveToken(kc.token)
-        if (authenticated) {
-            user.value = kc.tokenParsed as any
-            setTokenRefresh()
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
+          isAuthenticated.value = true
+          saveToken(session.access_token)
+          user.value = mapSupabaseUser(session.user)
+        } else {
+          isAuthenticated.value = false
+          saveToken(null)
+          user.value = null
         }
-        kc.onTokenExpired = async () => {
-             try {
-                await kc.updateToken(30)
-                saveToken(kc.token)
-             } catch (e) {
-                dbg('Token refresh failed, logging out', e)
-                await logout()
-             }
-         }
-      } catch (innerError) {
-          console.error('[AUTH] INIT FAILED:', innerError)
-          throw innerError
-      }
+      })
     } catch (e: any) {
-      console.error(e)
       error.value = e?.message || 'Nie udało się zainicjalizować logowania'
-      // Ensure keycloak is reset if init failed so retry is possible
-      keycloak.value = null
-      initializing.value = false
     } finally {
-      // Don't set initializing to false here if we want to allow retry,
-      // but initAttempted should be true only if success? No, it means we tried.
       initializing.value = false
       initAttempted.value = true
     }
   }
 
-  function setTokenRefresh() {
-    const kc = keycloak.value
-    if (!kc) return
-    // co 20s spróbuj odświeżyć gdy krótszy niż 60s
-    const interval = setInterval(async () => {
-      if (!keycloak.value) return clearInterval(interval)
-      try {
-        const refreshed = await kc.updateToken(60)
-        if (refreshed) saveToken(kc.token)
-      } catch (e) {
-        dbg('Periodic token refresh failed', e)
-        await logout()
-      }
-    }, 20000)
-  }
-
   async function ensureInitialized() {
-    if (!config.enabled) return
     if (initAttempted.value) return
     await init()
   }
 
-  async function login(redirectUri?: string) {
-    if (!config.enabled) {
-      // DEV: autoryzacja wyłączona – przepuść użytkownika
+  async function login(email: string, password: string) {
+    error.value = null
+    const { data, error: sbError } = await supabase.auth.signInWithPassword({ email, password })
+    if (sbError) throw new Error(sbError.message)
+    if (data.session) {
       isAuthenticated.value = true
-      user.value = { username: 'dev', email: 'dev@example.com' }
-      saveToken('dev-token')
-      return
+      saveToken(data.session.access_token)
+      user.value = mapSupabaseUser(data.user!)
     }
-    await init()
-    const kc = keycloak.value
-    if (!kc) throw new Error('Keycloak nie jest zainicjalizowany')
-    await kc.login({ redirectUri })
   }
 
-  async function logout(redirectUri?: string) {
-    if (!config.enabled) {
-      isAuthenticated.value = false
-      user.value = null
-      saveToken(null)
-      return
-    }
-    const kc = keycloak.value
+  async function logout() {
+    await supabase.auth.signOut()
     isAuthenticated.value = false
     user.value = null
     saveToken(null)
-    if (kc) await kc.logout({ redirectUri: redirectUri || window.location.origin + '/login' })
   }
-
-  const enabled = computed(() => config.enabled)
 
   return {
     // state

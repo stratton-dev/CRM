@@ -468,7 +468,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col items-stretch bg-slate-50/50 p-5 rounded-[2rem] relative isolate">
+  <div class="h-full flex flex-col items-stretch bg-slate-50/50 p-5 rounded-4xl relative isolate">
     <!-- Overlay for closing month picker -->
     <div v-if="showMonthPicker" class="fixed inset-0 z-40 bg-transparent" @click="closeMonthPicker"></div>
 
@@ -553,7 +553,7 @@ onBeforeUnmount(() => {
 
       <!-- Days Grid with auto-fit rows -->
       <div 
-        class="flex-1 grid grid-cols-7 bg-slate-200 gap-px border-l border-t border-slate-200 min-h-0 bg-gray-50/50"
+        class="flex-1 grid grid-cols-7 gap-px border-l border-t border-slate-200 min-h-0 bg-gray-50/50"
         :style="{ gridTemplateRows: `repeat(${rowCount}, 1fr)` }"
       >
         <!-- Empty slots from previous month -->
@@ -604,7 +604,7 @@ onBeforeUnmount(() => {
               @dragstart="onDragStart($event, act)"
             >
               <!-- Type Indicator Icon (Subtle) -->
-              <div class="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
+              <div class="absolute right-0 top-0 bottom-0 w-6 bg-linear-to-l from-white to-transparent z-10 pointer-events-none"></div>
 
               <div class="flex flex-col min-w-0 flex-1 z-0">
                   <div class="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider opacity-60 mb-0.5 leading-none" 
@@ -648,7 +648,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Add Button (Hover) -->
-          <div class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/[0.02] pointer-events-none transition-colors duration-300"></div>
+          <div class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/2 pointer-events-none transition-colors duration-300"></div>
           <button 
             type="button" 
             class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 bg-white text-stratton-gold hover:text-white hover:bg-stratton-gold border border-slate-100 rounded-xl w-8 h-8 flex items-center justify-center text-lg shadow-lg hover:shadow-amber-500/30 transition-all transform hover:scale-110 z-10" 
@@ -667,7 +667,7 @@ onBeforeUnmount(() => {
     <!-- Modals -->
     <Teleport to="body">
       <!-- Add/Edit Modal -->
-      <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" @click.self="closeModal">
+      <div v-if="showModal" class="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" @click.self="closeModal">
         <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md relative animate-fade-in-up border border-white/20">
           <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-white rounded-full p-4 shadow-xl border-4 border-slate-50">
              <AppIcon :name="newEvent.id ? 'pencil-square' : 'calendar'" class="w-8 h-8 text-stratton-gold" />
@@ -740,7 +740,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Day Details Modal -->
-      <div v-if="selectedDay" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" @click.self="closeDayDetails">
+      <div v-if="selectedDay" class="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" @click.self="closeDayDetails">
         <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg relative animate-fade-in-up md:min-w-[500px]">
           <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
             <div>

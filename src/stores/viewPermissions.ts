@@ -135,11 +135,11 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'quick-calculator': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   calculator: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   meetings: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
-  leaderboard: ['ADMIN'],
-  settings: ['ADMIN'],
+  leaderboard: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
+  settings: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'settings-backend': ['ADMIN'],
   'settings-auth': ['ADMIN'],
-  'settings-mail': ['ADMIN'],
+  'settings-mail': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'settings-consents': ['ADMIN'],
   'settings-crm-permissions': ['ADMIN'],
   'settings-calculator': ['ADMIN'],
@@ -194,6 +194,7 @@ export const useViewPermissionsStore = defineStore('view-permissions', () => {
       loaded.value = true
     } catch (err: any) {
       error.value = err?.response?.data?.message || err?.message || 'Nie udało się pobrać uprawnień.'
+      loaded.value = true // fallback to DEFAULT_PERMISSIONS on error
     } finally {
       loading.value = false
     }
@@ -232,6 +233,10 @@ export const useViewPermissionsStore = defineStore('view-permissions', () => {
     
     // Safety fallback for new 'meetings' view during deployment transition
     if (viewKey === 'meetings') {
+      const baseRoles = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
+      if (baseRoles.includes(normalizedRole)) return true
+    }
+    if (viewKey === 'settings-mail') {
       const baseRoles = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
       if (baseRoles.includes(normalizedRole)) return true
     }

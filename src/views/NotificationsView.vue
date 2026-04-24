@@ -154,7 +154,7 @@ const getTypeLabel = (type: string) => {
 
 <template>
   <div class="space-y-6 p-6">
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border border-slate-800">
+    <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border border-slate-800">
         <div class="relative z-10 flex items-center gap-6">
             <RouterLink to="/app/dashboard" class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
                 <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />

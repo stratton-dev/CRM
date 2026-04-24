@@ -11,10 +11,12 @@ import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import ClientCardModal from '@/components/ClientCardModal.vue'
 import type { Client, User } from '@/types/models'
 
-defineProps<{
+const props = defineProps<{
   embedded?: boolean
+  viewScope?: string
 }>()
 
 const router = useRouter()
@@ -81,7 +83,7 @@ const sendMsg = () => {
 const promoteToClient = (client: any) => {
   if (!client.nip || !client.name) {
     toast.error('Uzupełnij NIP i nazwę firmy przed utworzeniem kalkulacji.')
-    openEditClient(client)
+    openClientModal(client)
     return
   }
   // Navigate to Calculator with this client pre-selected
@@ -173,126 +175,18 @@ const editRedirect = (user: any) => {
 }
 
 
-const showAddModal = ref(false)
-const showEditModal = ref(false)
-const isSubmitting = ref(false)
-const isFetchingGus = ref(false)
-const dateInput = ref<HTMLInputElement | null>(null)
-const wasValidated = ref(false)
+const selectedClientForModal = ref<Client | null>(null)
+const showClientModal = ref(false)
 
-const contactSources = [
-  'Kontakt własny',
-  'Cold calling',
-  'Polecenie od innego klienta',
-  'Przypadkowa rozmowa'
-]
-
-const industries = [
-  "Uprawy rolne, chów i hodowla zwierząt, łowiectwo, włączając działalność usługową",
-  "Leśnictwo i pozyskiwanie drewna",
-  "Rybactwo",
-  "Wydobywanie węgla kamiennego i węgla brunatnego (lignitu)",
-  "Górnictwo ropy naftowej i gazu ziemnego",
-  "Górnictwo rud metali",
-  "Pozostałe górnictwo i wydobywanie",
-  "Usługi wspomagające górnictwo i wydobywanie",
-  "Produkcja art. spożywczych",
-  "Produkcja napojów",
-  "Produkcja wyrobów tytoniowych",
-  "Produkcja wyrobów tekstylnych",
-  "Produkcja odzieży",
-  "Produkcja skór i wyrobów ze skór wyprawionych",
-  "Produkcja wyrobów z drewna oraz korka, z wyłączeniem mebli; Produkcja wyrobów ze słomy i materiałów używanych do wyplatania",
-  "Produkcja papieru i wyrobów z papieru",
-  "Poligrafia i reprodukcja zapisanych nośników informacji",
-  "Wytwarzanie i przetwarzanie koksu i produktów rafinacji ropy naftowej",
-  "Produkcja chemikaliów i wyrobów chemicznych",
-  "Produkcja podstawowych substancji farmaceutycznych oraz leków i pozostałych wyrobów farmaceutycznych",
-  "Produkcja wyrobów z gumy i tworzyw sztucznych",
-  "Produkcja wyrobów z pozostałych mineralnych surowców niemetalicznych",
-  "Produkcja metali",
-  "Produkcja metalowych wyrobów gotowych, z wyłączeniem maszyn i urządzeń",
-  "Produkcja komputerów, wyrobów elektronicznych i optycznych",
-  "Produkcja urządzeń elektrycznych",
-  "Produkcja maszyn i urządzeń, gdzie indziej niesklasyfikowana",
-  "Produkcja pojazdów samochodowych, przyczep i naczep, z wyłączeniem motocykli",
-  "Produkcja pozostałego sprzętu transportowego",
-  "Produkcja mebli",
-  "Pozostała produkcja wyrobów",
-  "Naprawa, konserwacja i instalowanie maszyn i urządzeń",
-  "Wytwarzanie i zaopatrywanie w energię elektryczną, gaz, parę wodną, gorącą wodę i powietrze do układów klimatyzacyjnych",
-  "Pobór, uzdatnianie i dostarczanie wody",
-  "Odprowadzanie i oczyszczanie ścieków",
-  "Zbieranie, przetwarzanie i unieszkodliwianie odpadów oraz odzysk surowców",
-  "Rekultywacją i pozostałe usługi związane z gospodarką odpadami",
-  "Roboty budowlane związane ze wznoszeniem budynków",
-  "Roboty związane z budową obiektów inżynierii lądowej i wodnej",
-  "Roboty budowlane specjalistyczne",
-  "Handel hurtowy i detaliczny pojazdami samochodowymi; Naprawa pojazdów samochodowych",
-  "Handel hurtowy (bez pojazdów samochodowych)",
-  "Handel detaliczny (bez pojazdów samochodowych)",
-  "Transport lądowy oraz rurociągowy",
-  "Transport wodny",
-  "Transport lotniczy",
-  "Magazynowanie i usługi wspomagające transport",
-  "Działalność pocztowa i kurierska",
-  "Zakwaterowanie",
-  "Wyżywienie",
-  "Działalność wydawnicza",
-  "Działalność filmowa, telewizyjna, dźwiękowa i muzyczna",
-  "Nadawanie programów telewizyjnych i radiowych",
-  "Telekomunikacja",
-  "Oprogramowanie i doradztwo w zakresie informatyki",
-  "Zarządzanie stronami WWW, przetwarzanie danych i hosting",
-  "Usługi finansowe z wyłączeniem ubezpieczeń i funduszów emerytalnych",
-  "Ubezpieczenia, reasekuracja i fundusze emerytalne, z wyłączeniem obowiązkowego ubezpieczenia społecznego",
-  "Usługi objęrem pośrednictwem finansowym",
-  "Obsługa rynku nieruchomości",
-  "Usługi prawnicze, rachunkowo-księgowe i doradztwo podatkowe",
-  "Działalność firm centralnych i doradztwo związane z zarządzaniem",
-  "Architektura, inżynieria, badania i analizy techniczne",
-  "Badania naukowe i prace rozwojowe",
-  "Reklama, badanie rynku i opinii publicznej",
-  "Projektowanie, fotografia, tłumaczenia, działalność profesjonalna",
-  "Weterynaria",
-  "Wynajem i dzierżawa",
-  "Zatrudnienie",
-  "Turystyka",
-  "Usługi detektywistyczne i ochroniarskie",
-  "Sprzątanie budynków i gospodarowanie terenami zieleni",
-  "Administracja biurowa i wspomaganie prowadzenia działalności gospodarczej",
-  "Administracja publiczna, obrona narodowa i obowiązkowe zabezpieczenia społeczne",
-  "Edukacja",
-  "Opieka zdrowotna",
-  "Pomoc społeczna (z zakwaterowaniem)",
-  "Pomoc społeczna (bez zakwaterowania)",
-  "Kultura i rozrywka",
-  "Biblioteki, archiwa, muzea, zoo oraz inne obiekty kulturalne",
-  "Gry losowe i zakłady wzajemne",
-  "Sport, rozrywka i rekreacja",
-  "Działalność organizacji członkowskich",
-  "Naprawa komputerów i artykułów osobistych oraz domowych",
-  "Pozostała indywidualna działalność usługowa"
-]
-
-const initialForm = {
-  contactName: '',
-  contactPosition: '',
-  contactPhone: '',
-  contactEmail: '',
-  isDecisionMaker: false,
-  companyName: '',
-  nip: '',
-  address: '',
-  industry: '',
-  companySize: '',
-  source: 'Kontakt własny',
-  meetingDate: '',
-  meetingNotes: '',
+const openClientModal = (client: Client) => {
+  selectedClientForModal.value = client
+  showClientModal.value = true
 }
 
-const form = ref({ ...initialForm })
-const selectedClient = ref<Client | null>(null)
+const openAddModal = () => {
+  selectedClientForModal.value = null
+  showClientModal.value = true
+}
 
 const searchQuery = ref('')
 const sortKey = ref('name')
@@ -307,6 +201,26 @@ const filteredClients = computed(() => {
   list = list.filter(c => 
     !['OFFER_GENERATED', 'CALCULATION_SENT', 'SIGNED', 'TERMINATED', 'RESIGNED'].includes(c.status)
   )
+
+  if (props.embedded && props.viewScope && props.viewScope !== 'all') {
+    const scope = props.viewScope
+    const myId = currentUser.value?.id
+    if (scope === 'mine') {
+      list = list.filter(c => c.ownerId === myId)
+    } else if (scope === 'structure' || scope === 'team') {
+      if (myId && currentUser.value?.role !== 'ADMIN') {
+        const subtreeIds = [myId, ...structureStore.getSubtreeUserIds(myId)]
+        list = list.filter(c => !c.ownerId || subtreeIds.includes(c.ownerId))
+      }
+      // ADMIN with 'structure' sees all — no extra filter
+    } else if (scope.startsWith('role:')) {
+      const targetRole = scope.slice(5)
+      list = list.filter(c => {
+        const owner = structureUsers.value.find((u: any) => u.id === c.ownerId)
+        return owner?.role === targetRole
+      })
+    }
+  }
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
@@ -358,182 +272,6 @@ const toggleSort = (key: string) => {
     sortKey.value = key
     sortOrder.value = 'asc'
   }
-}
-
-const fetchGusData = async () => {
-  if (!form.value.nip || form.value.nip.length !== 10) {
-    toast.warning('Podaj poprawny 10-cyfrowy NIP')
-    return
-  }
-  
-  isFetchingGus.value = true
-  try {
-    const { data } = await api.get('/v1/gus', { params: { nip: form.value.nip } })
-    if (data) {
-      form.value.companyName = data.name || ''
-      form.value.address = `${data.street || ''} ${data.houseNr || ''}${data.aptNr ? '/' + data.aptNr : ''}, ${data.zipCode || ''} ${data.city || ''}`.trim()
-      toast.success('Dane pobrane pomyślnie')
-    }
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Nie znaleziono danych dla podanego NIP')
-  } finally {
-    isFetchingGus.value = false
-  }
-}
-
-const handleAddMeeting = async () => {
-  wasValidated.value = true
-  if (
-    !form.value.contactName || 
-    !form.value.source || 
-    !form.value.meetingDate || 
-    !form.value.companySize || 
-    !form.value.industry
-  ) {
-    toast.warning('Wypełnij wymagane pola zaznaczone na czerwono')
-    return
-  }
-  
-  isSubmitting.value = true
-  try {
-    // 1. Create client profile if company/nip provided or just use contact data
-    const payload = {
-      name: form.value.companyName || form.value.contactName,
-      nip: form.value.nip,
-      contact_name: form.value.contactName,
-      contact_phone: form.value.contactPhone,
-      contact_email: form.value.contactEmail,
-      contact_position: form.value.contactPosition,
-      is_decision_maker: form.value.isDecisionMaker,
-      address: form.value.address,
-      industry: form.value.industry,
-      company_size: form.value.companySize,
-      source: form.value.source,
-      status: 'IN_TALKS',
-      initial_meeting: {
-        date: new Date(form.value.meetingDate).toISOString(),
-        notes: form.value.meetingNotes
-      }
-    }
-    
-    await api.post('/v1/meetings/prospect', payload)
-    await clientStore.refreshApiData()
-    toast.success('Spotkanie i klient dodani pomyślnie')
-    showAddModal.value = false
-    form.value = { ...initialForm }
-  } catch (error: any) {
-    toast.error('Błąd podczas zapisywania: ' + (error.response?.data?.message || error.message))
-  } finally {
-    isSubmitting.value = false
-  }
-}
-
-const openAddModal = () => {
-    // Reset form
-    form.value = { ...initialForm }
-    wasValidated.value = false
-    isEditing.value = false
-    showAddModal.value = true
-}
-
-const isEditing = ref(false)
-
-const openEditClient = (client: Client) => {
-  selectedClient.value = client
-  isEditing.value = true
-  form.value = {
-    contactName: client.contactName || '',
-    contactPosition: client.contactPosition || '',
-    contactPhone: client.contactPhone || '',
-    contactEmail: client.contactEmail || '',
-    isDecisionMaker: client.isDecisionMaker || false,
-    companyName: client.name || '',
-    nip: client.nip || '',
-    address: `${client.street || ''} ${client.buildingNr || ''}, ${client.zip || ''} ${client.city || ''}`.trim(),
-    industry: client.industry || '',
-    companySize: client.companySize || '',
-    source: client.source || 'Kontakt własny',
-    meetingDate: new Date().toISOString().slice(0, 16),
-    meetingNotes: '',
-  }
-  showAddModal.value = true
-}
-
-const handleUpdateClient = async () => {
-    if (!selectedClient.value) return
-    isSubmitting.value = true
-    
-    // We'll track success of operations to give better feedback
-    let noteSaved = false
-    let clientUpdated = false
-    
-    try {
-        // 1. Add activity note FIRST (since this is often the primary goal)
-        if (form.value.meetingNotes) {
-             const activityDate = form.value.meetingDate ? new Date(form.value.meetingDate).toISOString() : new Date().toISOString()
-             
-             await clientStore.addActivity(selectedClient.value.id, {
-                 type: 'MEETING', 
-                 description: form.value.meetingNotes,
-                 authorId: currentUser.value?.id || '',
-             }, activityDate)
-             noteSaved = true
-             toast.success('Zapisano notatkę')
-        }
-
-        // 2. Try to update client data - wrap in separate try/catch to not block note saving
-        try {
-            await api.patch(`/v1/clients/${selectedClient.value.id}`, {
-                name: form.value.companyName,
-                nip: form.value.nip,
-                contact_name: form.value.contactName,
-                contact_phone: form.value.contactPhone,
-                contact_email: form.value.contactEmail,
-                contact_position: form.value.contactPosition,
-                is_decision_maker: form.value.isDecisionMaker,
-                address: form.value.address,
-                industry: form.value.industry,
-                company_size: form.value.companySize,
-                source: form.value.source,
-            })
-            clientUpdated = true
-            toast.success('Zaktualizowano dane klienta')
-        } catch (clientError: any) {
-            console.error('Client update error:', clientError)
-            // Only show error if we explicitly changed something that failed to save
-            // or if it's a critical permission error that the user should know about
-            // But since the note is saved, we don't want to show a scary "Action Unauthorized" if possible
-            // unless the user intended to update client data.
-            
-            if (!noteSaved) {
-                // If note wasn't saved either (or wasn't attempted), then this is a hard failure
-                throw clientError
-            } else {
-                // Determine if we should warn
-                const msg = clientError.response?.data?.message || clientError.message
-                if (msg.includes('unauthorized') || msg.includes('403') || msg.includes('THIS ACTION IS UNAUTHORIZED')) {
-                     // SILENCE: If note was saved but user has no permission to update company core data, 
-                     // we just ignore it to not confuse them. They primarily wanted to save the meeting note.
-                     console.warn('Client update unauthorized, but note saved successfully.')
-                } else {
-                     toast.warning('Notatka zapisana, ale wystąpił błąd przy aktualizacji danych klienta: ' + msg)
-                }
-            }
-        }
-
-        await clientStore.refreshApiData()
-        
-        // Close modal only if at least one operation succeeded
-        if (noteSaved || clientUpdated) {
-            showAddModal.value = false
-            isEditing.value = false
-        }
-        
-    } catch (error: any) {
-        toast.error('Błąd zapisu: ' + (error.response?.data?.message || error.message))
-    } finally {
-        isSubmitting.value = false
-    }
 }
 
 const handleDeleteClient = async (client: Client) => {
@@ -736,7 +474,7 @@ const exportToCsv = () => {
               <template v-for="client in slicedMeetings" :key="client.id">
               <tr
                 class="hover:bg-slate-50 cursor-pointer transition-colors group"
-                @click="openEditClient(client)"
+                @click="openClientModal(client)"
               >
                 <td class="px-4 py-3 whitespace-nowrap">
                   <div class="w-fit rounded-lg border border-dashed border-slate-200 px-3 py-1 bg-slate-50 hover:bg-white hover:border-slate-300 transition-colors">
@@ -785,7 +523,7 @@ const exportToCsv = () => {
                       <AppIcon name="calculator" class="w-4 h-4" />
                     </button>
                     <button
-                      @click.stop="openEditClient(client)"
+                      @click.stop="openClientModal(client)"
                       class="p-2 rounded-lg border border-transparent text-slate-400 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-50 transition"
                       title="Edytuj"
                     >
@@ -936,303 +674,13 @@ const exportToCsv = () => {
       </div>
     </div>
 
-    <!-- Add Meeting Modal -->
-    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showAddModal = false"></div>
-      <div class="relative bg-surface w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-card shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300 border border-slate-200">
-        <div class="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-surface-dark z-10 text-white rounded-t-card">
-          <div>
-            <h2 class="text-xl font-bold">{{ isEditing ? 'Edycja Spotkania' : 'Nowe Spotkanie' }}</h2>
-            <p class="text-slate-300 text-sm mt-1">Uzupełnij dane spotkania i klienta</p>
-          </div>
-          <button @click="showAddModal = false" class="text-slate-400 hover:text-white transition-colors">
-            <AppIcon name="xmark" class="w-6 h-6" />
-          </button>
-        </div>
+    <ClientCardModal
+      :open="showClientModal"
+      :client="selectedClientForModal ?? undefined"
+      @close="showClientModal = false"
+      @saved="clientStore.refreshApiData()"
+    />
 
-        <div class="p-8 space-y-8">
-          <!-- Section: Contact Person -->
-          <div class="space-y-4">
-            <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800">
-              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                <AppIcon name="user" class="w-4 h-4" />
-              </div>
-              Osoba Kontaktowa
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Imię i Nazwisko</label>
-                <input 
-                  v-model="form.contactName" 
-                  type="text" 
-                  placeholder="Jan Kowalski" 
-                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
-                />
-              </div>
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Stanowisko</label>
-                <input v-model="form.contactPosition" type="text" placeholder="Dyrektor HR" class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" />
-              </div>
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Telefon</label>
-                <input 
-                  v-model="form.contactPhone" 
-                  type="text" 
-                  placeholder="+48 000 000 000" 
-                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
-                />
-              </div>
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Email</label>
-                <input 
-                  v-model="form.contactEmail" 
-                  type="email" 
-                  placeholder="email@firma.pl" 
-                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
-                />
-              </div>
-            </div>
-            <label class="flex items-center gap-3 cursor-pointer group mt-2">
-              <input v-model="form.isDecisionMaker" type="checkbox" class="w-5 h-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 transition-all shadow-sm" />
-              <span class="text-slate-700 font-medium group-hover:text-emerald-700 transition-colors text-sm">Osoba decyzyjna</span>
-            </label>
-          </div>
-
-          <!-- Section: Company Details -->
-          <div class="space-y-4 pt-8 border-t border-slate-100">
-            <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800">
-              <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-                <AppIcon name="building" class="w-4 h-4" />
-              </div>
-              Dane Firmy (Opcjonalne)
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="space-y-1 md:col-span-2">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">NIP (GUS Autofill)</label>
-                <div class="flex gap-2">
-                  <input v-model="form.nip" type="text" placeholder="10 cyfr" class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" />
-                  <button 
-                    @click="fetchGusData" 
-                    :disabled="isFetchingGus"
-                    class="bg-slate-800 text-white px-4 rounded-lg font-bold hover:bg-slate-700 transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap text-sm shadow-sm"
-                  >
-                   <AppIcon v-if="!isFetchingGus" name="refresh" class="w-4 h-4" />
-                   <div v-else class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                   Pobierz
-                  </button>
-                </div>
-              </div>
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Ilość pracowników *</label>
-                <input 
-                  v-model="form.companySize" 
-                  type="text" 
-                  placeholder="Np. 25" 
-                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
-                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.companySize }"
-                />
-              </div>
-              <div class="space-y-1 md:col-span-3">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Nazwa firmy *</label>
-                <input 
-                  v-model="form.companyName" 
-                  type="text" 
-                  placeholder="Firma Sp. z o.o." 
-                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
-                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.companyName }"
-                />
-              </div>
-              <div class="space-y-1 md:col-span-2">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Adres *</label>
-                <input 
-                  v-model="form.address" 
-                  type="text" 
-                  placeholder="ul. Sezamkowa 1, 00-000 Warszawa" 
-                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
-                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.address }"
-                />
-              </div>
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Branża *</label>
-                <input 
-                  v-model="form.industry" 
-                  list="industry-options"
-                  type="text" 
-                  placeholder="Wyszukaj branżę..." 
-                  class="form-input border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
-                  :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.industry }"
-                />
-                <datalist id="industry-options">
-                  <option v-for="ind in industries" :key="ind" :value="ind"></option>
-                </datalist>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section: Meeting Info -->
-          <div class="space-y-4 pt-8 border-t border-slate-100">
-             <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800">
-              <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
-                <AppIcon name="calendar" class="w-4 h-4" />
-              </div>
-              {{ isEditing ? 'Ostatnia Aktywność / Aktualizacja' : 'Informacje o Spotkaniu' }}
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Źródło Kontaktu *</label>
-                <select v-model="form.source" class="form-input font-medium text-slate-700 bg-white border-slate-300 focus:border-primary focus:ring-primary rounded-lg">
-                  <option v-for="src in contactSources" :key="src" :value="src">{{ src }}</option>
-                </select>
-              </div>
-              <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1" :class="{'flex justify-between items-center': isEditing}">
-                  {{ isEditing ? 'Data aktualizacji' : 'Data i Godzina *' }}
-                </label>
-                <div class="flex gap-2">
-                  <input 
-                    ref="dateInput" 
-                    v-model="form.meetingDate" 
-                    type="datetime-local" 
-                    class="form-input flex-1 border-slate-300 focus:border-primary focus:ring-primary rounded-lg" 
-                    :class="{ 'border-rose-500 ring-1 ring-rose-500': wasValidated && !form.meetingDate }"
-                  />
-                  <button 
-                    type="button"
-                    @click="dateInput?.blur()"
-                    class="bg-emerald-600 text-white px-6 rounded-lg font-bold hover:bg-emerald-700 transition-all shadow-sm active:scale-95 flex items-center justify-center shrink-0 text-sm"
-                  >
-                    OK
-                  </button>
-                </div>
-              </div>
-              <div class="space-y-1 md:col-span-2">
-                <label class="text-xs font-bold text-slate-500 uppercase ml-1">Cel / Notatki</label>
-                <textarea 
-                  v-model="form.meetingNotes"
-                  rows="3" 
-                  :placeholder="isEditing ? 'Wprowadź notatkę z ostatniego kontaktu lub aktualizację...' : 'Opisz cel spotkania lub dodaj ważne uwagi...'"
-                  class="form-input resize-none border-slate-300 focus:border-primary focus:ring-primary rounded-lg"
-                ></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 z-10 rounded-b-card">
-          <button 
-            @click="showAddModal = false"
-            class="px-5 py-2.5 rounded-lg font-bold text-slate-600 hover:bg-slate-200 transition-all text-sm"
-          >
-            Anuluj
-          </button>
-          <button 
-            @click="isEditing ? handleUpdateClient() : handleAddMeeting()"
-            :disabled="isSubmitting"
-            class="bg-primary hover:bg-primary-dark text-white px-8 py-2.5 rounded-lg font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2 text-sm"
-          >
-            <AppIcon v-if="!isSubmitting" name="check" class="w-4 h-4" />
-            <div v-else class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            {{ isEditing ? 'Zapisz Zmiany' : 'Zapisz Spotkanie' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-
-    <!-- Edit Client Modal - DEPRECATED / REMOVED from UI trigger but kept for safety if any other calls remain, though we will disable it -->
-    <!-- We will remove the v-if from here or comment out the block to ensure it's not used. 
-         Actually, let's keep it but since we changed openEditClient to use showAddModal, this block will never be shown.
-    -->
-    <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showEditModal = false"></div>
-      <div class="relative bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
-        <div class="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Edycja Klienta</h2>
-            <p class="text-slate-500 mt-1">Popraw dane w bazie CRM</p>
-          </div>
-          <button @click="showEditModal = false" class="text-slate-400 hover:text-slate-600 transition-colors">
-            <AppIcon name="xmark" class="w-8 h-8" />
-          </button>
-        </div>
-
-        <div class="p-8 space-y-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-4">
-                    <h3 class="text-slate-800 font-bold uppercase text-xs tracking-widest border-l-4 border-blue-500 pl-3">Dane Osobowe</h3>
-                    <div class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Imię i Nazwisko</label>
-                            <input v-model="form.contactName" type="text" class="form-input" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Stanowisko</label>
-                            <input v-model="form.contactPosition" type="text" class="form-input" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Telefon</label>
-                            <input v-model="form.contactPhone" type="text" class="form-input" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Email</label>
-                            <input v-model="form.contactEmail" type="email" class="form-input" />
-                        </div>
-                        <label class="flex items-center gap-3 cursor-pointer mt-2">
-                            <input v-model="form.isDecisionMaker" type="checkbox" class="w-5 h-5 rounded border-slate-300 text-green-600" />
-                            <span class="text-slate-700 font-medium">Osoba decyzyjna</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="space-y-4">
-                    <h3 class="text-slate-800 font-bold uppercase text-xs tracking-widest border-l-4 border-green-500 pl-3">Dane Firmowe</h3>
-                    <div class="space-y-4">
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Nazwa Firmy</label>
-                            <input v-model="form.companyName" type="text" class="form-input" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">NIP</label>
-                            <input v-model="form.nip" type="text" class="form-input" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Adres</label>
-                            <input v-model="form.address" type="text" class="form-input" />
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Branża</label>
-                            <input 
-                              v-model="form.industry" 
-                              list="industry-options-edit"
-                              type="text" 
-                              class="form-input" 
-                            />
-                            <datalist id="industry-options-edit">
-                              <option v-for="ind in industries" :key="ind" :value="ind"></option>
-                            </datalist>
-                        </div>
-                        <div class="space-y-1">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Ilość pracowników</label>
-                            <input v-model="form.companySize" type="text" class="form-input" />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4 sticky bottom-0 z-10">
-          <button @click="showEditModal = false" class="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-all">Anuluj</button>
-          <button 
-            @click="handleUpdateClient"
-            :disabled="isSubmitting"
-            class="bg-blue-600 hover:bg-blue-700 text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/30 disabled:opacity-50 flex items-center gap-2"
-          >
-            <AppIcon v-if="!isSubmitting" name="check" class="w-5 h-5" />
-            <div v-else class="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            Zapisz Zmiany
-          </button>
-        </div>
-      </div>
-    </div>
     <!-- Notification Modal -->
     <div v-if="showMsgModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" @click="closeMsgModal"></div>

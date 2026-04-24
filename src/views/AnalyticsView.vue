@@ -26,11 +26,59 @@ const chartMetric = ref<'SALES' | 'MEETINGS'>('SALES')
 
 const user = computed(() => currentUser.value)
 
+/**
+ * Scope rules:
+ *  ADMIN    → widzi wszystkich użytkowników w systemie
+ *  DIRECTOR → widzi swój pion — wszystkich poniżej swojego hierarchicalId (np. "PL" → cały kraj)
+ *  MANAGER  → widzi swoją grupę — bezpośrednie podzespoły pod własnym hierarchicalId
+ *  SALES    → widzi tylko siebie
+ *
+ * Używamy prefiksu hierarchicalId (np. "PL/WM/") zamiast rekurencji przez parentKeycloakId,
+ * żeby zakres był spójny z widokiem struktury i nie zależał od kompletności drzewa parentów.
+ * Fallback na getSubtreeUserIds gdy hierarchicalId nie jest ustawione.
+ */
+const getScopeIds = (
+  u: { id: string; role: string; hierarchicalId?: string | null },
+  allUsers: { id: string; role?: string; hierarchicalId?: string | null; isRemovedFromStructure?: boolean }[],
+): Set<string> => {
+  // SALES — tylko własne ID
+  if (u.role === 'SALES') return new Set([u.id])
+
+  // ADMIN — wszyscy
+  if (u.role === 'ADMIN') return new Set(allUsers.filter((m) => !m.isRemovedFromStructure).map((m) => m.id))
+
+  // DIRECTOR / MANAGER — pion lub grupa wyznaczona przez hierarchicalId
+  const hid = u.hierarchicalId
+  if (hid) {
+    const prefix = hid + '/'
+    const subtree = allUsers
+      .filter((m) => !m.isRemovedFromStructure && m.hierarchicalId?.startsWith(prefix))
+      .map((m) => m.id)
+    // Includie własne ID (manager może też mieć własnych klientów)
+    return new Set([u.id, ...subtree])
+  }
+  // Fallback gdy brak hierarchicalId
+  return new Set([u.id, ...structure.getSubtreeUserIds(u.id)])
+}
+
 const criticalNotifications = computed(() => {
   const u = user.value
   if (!u) return []
   const items = Array.isArray(notifications.value) ? notifications.value : []
-  return items.filter((n) => n.userId === u.id && n.type === 'CRITICAL' && !n.read)
+  const allUsers = Array.isArray(users.value) ? users.value : []
+  const scopeIds = getScopeIds(u, allUsers)
+
+  const seen = new Set<string>()
+  return items.filter((n) => {
+    if (!scopeIds.has(n.userId)) return false
+    if (n.type !== 'CRITICAL' || n.read) return false
+    // Filtruj błędy API zapisane przypadkowo jako powiadomienia
+    if (/field is required|the body/i.test(n.message)) return false
+    // Deduplikacja po treści
+    if (seen.has(n.message)) return false
+    seen.add(n.message)
+    return true
+  })
 })
 
 const nextRankData = computed(() => {
@@ -41,6 +89,8 @@ const nextRankData = computed(() => {
 const myClientsCount = computed(() => {
   const u = user.value
   if (!u) return 0
+  // For managers/directors/admins show full team count, for sales — own
+  if (u.role !== 'SALES') return funnelClients.value.length
   const list = Array.isArray(clients.value) ? clients.value : []
   return list.filter((client) => client.ownerId === u.id).length
 })
@@ -48,6 +98,8 @@ const myClientsCount = computed(() => {
 const signedCount = computed(() => {
   const u = user.value
   if (!u) return 0
+  // For managers/directors/admins show full team signed count
+  if (u.role !== 'SALES') return funnelClients.value.filter((c) => c.status === 'SIGNED').length
   const list = Array.isArray(clients.value) ? clients.value : []
   return list.filter((client) => client.ownerId === u.id && client.status === 'SIGNED').length
 })
@@ -56,22 +108,9 @@ const funnelClients = computed(() => {
   const u = user.value
   if (!u) return []
   const list = Array.isArray(clients.value) ? clients.value : []
-  if (u.role === 'SALES') return list.filter((client) => client.ownerId === u.id)
-  if (['MANAGER', 'DIRECTOR', 'ADMIN'].includes(u.role)) {
-    const allUsers = Array.isArray(users.value) ? users.value : []
-    let teamIds: string[] = []
-    if (u.role === 'ADMIN') {
-      teamIds = allUsers.filter((item) => item.role === 'SALES').map((item) => item.id)
-    } else {
-      teamIds = structure.getSubtreeUserIds(u.id)
-      teamIds = teamIds.filter((id) => {
-        const member = allUsers.find((item) => item.id === id)
-        return member && (member.role === 'SALES' || member.role === 'MANAGER')
-      })
-    }
-    return list.filter((client) => teamIds.includes(client.ownerId))
-  }
-  return []
+  const allUsers = Array.isArray(users.value) ? users.value : []
+  const scopeIds = getScopeIds(u, allUsers)
+  return list.filter((client) => scopeIds.has(client.ownerId))
 })
 
 const funnelEstimate = computed(() => {
@@ -126,16 +165,13 @@ const chartData = computed(() => {
   }
 
   if (['MANAGER', 'DIRECTOR', 'ADMIN'].includes(role)) {
-    let teamIds: string[] = []
-    if (role === 'ADMIN') {
-      teamIds = allUsers.filter((u) => u.role === 'SALES').map((u) => u.id)
-    } else if (user.value) {
-      teamIds = structure.getSubtreeUserIds(user.value.id)
-      teamIds = teamIds.filter((id) => {
-        const u = allUsers.find((item) => item.id === id)
-        return u && (u.role === 'SALES' || u.role === 'MANAGER')
-      })
-    }
+    const scopeIds = getScopeIds(user.value!, allUsers)
+    // Ranking tylko po SALES i MANAGER (nie liczymy samego siebie jako row jeśli DIRECTOR/ADMIN)
+    const teamIds = [...scopeIds].filter((id) => {
+      if (id === user.value?.id) return false
+      const m = allUsers.find((item) => item.id === id)
+      return m && ['SALES', 'MANAGER'].includes(m.role ?? '')
+    })
 
     const rows = teamIds.map((id) => {
       const u = allUsers.find((item) => item.id === id)
@@ -196,8 +232,80 @@ const getRankIconClass = (rank?: Rank | null) => {
   }
 }
 
+// ── ApexCharts options ──────────────────────────────────────────────────────
+
+const apexFunnelOptions = computed(() => ({
+  chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
+  plotOptions: {
+    bar: { horizontal: true, borderRadius: 6, distributed: true, dataLabels: { position: 'right' } },
+  },
+  colors: ['#94a3b8', '#f59e0b', '#3b82f6', '#10b981'],
+  dataLabels: { enabled: true, formatter: (val: number) => `${val} klientów` },
+  xaxis: { categories: chartData.value.map((d) => d.label) },
+  legend: { show: false },
+  grid: { borderColor: '#f1f5f9', xaxis: { lines: { show: false } } },
+  tooltip: { y: { formatter: (val: number) => `${val} klientów` } },
+}))
+
+const apexBarOptions = computed(() => ({
+  chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
+  plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
+  colors: ['#C5A059'],
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: chartData.value.map((d) => d.label),
+    labels: { rotate: -40, style: { fontSize: '11px' } },
+  },
+  yaxis: { title: { text: chartMetric.value === 'SALES' ? 'Podpisane umowy' : 'Spotkania' }, min: 0, forceNiceScale: true },
+  grid: { borderColor: '#f1f5f9' },
+  tooltip: { y: { formatter: (val: number) => `${val}` } },
+}))
+
+const apexChartSeries = computed(() => [
+  { name: chartMetric.value === 'SALES' ? 'Podpisane' : 'Spotkania', data: chartData.value.map((d) => d.value) },
+])
+
+// Monthly new-client trend — last 6 months (scoped to funnelClients)
+const monthlyTrendLabels = computed(() => {
+  const now = new Date()
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    return d.toLocaleString('pl-PL', { month: 'short', year: '2-digit' })
+  })
+})
+
+const monthlyTrendSeries = computed(() => {
+  const now = new Date()
+  const list = funnelClients.value
+  const data = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    const start = new Date(d.getFullYear(), d.getMonth(), 1)
+    const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59)
+    return list.filter((c: any) => {
+      const created = c.createdAt ? new Date(c.createdAt) : null
+      return created && created >= start && created <= end
+    }).length
+  })
+  return [{ name: 'Nowi klienci', data }]
+})
+
+const apexLineOptions = computed(() => ({
+  chart: { type: 'area', toolbar: { show: false }, fontFamily: 'inherit' },
+  stroke: { curve: 'smooth', width: 3 },
+  fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 90, 100] } },
+  colors: ['#C5A059'],
+  xaxis: { categories: monthlyTrendLabels.value },
+  yaxis: { title: { text: 'Klienci' }, min: 0, forceNiceScale: true },
+  dataLabels: { enabled: false },
+  markers: { size: 4 },
+  grid: { borderColor: '#f1f5f9' },
+  tooltip: { y: { formatter: (val: number) => `${val} klientów` } },
+}))
+
 onMounted(() => {
   auditLogStore.fetchLogs()
+  if (clientStore.clients.length === 0) clientStore.fetchClients({ perPage: 200 })
+  if (structure.users.length === 0) structure.fetchStructure()
 })
 </script>
 
@@ -245,11 +353,15 @@ onMounted(() => {
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div v-if="user?.role !== 'CLIENT_HR'" class="bg-white border border-gray-200 rounded shadow-sm p-4 hover:border-brand-main transition-colors cursor-default">
-        <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Moi Klienci</dt>
+        <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          {{ user?.role === 'SALES' ? 'Moi Klienci' : 'Klienci Zespołu' }}
+        </dt>
         <dd class="mt-2 text-3xl font-light text-gray-900">{{ myClientsCount }}</dd>
       </div>
       <div v-if="user?.role !== 'CLIENT_HR'" class="bg-white border border-gray-200 rounded shadow-sm p-4 hover:border-brand-main transition-colors cursor-default">
-        <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Podpisane Umowy</dt>
+        <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          {{ user?.role === 'SALES' ? 'Podpisane Umowy' : 'Umowy Zespołu' }}
+        </dt>
         <dd class="mt-2 text-3xl font-light text-gray-900">{{ signedCount }}</dd>
       </div>
       <div v-if="user?.role !== 'CLIENT_HR'" class="bg-white border border-gray-200 rounded shadow-sm p-4 hover:border-brand-main transition-colors cursor-default">
@@ -277,14 +389,23 @@ onMounted(() => {
           </div>
         </div>
         <div class="space-y-3">
-          <div v-for="row in chartData" :key="row.label" class="flex items-center gap-3">
-            <div class="w-28 text-xs font-semibold text-gray-600 truncate">{{ row.label }}</div>
-            <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="bg-brand-main h-2" :style="{ width: `${Math.min(100, row.value * 12)}%` }"></div>
-            </div>
-            <div class="text-xs font-bold text-gray-700 w-8 text-right">{{ row.value }}</div>
-          </div>
-          <div v-if="chartData.length === 0" class="text-xs text-gray-400">Brak danych.</div>
+          <div v-if="chartData.length === 0" class="text-xs text-gray-400 text-center py-8">Brak danych.</div>
+          <template v-else>
+            <apexchart
+              v-if="user?.role === 'SALES'"
+              type="bar"
+              height="220"
+              :options="apexFunnelOptions"
+              :series="apexChartSeries"
+            />
+            <apexchart
+              v-else
+              type="bar"
+              height="220"
+              :options="apexBarOptions"
+              :series="apexChartSeries"
+            />
+          </template>
         </div>
       </div>
 
@@ -303,6 +424,13 @@ onMounted(() => {
           </div>
         </div>
       </div>
+    </div>
+
+    <div v-if="user?.role !== 'CLIENT_HR'" class="bg-white border border-gray-200 rounded shadow-sm p-4">
+      <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
+        <h3 class="text-sm font-bold text-gray-700 uppercase">Trend — Nowi Klienci (6 miesięcy)</h3>
+      </div>
+      <apexchart type="area" height="200" :options="apexLineOptions" :series="monthlyTrendSeries" />
     </div>
   </div>
 </template>

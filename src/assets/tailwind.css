@@ -42,7 +42,7 @@
 
 @layer base {
   html {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   body {
@@ -147,7 +147,7 @@
     /* Default accent color (Stratton Gold) if not specified */
     --tile-color: #C5A059; 
     
-    @apply relative flex flex-col items-center justify-center p-6 bg-white rounded-2xl shadow-sm transition-all duration-300 ease-out overflow-hidden cursor-pointer border border-slate-100;
+    @apply relative flex flex-col items-center justify-center p-6 rounded-2xl shadow-sm transition-all duration-300 ease-out overflow-hidden cursor-pointer;
   }
 
   /* The slide-in top border */

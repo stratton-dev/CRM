@@ -206,8 +206,17 @@ export const useCalculatorStore = defineStore('calculator', () => {
   };
 
   const updateEmployee = (id: number, patch: Partial<Pracownik>) => {
+    const normalizedPatch: Partial<Pracownik> = { ...patch };
+    if (patch.typUmowy && patch.kupTyp === undefined) {
+      normalizedPatch.kupTyp = patch.typUmowy === 'UZ' ? 'PROC_20' : 'STANDARD';
+    }
+    if (patch.typUmowy && patch.nettoZasadnicza === undefined) {
+      normalizedPatch.nettoZasadnicza = patch.typUmowy === 'UZ'
+        ? config.value.minimalnaKwotaUZ.zasadniczaNetto
+        : config.value.placaMinimalna.netto;
+    }
     pracownicy.value = pracownicy.value.map((item) =>
-      item.id === id ? { ...item, ...patch } : item
+      item.id === id ? { ...item, ...normalizedPatch } : item
     );
   };
 
@@ -661,7 +670,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
     }
   };
 
-  const saveCalculationToApi = async () => {
+  const saveCalculationToApi = async (offerType: 'QUICK_SIMULATION' | 'DETAILED' = 'DETAILED') => {
     if (!auth.enabled) return null;
     const meetingId = context.value.meetingId;
     const clientId = context.value.clientId;
@@ -688,6 +697,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
       },
       valid_until: validUntil.toISOString().slice(0, 10),
       status: 'GENERATED',
+      offer_type: offerType,
     };
 
     try {
@@ -696,8 +706,34 @@ export const useCalculatorStore = defineStore('calculator', () => {
       return data;
     } catch (error: any) {
       console.warn('Failed to save calculation to CRM (continuing offline):', error?.response?.data || error?.message);
-      // Removed toast error to allow seamless offline work
-      // toast.error('Nie udało się zapisać kalkulacji w CRM, ale proces jest kontynuowany.');
+      return null;
+    }
+  };
+
+  const saveQuickSimToApi = async (simData: { employeeCount: number; monthlySavings: number }) => {
+    if (!auth.enabled) return null;
+    const meetingId = context.value.meetingId;
+    const clientId = context.value.clientId;
+    if (!meetingId && !clientId) return null; // Quick sim z Dashboardu bez NIP — nie zapisujemy
+
+    const validUntil = new Date();
+    validUntil.setDate(validUntil.getDate() + getOfferValidDays());
+
+    const payload = {
+      meeting_id: meetingId ? Number(meetingId) : undefined,
+      client_id: clientId ? Number(clientId) : undefined,
+      employee_count: simData.employeeCount,
+      savings_amount: Math.max(0, Math.round(simData.monthlySavings)),
+      valid_until: validUntil.toISOString().slice(0, 10),
+      status: 'GENERATED',
+      offer_type: 'QUICK_SIMULATION',
+    };
+
+    try {
+      const { data } = await api.post('/v1/calculations', payload);
+      return data;
+    } catch (error: any) {
+      console.warn('Failed to save quick simulation to CRM:', error?.response?.data || error?.message);
       return null;
     }
   };
@@ -952,6 +988,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
     updateMeetingOfferStatus,
     updateClientStatus,
     saveCalculationToApi,
+    saveQuickSimToApi,
     updateCalculationStatus,
     buildOfferEmailAttachments,
     syncHistoryToApiByNip,

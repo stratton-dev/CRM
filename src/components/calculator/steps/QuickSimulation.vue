@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import AppIcon from '@/components/AppIcon.vue';
 import { formatPLN } from '../utils/formatters';
 import { useCalculatorStore } from '../store/useCalculatorStore';
+import { useMailboxStore } from '@/stores/mailbox';
 import { obliczWariantPodzial, obliczWariantStandard } from '../tax-engine';
 import { Pracownik } from '../models/employee';
 
@@ -16,18 +17,26 @@ const props = withDefaults(
     initialAvgWage?: number;
     initialContractType?: ContractType;
     initialSalaryMode?: 'NETTO' | 'BRUTTO';
+    // Przekazane z QuickCalculatorView gdy wchodzimy z ProcessStart/ClientsView
+    contactEmail?: string | null;
+    contactName?: string | null;
+    clientId?: string | null;
   }>(),
   {
     initialEmployees: 50,
     initialAvgWage: 6000,
     initialContractType: 'UOP',
     initialSalaryMode: 'NETTO',
+    contactEmail: null,
+    contactName: null,
+    clientId: null,
   }
 );
 
 const emit = defineEmits<{ (event: 'transfer'): void }>();
 
 const store = useCalculatorStore();
+const mailboxStore = useMailboxStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -178,14 +187,166 @@ const handleTransfer = () => {
   store.pracownicy = newEmployees;
   emit('transfer');
 };
-</script>
+
+// ── Generowanie oferty szacunkowej ─────────────────────────────────────────
+const isSendingOffer = ref(false);
+
+// Określa czy jesteśmy w kontekście klienta (z ProcessStart/ClientsView)
+const hasClientContext = computed(() => Boolean(props.clientId || store.context.clientId));
+
+const buildQuickSimHtml = () => {
+  const s = simulation.value;
+  const firmaNazwa = store.firma.nazwa || 'Oferta dla Twojej firmy';
+  const firmaNip = store.firma.nip ? `NIP: ${store.firma.nip}` : '';
+  const date = new Date().toLocaleDateString('pl-PL');
+  const provPercent = strategy.value === 'SAVINGS' ? 28 : 26;
+
+  return `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Oferta szacunkowa — ${firmaNazwa}</title>
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body { font-family: Arial, sans-serif; color: #1e293b; font-size: 13px; }
+    .header { background: #0f172a; color: white; padding: 32px; border-radius: 8px; margin-bottom: 24px; }
+    .header h1 { margin: 0 0 4px; font-size: 22px; }
+    .header p { margin: 0; opacity: 0.6; font-size: 11px; }
+    .badge { display: inline-block; background: #C5A059; color: white; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold; letter-spacing: 0.08em; margin-top: 8px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
+    .card .label { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 6px; }
+    .card .value { font-size: 28px; font-weight: 900; color: #0f172a; }
+    .card .sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    .table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .table th { background: #f8fafc; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    .table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+    .highlight { background: #fffbeb; }
+    .footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 24px; }
+    .tag { font-size: 9px; font-weight: bold; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${firmaNazwa}</h1>
+    <p>${firmaNip} ${firmaNip ? '·' : ''} Oferta szacunkowa · ${date}</p>
+    <span class="badge">QUICK SIMULATION</span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">Oszczędność miesięczna netto</div>
+      <div class="value">${formatPLN(s.monthlySavings)}</div>
+      <div class="sub">Przy ${strategy.value === 'WIN_WIN' ? 'wypłacie podwyżek pracownikom' : 'pełnej oszczędności dla firmy'}</div>
+    </div>
+    <div class="card">
+      <div class="label">Potencjał roczny</div>
+      <div class="value">${formatPLN(s.yearlySavings)}</div>
+      <div class="sub">Szacunkowe oszczędności w skali roku</div>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Parametr</th>
+        <th>Stan obecny</th>
+        <th>Model Eliton Prime™</th>
+        <th>Różnica</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Liczba pracowników UoP</td>
+        <td>${s.countUOP}</td>
+        <td>${s.countUOP}</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>Liczba pracowników UZ</td>
+        <td>${s.countUZ}</td>
+        <td>${s.countUZ}</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>Całkowity koszt zatrudnienia / mies.</td>
+        <td>${formatPLN(s.totalStd)}</td>
+        <td>${formatPLN(s.totalNew)}</td>
+        <td>${formatPLN(s.totalStd - s.totalNew)}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Oszczędność miesięczna</strong> <span class="tag">Prowizja ${provPercent}%</span></td>
+        <td colspan="2" style="text-align:center">—</td>
+        <td><strong>${formatPLN(s.monthlySavings)}</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Niniejsza oferta ma charakter szacunkowy i została przygotowana na podstawie deklarowanych danych. Ostateczne wartości ustalane są po analizie listy płac. Obowiązuje 30 dni od daty wystawienia.
+  </div>
+</body>
+</html>`;
+};
+
+const generateQuickOffer = async () => {
+  if (isSendingOffer.value) return;
+  isSendingOffer.value = true;
+  try {
+    const simData = {
+      employeeCount: simulation.value.countUOP + simulation.value.countUZ,
+      monthlySavings: simulation.value.monthlySavings,
+    };
+
+    // Zapisz do DB tylko gdy jest kontekst klienta (ProcessStart / ClientsView)
+    if (hasClientContext.value) {
+      const calc = await store.saveQuickSimToApi(simData);
+      await store.updateMeetingOfferStatus('generated');
+      await store.updateClientStatus('OFFER_GENERATED');
+      if (calc?.id) {
+        await store.updateCalculationStatus(String(calc.id), 'READY');
+      }
+    }
+
+    const htmlContent = buildQuickSimHtml();
+
+    if (hasClientContext.value) {
+      // Otwórz skrzynkę z wypełnionym compose — oferta jako załącznik
+      mailboxStore.composeState = {
+        open: true,
+        to: props.contactEmail || store.firma.email || '',
+        subject: `Oferta szacunkowa — ${store.firma.nazwa || 'Twoja firma'}`,
+        body: `Dzień dobry${props.contactName ? `, ${props.contactName}` : ''},\n\nW załączeniu przesyłam wstępną ofertę szacunkową przygotowaną na podstawie przekazanych informacji.\n\nZ wyrazami szacunku`,
+        attachments: [
+          {
+            filename: `oferta-szacunkowa-${store.firma.nip || 'firma'}.html`,
+            html: htmlContent,
+            content_type: 'text/html',
+          },
+        ],
+      };
+      await router.push('/app/mailbox');
+    } else {
+      // Bez klienta — tylko drukuj / PDF
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+        printWin.focus();
+        printWin.print();
+      }
+    }
+  } finally {
+    isSendingOffer.value = false;
+  }
+};</script>
 
 <template>
   <div class="animate-fade-in">
     <div class="max-w-screen-2xl mx-auto space-y-8">
       
       <!-- Top Header Area: Results & Controls (Full Width) -->
-      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-6">
+      <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-6">
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-6">
             <!-- Left: Back Button + Title -->
             <div class="flex items-center gap-6 self-start md:self-center">
@@ -198,16 +359,30 @@ const handleTransfer = () => {
                 </div>
             </div>
 
-            <!-- Right: Next Button -->
-            <button 
-              type="button" 
-              class="h-12 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white px-8 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale self-end md:self-center border border-white/20 hover:brightness-110 active:scale-95"
-              :disabled="!isCountValid"
-              @click="handleTransfer"
-            >
-              <span class="text-[13px]">Dalej</span>
-              <AppIcon name="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            <!-- Right: Action Buttons -->
+            <div class="flex flex-col sm:flex-row items-end sm:items-center gap-3 self-end md:self-center">
+              <!-- Generuj ofertę szacunkową -->
+              <button
+                type="button"
+                class="h-12 bg-slate-700 border border-stratton-gold/40 text-stratton-gold px-6 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 group disabled:opacity-50 disabled:grayscale hover:bg-stratton-gold hover:text-white active:scale-95"
+                :disabled="!isCountValid || isSendingOffer"
+                @click="generateQuickOffer"
+              >
+                <AppIcon v-if="isSendingOffer" name="arrow-path" class="w-4 h-4 animate-spin" />
+                <AppIcon v-else name="envelope" class="w-4 h-4" />
+                <span class="text-[12px]">{{ hasClientContext ? 'Wyślij ofertę' : 'Drukuj PDF' }}</span>
+              </button>
+              <!-- Przejdź do szczegółów -->
+              <button
+                type="button"
+                class="h-12 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white px-8 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale border border-white/20 hover:brightness-110 active:scale-95"
+                :disabled="!isCountValid"
+                @click="handleTransfer"
+              >
+                <span class="text-[13px]">Dalej</span>
+                <AppIcon name="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
         </div>
 
         <!-- Content: Cards -->
@@ -365,51 +540,54 @@ const handleTransfer = () => {
               </div>
             </div>
 
-            <div class="space-y-4">
+            <div class="space-y-3">
               <label class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                 <AppIcon name="layers" class="w-4 h-4 text-stratton-gold/60" />
-                wybierz model optymalizacji
+                Model optymalizacji
               </label>
-              <div class="grid grid-cols-1 gap-3">
-                <button
-                  type="button"
-                  class="relative p-4 rounded-2xl border-2 text-left transition-all flex items-start gap-4 group/btn overflow-hidden"
-                  :class="strategy === 'SAVINGS' ? 'bg-slate-800 border-stratton-gold shadow-[0_0_30px_rgba(197,160,89,0.15)] ring-1 ring-stratton-gold/20' : 'bg-slate-800/30 border-slate-700/50 opacity-60 hover:opacity-100 hover:border-slate-600'"
-                  @click="strategy = 'SAVINGS'"
-                >
-                  <div class="absolute inset-0 bg-linear-to-br from-stratton-gold/5 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
-                  <div class="mt-1 p-2 rounded-xl" :class="strategy === 'SAVINGS' ? 'bg-stratton-gold text-white' : 'bg-slate-700 text-slate-400'">
-                    <AppIcon name="arrow-trending-up" class="w-4 h-4" />
+              <div class="relative p-4 rounded-2xl border-2 bg-slate-800 border-stratton-gold shadow-[0_0_30px_rgba(197,160,89,0.15)] ring-1 ring-stratton-gold/20 flex items-start gap-4 overflow-hidden">
+                <div class="absolute inset-0 bg-linear-to-br from-stratton-gold/5 to-transparent pointer-events-none"></div>
+                <div class="mt-0.5 p-2 rounded-xl bg-stratton-gold text-white shrink-0">
+                  <AppIcon name="arrow-trending-up" class="w-4 h-4" />
+                </div>
+                <div class="relative z-10">
+                  <div class="text-sm font-black text-white uppercase tracking-wider">
+                    Eliton Prime<sup class="text-[8px] ml-0.5 opacity-50">TM</sup>
                   </div>
-                  <div class="relative z-10">
-                    <div class="text-sm font-black text-white uppercase tracking-wider">Eliton Prime<sup class="text-[8px] ml-0.5 opacity-50">TM</sup></div>
-                    <div class="text-[10px] text-slate-400 mt-1 font-bold">Wszystkie oszczędności dla firmy. Prowizja 28%.</div>
+                  <div class="mt-1.5 space-y-0.5">
+                    <div class="text-[11px] text-stratton-gold font-extrabold uppercase tracking-widest">
+                      Opłata serwisowa: 28%
+                    </div>
+                    <div class="text-[10px] text-slate-400 font-semibold">
+                      od wartości nominalnej świadczenia
+                    </div>
                   </div>
-                </button>
-
-                <button
-                  type="button"
-                  class="relative p-4 rounded-2xl border-2 text-left transition-all flex items-start gap-4 group/btn overflow-hidden"
-                  :class="strategy === 'WIN_WIN' ? 'bg-slate-800 border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/20' : 'bg-slate-800/30 border-slate-700/50 opacity-60 hover:opacity-100 hover:border-slate-600'"
-                  @click="strategy = 'WIN_WIN'"
-                >
-                  <div class="absolute inset-0 bg-linear-to-br from-blue-500/5 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity"></div>
-                  <div class="mt-1 p-2 rounded-xl" :class="strategy === 'WIN_WIN' ? 'bg-blue-500 text-white' : 'bg-slate-700 text-slate-400'">
-                    <AppIcon name="users" class="w-4 h-4" />
+                </div>
+                <div class="ml-auto shrink-0 flex items-center self-center">
+                  <div class="w-5 h-5 rounded-full bg-stratton-gold flex items-center justify-center shadow-[0_0_12px_rgba(197,160,89,0.5)]">
+                    <AppIcon name="check" class="w-3 h-3 text-white" />
                   </div>
-                  <div class="relative z-10">
-                    <div class="text-sm font-black text-white uppercase tracking-wider text-blue-50">Eliton Prime PLUS<sup class="text-[8px] ml-0.5 opacity-50">TM</sup></div>
-                    <div class="text-[10px] text-slate-400 mt-1 font-bold">Oszczędność + podwyżki. Prowizja 26%.</div>
-                  </div>
-                </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="p-6">
-            <button 
-              type="button" 
-              class="w-full h-14 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white font-extrabold uppercase tracking-widest rounded-xl shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none border border-white/20 hover:brightness-110 active:scale-95" 
+          <div class="p-6 space-y-3">
+            <!-- Wyślij ofertę szacunkową / Drukuj PDF -->
+            <button
+              type="button"
+              class="w-full h-12 bg-slate-800 border border-stratton-gold/40 text-stratton-gold font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stratton-gold hover:text-white active:scale-95"
+              :disabled="!isCountValid || isSendingOffer"
+              @click="generateQuickOffer"
+            >
+              <AppIcon v-if="isSendingOffer" name="arrow-path" class="w-4 h-4 animate-spin" />
+              <AppIcon v-else name="envelope" class="w-4 h-4" />
+              <span class="text-[12px]">{{ hasClientContext ? 'Wyślij ofertę szacunkową' : 'Drukuj / PDF' }}</span>
+            </button>
+            <!-- Przejdź do szczegółów (Kalkulator z listy płac) -->
+            <button
+              type="button"
+              class="w-full h-14 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-extrabold uppercase tracking-widest rounded-xl shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none border border-white/20 hover:brightness-110 active:scale-95"
               :disabled="!isCountValid"
               @click="handleTransfer"
             >
@@ -434,33 +612,54 @@ const handleTransfer = () => {
               </div>
             </div>
 
-            <div class="space-y-6">
+            <div class="space-y-5">
+              <!-- Bar 1: DO TEJ PORY -->
               <div>
-                <div class="w-full h-6 flex justify-center items-center mb-1">
-                  <span class="text-xs font-black text-rose-500 uppercase tracking-widest bg-rose-50 px-2 py-0.5 rounded">{{ formatPLN(simulation.totalStd) }}</span>
+                <div class="flex items-baseline justify-between mb-1.5">
+                  <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Do tej pory</span>
+                  <span class="text-sm font-extrabold text-rose-500">{{ formatPLN(simulation.totalStd) }}</span>
                 </div>
-                <div class="h-10 w-full bg-slate-100 rounded-xl overflow-hidden flex relative border border-slate-200 shadow-inner">
-                  <div class="h-full bg-slate-400 flex items-center justify-center text-white text-[10px] font-black w-full uppercase tracking-[0.2em]">DO TEJ PORY</div>
+                <div class="h-9 w-full bg-rose-50 rounded-xl overflow-hidden border border-rose-100 shadow-inner relative">
+                  <div class="absolute inset-0 bg-linear-to-r from-rose-500 to-rose-400 flex items-center px-4">
+                    <span class="text-white text-[10px] font-black uppercase tracking-widest opacity-80">Obecny koszt zatrudnienia</span>
+                  </div>
                 </div>
               </div>
 
+              <!-- Bar 2: Eliton Prime + Oszczędność -->
               <div>
-                <div class="relative h-6 mb-1">
-                  <span class="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Eliton Prime<sup class="text-[7px] ml-0.5">TM</sup></span>
-                  <div class="absolute left-0 h-full flex justify-center items-center transition-all duration-1000" :style="{ width: `${costRatio}%` }">
-                    <span class="text-stratton-gold font-black text-sm uppercase tracking-tight whitespace-nowrap bg-white px-2 rounded-full shadow-sm">{{ formatPLN(simulation.totalNew) }}</span>
-                  </div>
+                <div class="flex items-baseline justify-between mb-1.5">
+                  <span class="text-[10px] font-black uppercase tracking-widest text-stratton-gold flex items-center gap-1">
+                    Eliton Prime<sup class="text-[7px] ml-0.5">TM</sup>
+                    <span class="ml-1 text-slate-400 font-semibold normal-case tracking-normal text-[9px]">· opłata 28%</span>
+                  </span>
+                  <span class="text-sm font-extrabold text-slate-800">{{ formatPLN(simulation.totalNew) }}</span>
                 </div>
-                <div class="h-10 w-full bg-slate-100 rounded-xl overflow-hidden flex relative border border-slate-200 shadow-inner">
+                <div class="h-9 w-full bg-slate-100 rounded-xl overflow-hidden border border-slate-200 shadow-inner flex relative">
+                  <!-- Cost segment -->
                   <div
-                    class="h-full bg-linear-to-r from-blue-600 to-blue-500 flex items-center justify-center text-white text-[10px] font-black shadow-[rgba(37,99,235,0.3)_0px_0px_20px] z-10 transition-all duration-1000 uppercase tracking-[0.1em] border-r border-white/20"
+                    class="h-full bg-linear-to-r from-[#b8922a] to-stratton-gold flex items-center justify-center gap-1.5 shrink-0 transition-all duration-1000 border-r-2 border-white/40 shadow-[4px_0_12px_rgba(0,0,0,0.15)] z-10"
                     :style="{ width: `${costRatio}%` }"
                   >
-                    PO WPROWADZENIU MODELU
+                    <span v-if="costRatio > 22" class="text-white text-[9px] font-black uppercase tracking-widest truncate px-2 drop-shadow">
+                      Eliton Prime<sup class="text-[6px] ml-0.5">TM</sup>
+                    </span>
                   </div>
-                  <div class="flex-1 bg-stratton-gold/10 flex items-center justify-center text-stratton-gold text-[10px] font-black relative overflow-hidden uppercase tracking-[0.15em]">
-                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes.png')] opacity-5"></div>
-                    OSZCZĘDNOŚĆ
+                  <!-- Savings segment -->
+                  <div class="flex-1 flex items-center justify-center gap-1.5 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-linear-to-r from-emerald-400/20 to-emerald-500/30"></div>
+                    <div class="absolute inset-0" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(16,185,129,0.07) 4px, rgba(16,185,129,0.07) 8px)"></div>
+                    <AppIcon name="arrow-trending-up" class="w-3 h-3 text-emerald-600 relative z-10 shrink-0" />
+                    <span class="text-emerald-700 text-[9px] font-black uppercase tracking-widest relative z-10 whitespace-nowrap">
+                      Oszczędność {{ formatPLN(simulation.savings) }}
+                    </span>
+                  </div>
+                </div>
+                <!-- Savings % badge -->
+                <div class="mt-2 flex justify-end">
+                  <div class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                    <AppIcon name="arrow-trending-up" class="w-3 h-3" />
+                    {{ simulation.totalStd > 0 ? ((simulation.savings / simulation.totalStd) * 100).toFixed(1) : '0' }}% oszczędności miesięcznie
                   </div>
                 </div>
               </div>

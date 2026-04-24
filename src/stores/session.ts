@@ -148,6 +148,7 @@ export const useSessionStore = defineStore('session', () => {
     clearSession,
     impersonate,
     stopImpersonation,
+    resolveUserFromAuth,
     impersonatedUser: computed(() => (auth.enabled && originalUserId.value ? apiUser.value : null)),
     isRole,
   }

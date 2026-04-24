@@ -288,7 +288,7 @@ onMounted(() => {
 <template>
   <div class="p-6 max-w-[1920px] mx-auto space-y-8">
     <!-- Header -->
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover border border-slate-800 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover border border-slate-800 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
       
       <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full">
         <div class="flex items-center gap-6">

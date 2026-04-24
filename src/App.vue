@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useDataStore } from '@/stores/data'
@@ -12,7 +12,9 @@ import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import { useUiStore } from '@/stores/ui'
 import ToastContainer from '@/components/ToastContainer.vue'
 import AppIcon from '@/components/AppIcon.vue'
-import logoUrl from '@/assets/logo.svg'
+import AppSidebar from '@/components/AppSidebar.vue'
+import AppHeader from '@/components/AppHeader.vue'
+import NotificationsPanel from '@/components/NotificationsPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -25,7 +27,7 @@ const structure = useStructureStore()
 const viewPermissions = useViewPermissionsStore()
 const ui = useUiStore()
 
-const isSidebarOpen = ref(true)
+const isSidebarOpen = ref(localStorage.getItem('crm_sidebar') !== 'false')
 const { showNotifications, showCommandPalette, commandQuery } = storeToRefs(ui)
 const commandInput = ref<HTMLInputElement | null>(null)
 
@@ -34,105 +36,7 @@ const { users: dataUsers } = storeToRefs(data)
 const { clients } = storeToRefs(clientStore)
 const { notifications } = storeToRefs(notifStore)
 const { users: structureUsers } = storeToRefs(structure)
-const shouldShowSidebar = computed(() => true)
 const showShell = computed(() => route.path.startsWith('/app'))
-const authRole = computed(() => {
-  const roles = auth.user?.roles || []
-  const allowed = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
-  return roles.find((role) => allowed.includes(role))
-})
-const sidebarUser = computed(() => {
-  const user = currentUser.value
-  if (user) return { name: user.name, role: user.role, crmNumber: user.crmNumber }
-  return {
-    name: auth.fullName || auth.user?.username || auth.user?.email || '',
-    role: authRole.value,
-    crmNumber: undefined,
-  }
-})
-const sidebarInitials = computed(() => {
-  const name = sidebarUser.value.name?.trim() || ''
-  if (!name) return '--'
-  const parts = name.split(/\s+/).filter(Boolean)
-  const initials = parts.length >= 2 ? parts[0][0] + parts[1][0] : name.slice(0, 2)
-  return initials.toUpperCase()
-})
-
-const navLinks = computed(() => {
-  const fallbackRole = !auth.enabled ? (localStorage.getItem('stratton_dev_role') || undefined) : undefined
-  const role = currentUser.value?.role || authRole.value || fallbackRole
-  const links: Array<{ label: string; path: string; icon: string; viewKey: string }> = []
-
-  links.push({ label: 'Główny Pulpit', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
-
-  if (role === 'ADMIN') {
-    links.push(
-      { label: 'Użytkownicy', path: '/app/users', icon: 'user-tie', viewKey: 'user-management' },
-      { label: 'Analityka Finansowa', path: '/app/admin-analytics', icon: 'presentation-chart-line', viewKey: 'admin-analytics' },
-      { label: 'Logi Systemowe', path: '/app/admin-logs', icon: 'shield-check', viewKey: 'admin-logs' },
-      { label: 'Analityka (Sprzedaż)', path: '/app/analytics', icon: 'chart-line', viewKey: 'analytics' },
-      { label: 'Klienci', path: '/app/clients', icon: 'users', viewKey: 'clients' },
-      { label: 'Struktura', path: '/app/structure', icon: 'sitemap', viewKey: 'structure' },
-      { label: 'Rozliczenia', path: '/app/settlements', icon: 'invoice', viewKey: 'settlements' },
-      { label: 'Faktury', path: '/app/admin-invoices', icon: 'file-invoice-dollar', viewKey: 'admin-invoices' },
-      { label: 'Progi Prowizyjne', path: '/app/commission-thresholds', icon: 'sliders', viewKey: 'commission-thresholds' },
-      { label: 'Autenti', path: '/app/autenti-panel', icon: 'signature', viewKey: 'autenti-panel' },
-      { label: 'Rankingi', path: '/app/leaderboard', icon: 'trophy', viewKey: 'leaderboard' },
-      { label: 'Ustawienia', path: '/app/settings', icon: 'gear', viewKey: 'settings' }
-    )
-  } else if (role === 'DIRECTOR') {
-    links.push(
-      { label: 'Analityka', path: '/app/analytics', icon: 'chart-pie', viewKey: 'analytics' },
-      { label: 'Mój Zespół', path: '/app/structure', icon: 'people-roof', viewKey: 'structure' },
-      { label: 'Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
-      { label: 'Rozliczenia', path: '/app/settlements', icon: 'wallet', viewKey: 'settlements' },
-      { label: 'Rankingi', path: '/app/leaderboard', icon: 'medal', viewKey: 'leaderboard' }
-    )
-  } else if (role === 'MANAGER') {
-    links.push(
-      { label: 'Mój Zespół', path: '/app/structure', icon: 'people-group', viewKey: 'structure' },
-      { label: 'Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
-      { label: 'Rozliczenia', path: '/app/settlements', icon: 'wallet', viewKey: 'settlements' },
-      { label: 'Rankingi', path: '/app/leaderboard', icon: 'medal', viewKey: 'leaderboard' }
-    )
-  } else if (role === 'SALES') {
-    links.push(
-      { label: 'Spotkania', path: '/app/meetings', icon: 'calendar', viewKey: 'meetings' },
-      { label: 'Moi Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
-      { label: 'Szybka Oferta', path: '/app/quick-calculator', icon: 'calculator', viewKey: 'quick-calculator' },
-      { label: 'Moje Prowizje', path: '/app/settlements', icon: 'hand-holding-dollar', viewKey: 'settlements' },
-      { label: 'Ranking', path: '/app/leaderboard', icon: 'award', viewKey: 'leaderboard' }
-    )
-  }
-
-  links.push(
-    { label: 'Kalendarz', path: '/app/calendar', icon: 'calendar', viewKey: 'calendar' },
-    { label: 'Powiadomienia', path: '/app/notifications', icon: 'bell', viewKey: 'notifications' },
-    { label: 'Poczta', path: '/app/mailbox', icon: 'envelope', viewKey: 'mailbox' },
-    { label: 'Baza Wiedzy', path: '/app/knowledge-base', icon: 'book-open', viewKey: 'knowledge-base' }
-  )
-
-  if (role === 'ADMIN') {
-    links.push({ label: 'Aktualności', path: '/app/news-management', icon: 'document-text', viewKey: 'news-management' })
-  }
-
-  const filteredLinks = links.filter((link) => {
-    // Force show for newly added permissions if viewPermissions might be lagging or configured strangely
-    if (['user-management', 'admin-analytics', 'admin-logs'].includes(link.viewKey) && role === 'ADMIN') return true
-
-    if (link.viewKey === 'settings') {
-      return viewPermissions.isSettingsAllowed(role)
-    }
-    return viewPermissions.isViewAllowed(link.viewKey, role)
-  })
-
-  const dashboardLink = filteredLinks.find((link) => link.viewKey === 'dashboard')
-  const otherLinks = filteredLinks.filter((link) => link.viewKey !== 'dashboard').sort((a, b) => {
-    return a.label.localeCompare(b.label, 'pl')
-  })
-
-  return dashboardLink ? [dashboardLink, ...otherLinks] : otherLinks
-})
 
 const notificationsClearedAt = ref<number | null>(null)
 
@@ -200,6 +104,7 @@ const executeCommand = (item: any, type: 'action' | 'client' | 'user') => {
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
+  localStorage.setItem('crm_sidebar', String(isSidebarOpen.value))
 }
 
 const toggleNotifications = () => {
@@ -213,6 +118,7 @@ const markAsRead = (id: string) => {
 const logout = async () => {
   await auth.logout()
   session.clearSession()
+  localStorage.removeItem('crm_sidebar')
   isSidebarOpen.value = false
   router.push('/login')
 }
@@ -250,136 +156,16 @@ onBeforeUnmount(() => {
   <div v-if="showShell" class="flex h-screen bg-slate-50 transition-all duration-300" :class="session.isImpersonating ? 'border-[6px] border-amber-400' : ''">
     <ToastContainer />
 
-    <aside
-      v-if="shouldShowSidebar"
-      class="flex-shrink-0 flex flex-col transition-all duration-300 bg-slate-900 border-r border-slate-800"
-      :class="isSidebarOpen ? 'w-72' : 'w-20'"
-    >
-      <div class="h-20 flex items-center justify-center border-b border-slate-800 transition-colors hover:bg-slate-800/50 cursor-pointer px-4" @click="router.push('/app/dashboard')">
-        <div v-if="isSidebarOpen" class="text-center animate-fade-in">
-          <span class="text-stratton-gold font-bold text-xl uppercase tracking-wider block leading-tight">
-            PRIME CRM
-          </span>
-          <span class="text-stratton-gold font-medium text-[10px] uppercase tracking-widest block leading-tight mt-0.5">
-            System Zarządzania Zasobami Klienta
-          </span>
-        </div>
-        <span v-else class="text-stratton-gold font-bold text-xl">P</span>
-      </div>
+    <AppSidebar :is-open="isSidebarOpen" @toggle="toggleSidebar" />
 
-      <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 px-3">
-        <RouterLink
-          v-for="link in navLinks"
-          :key="link.path"
-          :to="link.path"
-          class="group flex items-center px-3 py-1.5 rounded-xl transition-all duration-200"
-          :class="route.path.startsWith(link.path) ? 'bg-stratton-gold text-slate-900 shadow-md font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
-          :title="link.label"
-        >
-          <div
-            class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-            :class="route.path.startsWith(link.path) ? 'bg-transparent' : 'bg-white/10 group-hover:bg-white/20'"
-          >
-            <AppIcon :name="link.icon" class="w-5 h-5" />
-          </div>
-          <span v-if="isSidebarOpen" class="ml-3 text-sm font-medium whitespace-nowrap animate-fade-in transition-opacity">
-            {{ link.label }}
-          </span>
-        </RouterLink>
-      </nav>
-
-      <div class="p-4 border-t border-slate-800 bg-slate-900">
-        <div class="flex items-center" :class="isSidebarOpen ? 'justify-between' : 'justify-center'">
-          <div v-if="isSidebarOpen" class="flex items-center min-w-0 mr-2">
-            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-600">
-              {{ sidebarInitials }}
-            </div>
-            <div class="ml-3 min-w-0">
-              <p class="text-sm font-medium text-white truncate">{{ sidebarUser?.name }}</p>
-              <div class="flex flex-col">
-                <span class="text-[10px] text-slate-400">{{ sidebarUser?.role }}</span>
-                <span v-if="sidebarUser?.crmNumber" class="text-[10px] text-stratton-gold font-mono">{{ sidebarUser?.crmNumber }}</span>
-              </div>
-            </div>
-          </div>
-          <button type="button" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" @click="toggleSidebar">
-            <AppIcon :name="isSidebarOpen ? 'chevron-left' : 'chevron-right'" class="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </aside>
-
-    <div class="flex-1 flex flex-col min-w-0 relative bg-slate-50">
-      <header v-if="shouldShowSidebar" class="relative w-full overflow-hidden pb-0 bg-slate-50 shrink-0 border-b border-gray-200">
-        <div class="flex items-center justify-between w-full px-4 h-16">
-          
-          <!-- Left Wing -->
-          <div class="flex-1 flex flex-col items-end relative h-full justify-center">
-             <!-- Search Bar (Compact) -->
-             <div 
-               class="absolute left-0 bottom-1.5 bg-white/90 hover:bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center cursor-text transition group shadow-sm z-30 w-40 sm:w-56 backdrop-blur-md overflow-hidden h-9"
-               @click="toggleCommandPalette"
-             >
-               <AppIcon name="search" class="w-4 h-4 text-slate-400 mr-2 group-hover:text-stratton-gold transition shrink-0" />
-               <span class="text-slate-500 text-[10px] font-bold truncate uppercase tracking-wider flex-1 text-right">Szukaj (Ctrl+F)</span>
-             </div>
-
-             <!-- Lines -->
-             <div class="absolute right-0 top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
-               <div class="h-px bg-[#0f172a] w-full"></div>
-               <div class="h-[2px] bg-[#0f172a] w-full"></div>
-             </div>
-             
-             <!-- Text -->
-             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
-              STRATTON
-             </span>
-          </div>
-
-          <!-- Center Logo -->
-          <div class="px-2 relative z-20 shrink-0">
-            <img :src="logoUrl" class="h-16 w-auto filter drop-shadow-md" alt="Stratton Prime" />
-          </div>
-
-          <!-- Right Wing -->
-          <div class="flex-1 flex flex-col items-start relative h-full justify-center">
-             <!-- Controls -->
-             <div class="absolute right-0 bottom-1.5 flex items-center space-x-2 z-30 bg-white/90 backdrop-blur-md px-3 rounded-lg border border-slate-100 shadow-sm h-9">
-               <div class="relative cursor-pointer group" @click="toggleNotifications">
-                  <div 
-                    class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition"
-                    :class="{ 'animate-bell': unreadCount > 0 }"
-                  >
-                    <AppIcon 
-                      name="bell" 
-                      class="w-5 h-5 text-slate-400 group-hover:text-stratton-gold transition"
-                    />
-                    <span v-if="unreadCount > 0" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 border border-white z-10"></span>
-                  </div>
-               </div>
-               <div class="h-4 w-px bg-slate-200 mx-1"></div>
-               <button type="button" class="flex items-center gap-1.5 text-slate-400 hover:text-slate-800 transition text-[11px] font-bold uppercase tracking-wide group" @click="logout">
-                 <span class="group-hover:underline">Wyloguj</span>
-                 <AppIcon name="logout" class="w-4 h-4" />
-               </button>
-             </div>
-
-             <!-- Lines -->
-             <div class="absolute left-0 top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
-               <div class="h-px bg-[#0f172a] w-full"></div>
-               <div class="h-[2px] bg-[#0f172a] w-full"></div>
-             </div>
-             
-             <!-- Text -->
-             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
-              PRIME
-             </span>
-          </div>
-          
-        </div>
-      </header>
-      <!-- Secondary Header Removed (Merged into main) -->
-
+    <div class="flex-1 flex flex-col min-w-0 relative bg-slate-50 lg:ml-14">
+      <AppHeader
+        :unread-count="unreadCount"
+        @toggle-notifications="toggleNotifications"
+        @toggle-command-palette="toggleCommandPalette"
+        @toggle-sidebar="toggleSidebar"
+        @logout="logout"
+      />
       <div v-if="session.isImpersonating" class="bg-amber-400 text-amber-900 text-sm py-2 px-4 text-center font-bold flex justify-center items-center shadow-md z-30 animate-pulse">
         <AppIcon name="mask" class="w-4 h-4 mr-2" />
         <span class="mr-4 uppercase tracking-wider">TRYB PODGLĄDU: {{ session.impersonatedUser?.name || 'Ładowanie...' }}</span>
@@ -388,9 +174,8 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <main 
-        class="flex-1 overflow-y-auto scroll-smooth crm-form transition-all duration-300 p-2 sm:p-4 lg:p-4"
-      >
+      <!-- MAIN CONTENT AREA -->
+      <main class="flex-1 overflow-y-auto scroll-smooth crm-form transition-all duration-300 p-2 sm:p-4 lg:p-4">
         <RouterView v-slot="{ Component }">
           <Transition name="route" mode="out-in" appear>
             <component :is="Component" v-if="Component" />
@@ -402,36 +187,14 @@ onBeforeUnmount(() => {
       </main>
     </div>
 
-    <div v-if="showNotifications" class="absolute right-8 top-24 w-96 bg-white rounded-xl shadow-xl border border-slate-100 py-0 z-50 text-sm overflow-hidden animate-fade-in-up" @click.stop>
-      <div class="bg-slate-50 px-5 py-4 border-b border-slate-100 font-bold text-slate-700 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <span>Powiadomienia</span>
-            <button v-if="myNotifications.length > 0" @click="clearAllNotifications" class="text-[10px] text-red-500 hover:text-red-700 uppercase tracking-wider font-bold bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors" title="Wyczyść widok powiadomień (nie usuwa z historii)">
-                Wyczyść
-            </button>
-        </div>
-        <button type="button" class="text-slate-400 hover:text-slate-600" @click="toggleNotifications">
-          <AppIcon name="xmark" class="w-4 h-4" />
-        </button>
-      </div>
-      <div class="max-h-80 overflow-y-auto">
-        <div
-          v-for="notif in myNotifications"
-          :key="notif.id"
-          class="px-5 py-4 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition group"
-          :class="{ 'bg-blue-50': !notif.read }"
-          @click="markAsRead(notif.id)"
-        >
-          <p class="text-stratton-blue font-bold text-xs mb-1 group-hover:underline">
-            <AppIcon name="info" class="w-4 h-4 mr-1" />
-            {{ notif.type }}
-          </p>
-          <p class="text-slate-800 text-sm font-medium">{{ notif.message }}</p>
-          <p class="text-slate-500 text-xs mt-1">{{ new Date(notif.date).toLocaleString() }}</p>
-        </div>
-        <div v-if="myNotifications.length === 0" class="p-8 text-center text-slate-400 text-sm">Brak nowych powiadomień.</div>
-      </div>
-    </div>
+    <!-- NOTIFICATIONS PANEL -->
+    <NotificationsPanel
+      v-if="showNotifications"
+      :notifications="myNotifications"
+      @close="toggleNotifications"
+      @mark-as-read="markAsRead"
+      @clear-all="clearAllNotifications"
+    />
   </div>
 
   <div v-else class="min-h-screen">
@@ -443,7 +206,7 @@ onBeforeUnmount(() => {
     </RouterView>
   </div>
 
-  <div v-if="showCommandPalette" class="fixed inset-0 z-[99] flex justify-center pt-[15vh]" @click="toggleCommandPalette">
+  <div v-if="showCommandPalette" class="fixed inset-0 z-99 flex justify-center pt-[15vh]" @click="toggleCommandPalette">
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"></div>
     <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[600px] flex flex-col transition-all overflow-hidden" @click.stop>
       <div class="p-4 border-b border-slate-100 flex items-center bg-slate-50">
@@ -453,7 +216,7 @@ onBeforeUnmount(() => {
           v-model="commandQuery"
           type="text"
           placeholder="Wpisz komendę, klienta lub pracownika..."
-          class="w-full text-2xl bg-transparent border-none focus:ring-0 !p-1 !shadow-none text-slate-800 placeholder-slate-400 font-bold"
+          class="w-full text-2xl bg-transparent border-none focus:ring-0 p-1! shadow-none! text-slate-800 placeholder-slate-400 font-bold"
         />
         <span class="text-xs text-slate-400 border border-slate-200 rounded px-2 py-1 bg-white mr-3">ESC</span>
         <button type="button" @click.stop="toggleCommandPalette" class="text-slate-400 hover:text-red-500 transition-colors p-1 hover:bg-slate-200 rounded-full">
@@ -537,21 +300,5 @@ onBeforeUnmount(() => {
 .route-enter-active,
 .route-leave-active {
   transition: opacity 220ms ease, transform 220ms ease;
-}
-
-@keyframes bell-pulse {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
-  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
-}
-
-@keyframes bell-pulse {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
-  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
-}
-
-.animate-bell {
-  animation: bell-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>

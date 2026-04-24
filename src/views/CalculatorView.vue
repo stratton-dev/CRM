@@ -48,7 +48,7 @@ const handleBack = () => {
 const steps = [
   { id: 0, label: 'Firma', icon: 'building' },
   { id: 1, label: 'Pracownicy', icon: 'users' },
-  { id: 2, label: 'Suma aktualnego kosztu zatrudnienia', icon: 'chart-line' },
+  { id: 2, label: 'Suma aktualnego Kosztu zatrudnienia', icon: 'chart-line' },
   { id: 3, label: 'Wynagrodzenie w modelu Eliton Prime<sup>TM</sup>', icon: 'chart-pie' },
   { id: 4, label: 'Oszczędności po wdrożeniu Eliton Prime<sup>TM</sup>', icon: 'sliders' },
   { id: 5, label: 'Podsumowanie', icon: 'file-invoice-dollar' },
@@ -171,6 +171,16 @@ onMounted(() => {
     const normalized = String(stepParam).toLowerCase();
     if (normalized === 'summary' || normalized === 'podsumowanie' || normalized === '5') {
       currentStep.value = 5;
+    } else if (normalized === '4') {
+      currentStep.value = 4;
+    } else if (normalized === '3') {
+      currentStep.value = 3;
+    } else if (normalized === '2') {
+      currentStep.value = 2;
+    } else if (normalized === '1' || normalized === 'pracownicy') {
+      currentStep.value = 1;   // start od kroku Pracownicy (z listy płac z ProcessStart)
+    } else if (normalized === '0' || normalized === 'firma') {
+      currentStep.value = 0;
     }
   }
 
@@ -215,10 +225,17 @@ onMounted(() => {
           udzialWProjekcie: analysis.project_participation || store.firma.udzialWProjekcie,
           oszczednosciPrzeszle: analysis.past_savings || store.firma.oszczednosciPrzeszle,
           oszczednosciAktualne: analysis.current_savings || store.firma.oszczednosciAktualne,
-          inwestycjePlanowane: analysis.planned_investments || store.firma.inwestycjePlanowane,
+          inwestycjePlanowane: analysis.planned_investments != null ? String(analysis.planned_investments) : store.firma.inwestycjePlanowane,
           kwotaOszczednosciDeklarowana: analysis.declared_savings || store.firma.kwotaOszczednosciDeklarowana,
           zadluzenia: analysis.debts || store.firma.zadluzenia,
           ryczaltVat: analysis.vat_model || store.firma.ryczaltVat,
+          zusWysokie: analysis.zus_cost_level != null
+            ? (Number(analysis.zus_cost_level) ? 'tak' : 'nie')
+            : store.firma.zusWysokie,
+          wdrazaOszczednosci: analysis.implementing_savings != null
+            ? (Number(analysis.implementing_savings) ? 'tak' : 'nie')
+            : store.firma.wdrazaOszczednosci,
+          wyzwanieKlienta: analysis.client_challenge || store.firma.wyzwanieKlienta,
         };
       })
       .catch(() => {});
@@ -227,104 +244,183 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-8">
-      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-6">
-        <div class="flex items-center gap-6 self-start md:self-center">
-            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
-              <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            </button>
-            <div>
-              <h1 class="text-3xl font-serif font-bold text-white flex items-center gap-3">
-                Kalkulator szczegółowy
-                <span class="text-[10px] bg-emerald-500/10 text-emerald-500 font-bold px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider">Aktywny</span>
-              </h1>
-              <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">
-                {{ currentStep === -1 ? 'Pulpit' : `Krok ${currentStep + 1} / ${steps.length}` }}
-              </p>
-            </div>
-        </div>
-        
-        <button 
-          type="button" 
-          class="h-12 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white px-8 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale self-end md:self-center border border-white/20 hover:brightness-110 active:scale-95"
-          :disabled="!canProceed || currentStep >= steps.length - 1" 
-          @click="currentStep++"
-        >
-          <span class="text-xs">Dalej</span>
-          <AppIcon name="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </button>
-      </div>
+  <div class="w-full min-h-screen bg-slate-50">
 
-      <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 group hover:border-slate-600 transition-colors">
-        <div>
-          <div class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Firma dla kalkulacji</div>
-          <div class="text-xl font-bold text-white tracking-tight">
-            {{ store.firma.nazwa || 'Nie wybrano firmy' }}
-          </div>
-          <div v-if="store.firma.nip" class="text-xs text-slate-400 font-mono mt-1">NIP: <span class="text-slate-300">{{ store.firma.nip }}</span></div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors" @click="showCompanyPicker = !showCompanyPicker">
-            Zmień firmę
-          </button>
-        </div>
+    <!-- D365 Top Command Bar — slim dark rail -->
+    <div class="bg-[#1a1a2e] border-b border-slate-800/80">
+      <div class="w-full px-5 lg:px-8 h-11 flex items-center justify-between gap-4">
 
-        <div v-if="showCompanyPicker" class="absolute right-4 top-full mt-3 w-full max-w-xl bg-white border border-slate-200 rounded-xl shadow-xl p-4 z-20">
-        <div class="flex items-center gap-2 mb-3">
-          <div class="relative flex-1">
-            <input v-model="companySearch" type="text" placeholder="Szukaj po nazwie lub NIP..." class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-slate-400 focus:border-slate-400 text-right font-bold" />
-            <AppIcon name="search" class="w-4 h-4 text-slate-400 absolute left-3 top-[10px]" />
-          </div>
-          <button type="button" class="text-xs text-slate-500 hover:text-slate-700" @click="showCompanyPicker = false">Zamknij</button>
-        </div>
-        <div class="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
+        <!-- Left: back + breadcrumb -->
+        <div class="flex items-center gap-3 min-w-0">
           <button
-            v-for="client in eligibleClients"
-            :key="client.id"
             type="button"
-            class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between"
-            @click="selectCompany(client.id)"
+            class="inline-flex items-center justify-center w-6 h-6 shrink-0 bg-white/10 border border-white/10 rounded text-slate-400 hover:bg-white/20 hover:text-white transition-all"
+            @click="handleBack"
           >
-            <div>
-              <div class="text-sm font-semibold text-slate-800">{{ client.name }}</div>
-              <div class="text-xs text-slate-500 font-mono">{{ client.nip }}</div>
-            </div>
-            <div class="text-[10px] uppercase font-bold text-slate-500">
-              {{ client.status }}
-            </div>
+            <AppIcon name="arrow-left" class="w-3 h-3" />
           </button>
-          <div v-if="eligibleClients.length === 0" class="px-3 py-4 text-xs text-slate-500">
-            Brak firm spełniających warunki (min. etap generowania oferty).
+          <div class="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest select-none">
+            <span class="text-slate-500">CRM</span>
+            <span class="text-slate-600">/</span>
+            <span class="text-slate-400">Kalkulator</span>
+            <span class="text-slate-600">/</span>
+            <span class="text-white">{{ currentStep === -1 ? 'Pulpit' : steps[currentStep]?.label.replace(/&lt;[^&gt;]*&gt;/g, '').replace(/<[^>]*>/g, '') }}</span>
           </div>
+        </div>
+
+        <!-- Center: Firma chip -->
+        <div v-if="store.firma.nazwa" class="hidden md:flex items-center gap-2 bg-white/8 border border-white/10 rounded px-2.5 h-6">
+          <div class="w-1.5 h-1.5 rounded-full bg-stratton-gold shrink-0"></div>
+          <span class="text-[10px] font-bold text-slate-200 truncate max-w-52">{{ store.firma.nazwa }}</span>
+          <span v-if="store.firma.nip" class="text-[9px] font-mono text-slate-500 hidden lg:block">· NIP {{ store.firma.nip }}</span>
+        </div>
+
+        <!-- Right: Progress indicator + Dalej -->
+        <div class="flex items-center gap-3 shrink-0">
+          <div v-if="currentStep >= 0" class="hidden lg:flex items-center gap-2">
+            <div class="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
+              <div
+                class="h-full bg-linear-to-r from-stratton-gold to-[#D4AF37] rounded-full transition-all duration-500"
+                :style="{ width: `${((currentStep + 1) / steps.length) * 100}%` }"
+              ></div>
+            </div>
+            <span class="text-[9px] text-slate-500 font-black uppercase tracking-widest">{{ currentStep + 1 }}/{{ steps.length }}</span>
+          </div>
+          <button
+            type="button"
+            class="h-7 px-4 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white rounded text-[10px] font-black uppercase tracking-widest border border-white/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:grayscale flex items-center gap-1.5"
+            :disabled="!canProceed || currentStep >= steps.length - 1"
+            @click="currentStep++"
+          >
+            Dalej <AppIcon name="arrow-right" class="w-2.5 h-2.5" />
+          </button>
         </div>
       </div>
     </div>
-  </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <aside class="lg:col-span-3 space-y-3">
-        <button type="button" class="w-full p-4 rounded-xl border-2 text-left transition-all duration-300" :class="currentStep === -1 ? 'border-stratton-gold bg-linear-to-br from-[#D4AF37] to-[#C5A059] text-white shadow-[0_8px_20px_-4px_rgba(197,160,89,0.35)]' : 'border-slate-100 bg-white text-slate-500 hover:border-stratton-gold hover:bg-slate-50'" @click="currentStep = -1">
-          <div class="flex items-center gap-3">
-            <AppIcon name="dashboard" class="w-5 h-5" />
-            <div>
-              <div class="font-bold">Pulpit</div>
-              <div class="text-[10px] uppercase tracking-widest font-extrabold" :class="currentStep === -1 ? 'text-white/80' : 'text-slate-400'">Start</div>
+    <!-- Body -->
+    <div class="w-full px-5 lg:px-8 py-6 flex gap-6 items-start">
+
+      <!-- D365 Navigation Rail — left sidebar -->
+      <aside class="hidden lg:flex flex-col gap-0.5 w-56 xl:w-60 shrink-0 sticky top-6">
+
+        <!-- App branding sub-header -->
+        <div class="flex items-center gap-2 px-3 py-2 mb-2">
+          <div class="w-6 h-6 rounded bg-stratton-gold/10 border border-stratton-gold/20 flex items-center justify-center">
+            <AppIcon name="shield-check" class="w-3 h-3 text-stratton-gold" />
+          </div>
+          <div>
+            <div class="text-[9px] font-black uppercase tracking-widest text-slate-700">Stratton Prime</div>
+            <div class="text-[8px] text-slate-400 font-medium">Kalkulator Eliton Prime™</div>
+          </div>
+        </div>
+
+        <!-- Pulpit nav item -->
+        <button
+          type="button"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all"
+          :class="currentStep === -1
+            ? 'bg-white border border-stratton-gold/30 text-stratton-gold shadow-sm'
+            : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:border-slate-200 hover:shadow-sm border border-transparent'"
+          @click="currentStep = -1"
+        >
+          <div
+            class="w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors"
+            :class="currentStep === -1 ? 'bg-stratton-gold/10 text-stratton-gold' : 'bg-slate-100 text-slate-400'"
+          >
+            <AppIcon name="dashboard" class="w-3 h-3" />
+          </div>
+          <span class="text-[10px] font-black uppercase tracking-wide">Pulpit</span>
+          <span v-if="currentStep === -1" class="ml-auto w-1 h-4 rounded-full bg-stratton-gold shrink-0"></span>
+        </button>
+
+        <div class="w-full h-px bg-slate-200/80 my-1.5"></div>
+
+        <!-- Step nav items -->
+        <button
+          v-for="step in steps"
+          :key="step.id"
+          type="button"
+          class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all"
+          :class="currentStep === step.id
+            ? 'bg-white border border-stratton-gold/30 text-stratton-gold shadow-sm'
+            : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:border-slate-200 hover:shadow-sm border border-transparent'"
+          @click="currentStep = step.id"
+        >
+          <div
+            class="w-5 h-5 rounded flex items-center justify-center shrink-0 text-[8px] font-black transition-colors"
+            :class="currentStep === step.id
+              ? 'bg-stratton-gold/10 text-stratton-gold'
+              : currentStep > step.id
+                ? 'bg-emerald-500 text-white'
+                : 'bg-slate-100 text-slate-400'"
+          >
+            <AppIcon v-if="currentStep > step.id" name="check" class="w-2.5 h-2.5" />
+            <span v-else>{{ step.id + 1 }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-[10px] font-black uppercase tracking-wide leading-tight truncate" v-html="step.label"></div>
+          </div>
+          <span v-if="currentStep === step.id" class="ml-auto w-1 h-4 rounded-full bg-stratton-gold shrink-0"></span>
+          <AppIcon v-else-if="currentStep > step.id" name="check-circle" class="w-3 h-3 text-emerald-500 shrink-0" />
+        </button>
+
+        <!-- Firma card -->
+        <div class="relative mt-4 rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div class="px-3 py-2 border-b border-slate-100 bg-slate-50/60">
+            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Wybrana firma</span>
+          </div>
+          <div class="px-3 py-2.5">
+            <div v-if="store.firma.nazwa">
+              <div class="text-[11px] font-bold text-slate-800 leading-snug">{{ store.firma.nazwa }}</div>
+              <div v-if="store.firma.nip" class="text-[9px] text-slate-400 font-mono mt-0.5">NIP {{ store.firma.nip }}</div>
+            </div>
+            <div v-else class="text-[10px] text-slate-400 italic">Nie wybrano firmy</div>
+            <button
+              type="button"
+              class="mt-2 w-full h-6 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-stratton-gold border border-slate-200 rounded transition-colors hover:border-stratton-gold/40"
+              @click="showCompanyPicker = !showCompanyPicker"
+            >
+              Zmień firmę
+            </button>
+          </div>
+
+          <!-- Company picker dropdown -->
+          <div v-if="showCompanyPicker" class="absolute left-0 top-full z-20 mt-1.5 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="relative flex-1">
+                <input
+                  v-model="companySearch"
+                  type="text"
+                  placeholder="Szukaj po nazwie lub NIP..."
+                  class="w-full pl-7 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold"
+                />
+                <AppIcon name="search" class="w-3 h-3 text-slate-400 absolute left-2.5 top-2" />
+              </div>
+              <button type="button" class="text-[10px] text-slate-400 hover:text-slate-700 font-bold w-5 h-5 flex items-center justify-center" @click="showCompanyPicker = false">✕</button>
+            </div>
+            <div class="max-h-52 overflow-y-auto border border-slate-100 rounded-lg divide-y divide-slate-50">
+              <button
+                v-for="client in eligibleClients"
+                :key="client.id"
+                type="button"
+                class="w-full text-left px-3 py-2 hover:bg-amber-50/40 flex items-center justify-between gap-2 transition-colors"
+                @click="selectCompany(client.id)"
+              >
+                <div class="min-w-0">
+                  <div class="text-[11px] font-semibold text-slate-800 truncate">{{ client.name }}</div>
+                  <div class="text-[9px] text-slate-500 font-mono">{{ client.nip }}</div>
+                </div>
+                <div class="text-[8px] uppercase font-black text-slate-400 shrink-0">{{ client.status }}</div>
+              </button>
+              <div v-if="eligibleClients.length === 0" class="px-3 py-3 text-[10px] text-slate-400 text-center">Brak firm</div>
             </div>
           </div>
-        </button>
-        <button v-for="step in steps" :key="step.id" type="button" class="w-full p-4 rounded-xl border-2 text-left transition-all duration-300" :class="currentStep === step.id ? 'border-stratton-gold bg-linear-to-br from-[#D4AF37] to-[#C5A059] text-white shadow-[0_8px_20px_-4px_rgba(197,160,89,0.35)]' : 'border-slate-100 bg-white text-slate-500 hover:border-stratton-gold hover:bg-slate-50'" @click="currentStep = step.id">
-          <div class="flex items-center gap-3">
-            <AppIcon :name="step.icon" class="w-5 h-5" />
-            <div>
-              <div class="font-bold" v-html="step.label"></div>
-              <div class="text-[10px] uppercase tracking-widest font-extrabold" :class="currentStep === step.id ? 'text-white/80' : 'text-slate-400'">Krok {{ step.id + 1 }}</div>
-            </div>
-          </div>
-        </button>
+        </div>
       </aside>
 
-      <section class="lg:col-span-9">
+      <!-- Main Content Area -->
+      <section class="flex-1 min-w-0">
         <DashboardStep v-if="currentStep === -1" @start="currentStep = 0" />
         <CompanyStep v-else-if="currentStep === 0" />
         <EmployeesStep v-else-if="currentStep === 1" />

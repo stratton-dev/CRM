@@ -61,10 +61,6 @@ router.beforeEach(async (to) => {
   }
   await viewPermissions.ensureLoaded()
   const role = session.currentUser?.role || auth.user?.roles?.find((r) => typeof r === 'string')
-  
-  if (to.name === 'meetings') {
-    console.log(`Router: checking access to meetings for role: ${role}`)
-  }
 
   if (String(to.name || '') === 'settings') {
     if (!viewPermissions.isSettingsAllowed(role)) {
@@ -76,6 +72,21 @@ router.beforeEach(async (to) => {
     return { path: '/app/dashboard' }
   }
   return true
+})
+
+router.onError((error, to) => {
+  if (
+    error.message.includes('Failed to fetch dynamically imported module') ||
+    error.message.includes('Importing a module script failed')
+  ) {
+    if (!to.query?.reload) {
+      // Force reload the page if the chunk fails to load
+      // Append reload query parameter to avoid infinite loops
+      window.location.href = to.fullPath + (to.fullPath.includes('?') ? '&' : '?') + 'reload=true'
+    } else {
+      console.error('Failed to load dynamic import even after reload', error)
+    }
+  }
 })
 
 export default router

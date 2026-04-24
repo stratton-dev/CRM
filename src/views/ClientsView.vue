@@ -14,6 +14,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { api } from '@/api/client'
 import type { Client } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
+import ClientCardModal from '@/components/ClientCardModal.vue'
 
 type ClientContact = {
   id: string
@@ -32,6 +33,7 @@ const props = defineProps<{
   embedded?: boolean
   dateFrom?: string
   dateTo?: string
+  viewScope?: string
 }>()
 
 const auth = useAuthStore()
@@ -54,7 +56,22 @@ const { currentUser, isReadOnly } = storeToRefs(session)
 
 const viewMode = ref<'list' | 'kanban'>('list')
 const selectedClient = ref<Client | null>(null)
-const activePanelTab = ref<'details' | 'contacts' | 'activity' | 'finance' | 'offers'>('details')
+const activePanelTab = ref<'details' | 'contacts' | 'activity' | 'finance' | 'offers' | 'ankieta'>('details')
+
+const clientAnalysis = ref<{
+  id: string | null
+  industry: string
+  employeeCount: number | null
+  taxModel: string
+  benefits: string | null
+  investmentsPlanned: boolean | null
+  zusHighCost: boolean | null
+  implementingSavings: boolean | null
+  hasDebts: boolean | null
+  clientChallenge: string
+  createdAt: string | null
+} | null>(null)
+const analysisLoading = ref(false)
 
 const filterText = ref('')
 const sortField = ref<keyof Client | 'opiekunDisplay' | ''>('lastActionDate')
@@ -88,7 +105,7 @@ const newContact = ref({
 })
 const isRescheduleOpen = ref(false)
 const rescheduleDateTime = ref('')
-const clientCalculations = ref<Array<{ id: string; meetingId: string; status: string; employeeCount: number; savingsAmount: number; validUntil: string; createdAt?: string | null; valueJson?: any | null }>>([])
+const clientCalculations = ref<Array<{ id: string; meetingId: string; status: string; employeeCount: number; savingsAmount: number; validUntil: string; createdAt?: string | null; valueJson?: any | null; offerType?: string | null }>>([])
 const calculationsLoading = ref(false)
 const calculationStatuses = ref<Array<{ key: string; label: string }>>([])
 const calculationsError = ref<string | null>(null)
@@ -201,6 +218,26 @@ const displayedClients = computed(() => {
     })
   }
 
+  if (props.embedded && props.viewScope && props.viewScope !== 'all') {
+    const scope = props.viewScope
+    const myId = currentUser.value?.id
+    if (scope === 'mine') {
+      list = list.filter((client) => client.ownerId === myId)
+    } else if (scope === 'structure' || scope === 'team') {
+      if (myId && currentUser.value?.role !== 'ADMIN') {
+        const subtreeIds = [myId, ...structure.getSubtreeUserIds(myId)]
+        list = list.filter((client) => !client.ownerId || subtreeIds.includes(client.ownerId))
+      }
+      // ADMIN with 'structure' sees all — no extra filter
+    } else if (scope.startsWith('role:')) {
+      const targetRole = scope.slice(5)
+      list = list.filter((client) => {
+        const owner = userList.find((u) => u.id === client.ownerId)
+        return owner?.role === targetRole
+      })
+    }
+  }
+
   if (sField) {
     list.sort((a: any, b: any) => {
       const valA = (a[sField] || '').toString().toLowerCase()
@@ -274,13 +311,16 @@ const sort = (field: keyof Client | 'opiekunDisplay') => {
 }
 
 const statusLabel = (status: Client['status']) => {
-  const labels: Record<Client['status'], string> = {
+  const labels: Partial<Record<Client['status'], string>> = {
     NEW: 'Nowy',
       IN_TALKS: 'W rozmowach',
       OFFER_PREPARING: 'Przygotowanie oferty',
       OFFER_GENERATED: 'Oferta wygenerowana',
       CALCULATION_SENT: 'Wysłano ofertę',
       SPECIAL_OFFER: 'Oferta Specjalna',
+      RESIGNED: 'Rezygnacja',
+      SIGNED: 'Podpisano',
+      TERMINATED: 'Zakończono',
   }
   return labels[status] || status
 }
@@ -300,10 +340,12 @@ const setViewMode = (mode: 'list' | 'kanban') => {
 const selectClient = (client: Client) => {
   selectedClient.value = client
   activePanelTab.value = 'details'
+  clientAnalysis.value = null
   if (auth.enabled) {
     void fetchClientConsents(client.id)
     void fetchClientContacts(client.id)
     void fetchClientCalculations(client.id)
+    void fetchClientAnalysis(client.id)
   }
 }
 
@@ -452,150 +494,11 @@ const formatReservationDate = (client: Client) => {
 }
 
 const isClientEditOpen = ref(false)
-const isSubmitting = ref(false)
-const clientEditForm = ref({
-  id: '',
-  contactName: '',
-  contactPosition: '',
-  contactPhone: '',
-  contactEmail: '',
-  isDecisionMaker: false,
-  companyName: '',
-  nip: '',
-  address: '',
-  industry: '',
-  companySize: '',
-})
-
-const industries = [
-  "Uprawy rolne, chów i hodowla zwierząt, łowiectwo, włączając działalność usługową",
-  "Leśnictwo i pozyskiwanie drewna",
-  "Rybactwo",
-  "Wydobywanie węgla kamiennego i węgla brunatnego (lignitu)",
-  "Górnictwo ropy naftowej i gazu ziemnego",
-  "Górnictwo rud metali",
-  "Pozostałe górnictwo i wydobywanie",
-  "Usługi wspomagające górnictwo i wydobywanie",
-  "Produkcja art. spożywczych",
-  "Produkcja napojów",
-  "Produkcja wyrobów tytoniowych",
-  "Produkcja wyrobów tekstylnych",
-  "Produkcja odzieży",
-  "Produkcja skór i wyrobów ze skór wyprawionych",
-  "Produkcja wyrobów z drewna oraz korka, z wyłączeniem mebli; Produkcja wyrobów ze słomy i materiałów używanych do wyplatania",
-  "Produkcja papieru i wyrobów z papieru",
-  "Poligrafia i reprodukcja zapisanych nośników informacji",
-  "Wytwarzanie i przetwarzanie koksu i produktów rafinacji ropy naftowej",
-  "Produkcja chemikaliów i wyrobów chemicznych",
-  "Produkcja podstawowych substancji farmaceutycznych oraz leków i pozostałych wyrobów farmaceutycznych",
-  "Produkcja wyrobów z gumy i tworzyw sztucznych",
-  "Produkcja wyrobów z pozostałych mineralnych surowców niemetalicznych",
-  "Produkcja metali",
-  "Produkcja metalowych wyrobów gotowych, z wyłączeniem maszyn i urządzeń",
-  "Produkcja komputerów, wyrobów elektronicznych i optycznych",
-  "Produkcja urządzeń elektrycznych",
-  "Produkcja maszyn i urządzeń, gdzie indziej niesklasyfikowana",
-  "Produkcja pojazdów samochodowych, przyczep i naczep, z wyłączeniem motocykli",
-  "Produkcja pozostałego sprzętu transportowego",
-  "Produkcja mebli",
-  "Pozostała produkcja wyrobów",
-  "Naprawa, konserwacja i instalowanie maszyn i urządzeń",
-  "Wytwarzanie i zaopatrywanie w energię elektryczną, gaz, parę wodną, gorącą wodę i powietrze do układów klimatyzacyjnych",
-  "Pobór, uzdatnianie i dostarczanie wody",
-  "Odprowadzanie i oczyszczanie ścieków",
-  "Zbieranie, przetwarzanie i unieszkodliwianie odpadów oraz odzysk surowców",
-  "Rekultywacją i pozostałe usługi związane z gospodarką odpadami",
-  "Roboty budowlane związane ze wznoszeniem budynków",
-  "Roboty związane z budową obiektów inżynierii lądowej i wodnej",
-  "Roboty budowlane specjalistyczne",
-  "Handel hurtowy i detaliczny pojazdami samochodowymi; Naprawa pojazdów samochodowych",
-  "Handel hurtowy (bez pojazdów samochodowych)",
-  "Handel detaliczny (bez pojazdów samochodowych)",
-  "Transport lądowy oraz rurociągowy",
-  "Transport wodny",
-  "Transport lotniczy",
-  "Magazynowanie i usługi wspomagające transport",
-  "Działalność pocztowa i kurierska",
-  "Zakwaterowanie",
-  "Wyżywienie",
-  "Działalność wydawnicza",
-  "Działalność filmowa, telewizyjna, dźwiękowa i muzyczna",
-  "Nadawanie programów telewizyjnych i radiowych",
-  "Telekomunikacja",
-  "Oprogramowanie i doradztwo w zakresie informatyki",
-  "Zarządzanie stronami WWW, przetwarzanie danych i hosting",
-  "Usługi finansowe z wyłączeniem ubezpieczeń i funduszów emerytalnych",
-  "Ubezpieczenia, reasekuracja i fundusze emerytalne, z wyłączeniem obowiązkowego ubezpieczenia społecznego",
-  "Usługi objęte pośrednictwem finansowym",
-  "Obsługa rynku nieruchomości",
-  "Usługi prawnicze, rachunkowo-księgowe i doradztwo podatkowe",
-  "Działalność firm centralnych i doradztwo związane z zarządzaniem",
-  "Architektura, inżynieria, badania i analizy techniczne",
-  "Badania naukowe i prace rozwojowe",
-  "Reklama, badanie rynku i opinii publicznej",
-  "Projektowanie, fotografia, tłumaczenia, działalność profesjonalna",
-  "Weterynaria",
-  "Wynajem i dzierżawa",
-  "Zatrudnienie",
-  "Turystyka",
-  "Usługi detektywistyczne i ochroniarskie",
-  "Sprzątanie budynków i gospodarowanie terenami zieleni",
-  "Administracja biurowa i wspomaganie prowadzenia działalności gospodarczej",
-  "Administracja publiczna, obrona narodowa i obowiązkowe zabezpieczenia społeczne",
-  "Edukacja",
-  "Opieka zdrowotna",
-  "Pomoc społeczna (z zakwaterowaniem)",
-  "Pomoc społeczna (bez zakwaterowania)",
-  "Kultura i rozrywka",
-  "Biblioteki, archiwa, muzea, zoo oraz inne obiekty kulturalne",
-  "Gry losowe i zakłady wzajemne",
-  "Sport, rozrywka i rekreacja",
-  "Działalność organizacji członkowskich",
-  "Naprawa komputerów i artykułów osobistych oraz domowych",
-  "Pozostała indywidualna działalność usługowa"
-]
+const selectedClientForEdit = ref<Client | null>(null)
 
 const openClientEditModal = (client: Client) => {
-  clientEditForm.value = {
-    id: client.id,
-    contactName: client.contactName || '',
-    contactPosition: client.contactPosition || '',
-    contactPhone: client.contactPhone || '',
-    contactEmail: client.contactEmail || '',
-    isDecisionMaker: client.isDecisionMaker || false,
-    companyName: client.name || '',
-    nip: client.nip || '',
-    address: `${client.street || ''} ${client.buildingNr || ''}, ${client.zip || ''} ${client.city || ''}`.trim(),
-    industry: client.industry || '',
-    companySize: client.companySize || '',
-  }
+  selectedClientForEdit.value = client
   isClientEditOpen.value = true
-}
-
-const handleUpdateClient = async () => {
-    if (!clientEditForm.value.id) return
-    isSubmitting.value = true
-    try {
-        await api.patch(`/v1/clients/${clientEditForm.value.id}`, {
-            name: clientEditForm.value.companyName,
-            nip: clientEditForm.value.nip,
-            contact_name: clientEditForm.value.contactName,
-            contact_phone: clientEditForm.value.contactPhone,
-            contact_email: clientEditForm.value.contactEmail,
-            contact_position: clientEditForm.value.contactPosition,
-            is_decision_maker: clientEditForm.value.isDecisionMaker,
-            address: clientEditForm.value.address,
-            industry: clientEditForm.value.industry,
-            company_size: clientEditForm.value.companySize,
-        })
-        await clientStore.refreshApiData()
-        toast.success('Dane klienta zaktualizowane')
-        isClientEditOpen.value = false
-    } catch (error: any) {
-        toast.error('Błąd aktualizacji: ' + (error.response?.data?.message || error.message))
-    } finally {
-        isSubmitting.value = false
-    }
 }
 
 const handleDeleteClient = async (client: Client) => {
@@ -648,6 +551,40 @@ const fetchCalculationStatuses = async () => {
   }
 }
 
+const fetchClientAnalysis = async (clientId: string) => {
+  if (!auth.enabled) return
+  analysisLoading.value = true
+  try {
+    const { data: meetingsData } = await api.get('/v1/meetings', { params: { client_id: clientId, per_page: 1 } })
+    const meetings = Array.isArray(meetingsData?.data) ? meetingsData.data : Array.isArray(meetingsData) ? meetingsData : []
+    const meeting = meetings.length ? meetings[0] : null
+    if (!meeting?.id) { clientAnalysis.value = null; return }
+
+    const { data } = await api.get('/v1/meeting-analyses', { params: { meeting_id: meeting.id, per_page: 1 } })
+    const list = Array.isArray(data?.data) ? data.data : []
+    const item = list.length ? list[0] : null
+    if (!item) { clientAnalysis.value = null; return }
+
+    clientAnalysis.value = {
+      id: String(item.id),
+      industry: item.industry || '',
+      employeeCount: item.employees_count != null ? Number(item.employees_count) : null,
+      taxModel: item.tax_model || item.vat_model || '',
+      benefits: item.benefits || null,
+      investmentsPlanned: item.investments_planned != null ? Boolean(item.investments_planned) : null,
+      zusHighCost: item.zus_cost_level != null ? Boolean(Number(item.zus_cost_level)) : null,
+      implementingSavings: item.implementing_savings != null ? Boolean(Number(item.implementing_savings)) : null,
+      hasDebts: item.debt_level === 'yes' ? true : item.debt_level === 'no' ? false : null,
+      clientChallenge: item.client_challenge || '',
+      createdAt: item.created_at || null,
+    }
+  } catch {
+    clientAnalysis.value = null
+  } finally {
+    analysisLoading.value = false
+  }
+}
+
 const fetchClientCalculations = async (clientId: string) => {
   if (!auth.enabled) return
   calculationsLoading.value = true
@@ -674,6 +611,7 @@ const fetchClientCalculations = async (clientId: string) => {
       validUntil: item.valid_until,
       createdAt: item.created_at || null,
       valueJson: item.value_json || null,
+      offerType: item.offer_type || null,
     }))
   } catch (error: any) {
     calculationsError.value = error?.response?.data?.message || error?.message || 'Nie udało się pobrać kalkulacji.'
@@ -1152,7 +1090,7 @@ if (route.query.expand) {
   <div class="flex flex-col" :class="embedded ? 'h-auto min-h-[600px]' : 'h-[calc(100vh-112px)]'">
 
     <div class="px-6 pt-6 pb-2" v-if="!embedded">
-       <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border border-slate-800">
+       <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border border-slate-800">
           <div class="relative z-10 flex items-center gap-6">
               <RouterLink to="/app/sales/start" class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
                   <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
@@ -1168,7 +1106,7 @@ if (route.query.expand) {
        </div>
     </div>
     
-    <div class="bg-slate-50 border-b border-slate-200 p-2 flex items-center shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-card' : ''">
+    <div class="bg-slate-50 border-b border-slate-200 p-2 flex items-center shadow-sm shrink-0" :class="embedded ? 'rounded-t-card' : ''">
       <div class="flex items-center gap-3 ml-4">
         <AppIcon name="users" class="w-5 h-5 text-primary" />
         <h3 class="font-black text-slate-800 text-xl tracking-tight">Klienci w obsłudze</h3>
@@ -1258,7 +1196,7 @@ if (route.query.expand) {
               </td>
               <td class="px-4 py-1.5 whitespace-nowrap text-xs text-gray-600">
                 <div class="flex items-center">
-                  <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2 h-2 rounded-full bg-red-500 mr-2 flex-shrink-0" title="Brak kontaktu od ponad 3 dni!"></span>
+                  <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2 h-2 rounded-full bg-red-500 mr-2 shrink-0" title="Brak kontaktu od ponad 3 dni!"></span>
                   <span>{{ new Date(client.lastActionDate).toLocaleDateString() }}</span>
                 </div>
               </td>
@@ -1274,14 +1212,14 @@ if (route.query.expand) {
                   <button
                     @click.stop="openClientEditModal(client)"
                     class="p-1 px-2 rounded-lg border border-transparent text-slate-400 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-50 transition"
-                    title="Edytuj"
+                    :aria-label="`Edytuj klienta: ${client.name}`"
                   >
                     <AppIcon name="pencil-square" class="w-4 h-4" />
                   </button>
                   <button
                     @click.stop="handleDeleteClient(client)"
                     class="p-1 px-2 rounded-lg border border-transparent text-slate-400 hover:text-red-600 hover:border-red-100 hover:bg-red-50 transition"
-                    title="Usuń"
+                    :aria-label="`Usuń klienta: ${client.name}`"
                   >
                     <AppIcon name="trash" class="w-4 h-4" />
                   </button>
@@ -1317,7 +1255,7 @@ if (route.query.expand) {
                     </div>
                 
                     <div class="flex items-center gap-2">
-                       <button type="button" class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" title="Wyślij wiadomość" @click="emailClientOwner(client)">
+                       <button type="button" class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" aria-label="Wyślij wiadomość e-mail do opiekuna" @click="emailClientOwner(client)">
                            <AppIcon name="chat-bubble-left-ellipsis" class="w-5 h-5" />
                        </button>
 
@@ -1326,7 +1264,7 @@ if (route.query.expand) {
                          v-if="getClientOwner(client) && canNotify(getClientOwner(client))" 
                          type="button" 
                          class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" 
-                         title="Wyślij powiadomienie wewnętrzne"
+                         aria-label="Wyślij powiadomienie wewnętrzne"
                          @click="openMsgModal(getClientOwner(client))"
                        >
                          <AppIcon name="bell" class="w-5 h-5" />
@@ -1336,7 +1274,7 @@ if (route.query.expand) {
                          v-if="getClientOwner(client) && canImpersonate(getClientOwner(client))" 
                          type="button" 
                          class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" 
-                         :title="`Podgląd konta: ${getClientOwner(client)?.name}`"
+                         :aria-label="`Podgląd konta: ${getClientOwner(client)?.name}`"
                          @click="impersonateUser(getClientOwner(client))"
                        >
                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1349,7 +1287,7 @@ if (route.query.expand) {
                          v-if="getClientOwner(client) && auth.enabled && currentUser?.role === 'ADMIN'"
                          type="button"
                          class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm"
-                         :title="`Przejdź do struktury aby edytować: ${getClientOwner(client)?.name}`"
+                         :aria-label="`Przejdź do struktury aby edytować: ${getClientOwner(client)?.name}`"
                          @click="editRedirect(getClientOwner(client))"
                        >
                           <AppIcon name="pencil-square" class="w-5 h-5" />
@@ -1359,7 +1297,7 @@ if (route.query.expand) {
                          v-if="getClientOwner(client) && canRemove(getClientOwner(client))" 
                          type="button" 
                          class="p-2 bg-white text-red-600 border border-slate-200 rounded-lg hover:bg-red-50 hover:border-red-200 transition shadow-sm" 
-                         :title="`Usuń ze struktury: ${getClientOwner(client)?.name}`"
+                         :aria-label="`Usuń ze struktury: ${getClientOwner(client)?.name}`"
                          @click="removeUser(getClientOwner(client))"
                        >
                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
@@ -1412,7 +1350,7 @@ if (route.query.expand) {
 
     <div v-if="viewMode === 'kanban'" class="flex-1 overflow-x-auto p-4 bg-surface">
       <div class="flex space-x-4 h-full">
-        <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col flex-shrink-0">
+        <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col shrink-0">
           <div class="p-3 border-b border-slate-200 bg-white/50 rounded-t-card">
             <h3 class="font-bold text-sm text-slate-700">{{ stage.title }} <span class="text-xs text-slate-400 font-normal">({{ stage.clients.length }})</span></h3>
           </div>
@@ -1429,8 +1367,8 @@ if (route.query.expand) {
                 <span class="block">{{ formatReservationDate(client) }}</span>
               </div>
               <div class="flex justify-between items-start">
-                <p class="font-bold text-sm text-slate-800 group-hover:text-primary transition-colors pr-2 break-words">{{ client.name }}</p>
-                <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0 mt-1" title="Brak kontaktu od ponad 3 dni!"></span>
+                <p class="font-bold text-sm text-slate-800 group-hover:text-primary transition-colors pr-2 wrap-break-word">{{ client.name }}</p>
+                <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-1" title="Brak kontaktu od ponad 3 dni!"></span>
               </div>
               <p class="text-[11px] text-slate-400 font-mono mt-1">{{ client.nip }}</p>
               <div class="mt-2 pt-2 border-t border-slate-100">
@@ -1461,13 +1399,13 @@ if (route.query.expand) {
     <div v-if="selectedClient" class="fixed inset-0 z-40">
       <div class="absolute inset-0 bg-black/30 backdrop-blur-[1px]" @click="closePanel"></div>
       <div class="absolute top-0 right-0 h-full w-full max-w-2xl bg-surface z-50 shadow-2xl flex flex-col animate-slide-in-right">
-        <div class="p-6 bg-white border-b border-slate-200 flex-shrink-0">
+        <div class="p-6 bg-white border-b border-slate-200 shrink-0">
           <div class="flex justify-between items-start">
             <div>
               <h3 class="text-xl font-bold text-slate-900">{{ selectedClient.name }}</h3>
               <p class="text-sm text-slate-500 font-mono mt-0.5">NIP: {{ selectedClient.nip }}</p>
             </div>
-            <button type="button" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors" @click="closePanel">
+            <button type="button" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors" aria-label="Zamknij panel szczegółów klienta" @click="closePanel">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
           </div>
@@ -1501,13 +1439,14 @@ if (route.query.expand) {
           </div>
         </div>
 
-        <div class="border-b border-slate-200 bg-white flex-shrink-0">
+        <div class="border-b border-slate-200 bg-white shrink-0">
           <nav class="flex space-x-6 px-6">
             <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'details'">Szczegóły</button>
             <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'contacts' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'contacts'">Kontakt</button>
             <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'activity' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'activity'">Aktywności</button>
             <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'finance' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'finance'">Finanse</button>
             <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'offers' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'offers'">Oferty</button>
+            <button type="button" class="px-1 py-4 text-sm font-bold border-b-2 transition-colors duration-200" :class="activePanelTab === 'ankieta' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'" @click="activePanelTab = 'ankieta'">Ankieta</button>
           </nav>
         </div>
 
@@ -1540,7 +1479,15 @@ if (route.query.expand) {
             </div>
             <div class="bg-white p-6 border border-slate-200 rounded-card shadow-sm">
               <h4 class="font-bold text-slate-400 uppercase text-xs tracking-wider mb-4">Zgody</h4>
-              <div v-if="consentsLoading" class="text-sm text-slate-400">Ładowanie zgód...</div>
+              <div v-if="consentsLoading" class="space-y-2 py-2">
+                <div v-for="i in 3" :key="`cs-sk-${i}`" class="animate-pulse flex items-start gap-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50">
+                  <div class="w-4 h-4 bg-slate-200 rounded mt-1 shrink-0"></div>
+                  <div class="flex-1 space-y-2">
+                    <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                    <div class="h-3 bg-slate-200 rounded w-3/4"></div>
+                  </div>
+                </div>
+              </div>
               <div v-else-if="!consentCatalog.length" class="text-sm text-slate-400">Brak zdefiniowanych zgód.</div>
               <div v-else class="space-y-3">
                 <label v-for="consent in consentCatalog" :key="consent.id" class="flex items-start gap-3 border border-slate-200 rounded-lg p-3 hover:border-primary/50 transition-colors bg-slate-50/50 cursor-pointer">
@@ -1588,7 +1535,17 @@ if (route.query.expand) {
                   class="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none text-right font-bold"
                 />
               </div>
-              <div v-if="contactsLoading" class="text-sm text-gray-400">Ładowanie kontaktów...</div>
+              <div v-if="contactsLoading" class="space-y-2">
+                <div v-for="i in 3" :key="`ct-sk-${i}`" class="animate-pulse border border-gray-100 rounded-lg p-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 space-y-2">
+                      <div class="h-4 bg-slate-200 rounded w-1/3"></div>
+                      <div class="h-3 bg-slate-200 rounded w-1/4"></div>
+                    </div>
+                    <div class="h-6 bg-slate-200 rounded-full w-12 shrink-0"></div>
+                  </div>
+                </div>
+              </div>
               <div v-else-if="filteredContacts.length === 0" class="text-sm text-gray-400">Brak kontaktów dla tego klienta.</div>
               <div v-else class="space-y-3">
                 <button
@@ -1747,6 +1704,67 @@ if (route.query.expand) {
               <p v-else class="text-sm text-gray-400">Brak faktur.</p>
             </div>
           </div>
+          <div v-else-if="activePanelTab === 'ankieta'" class="space-y-4">
+            <div class="bg-white p-4 border border-gray-200 rounded">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-xs font-bold text-gray-500 uppercase">Dane z Ankiety</h4>
+                <button type="button" class="text-xs text-sky-600 hover:text-sky-700" @click="selectedClient && fetchClientAnalysis(selectedClient.id)">Odśwież</button>
+              </div>
+              <div v-if="analysisLoading" class="space-y-3 py-2">
+                <div v-for="i in 6" :key="`an-sk-${i}`" class="animate-pulse h-8 bg-slate-100 rounded"></div>
+              </div>
+              <div v-else-if="!clientAnalysis" class="text-sm text-gray-400 py-6 text-center">Brak danych ankiety dla tego klienta.</div>
+              <template v-else>
+                <div class="text-[10px] text-slate-400 mb-4">Zebrane: {{ clientAnalysis.createdAt ? new Date(clientAnalysis.createdAt).toLocaleString('pl-PL') : '—' }}</div>
+                <div>
+                  <h5 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Profil firmy</h5>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-slate-50 rounded p-3">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Branża</div>
+                      <div class="text-sm font-semibold text-slate-800">{{ clientAnalysis.industry || '—' }}</div>
+                    </div>
+                    <div class="bg-slate-50 rounded p-3">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Liczba pracowników</div>
+                      <div class="text-sm font-semibold text-slate-800">{{ clientAnalysis.employeeCount ?? '—' }}</div>
+                    </div>
+                    <div class="bg-slate-50 rounded p-3">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Opodatkowanie</div>
+                      <div class="text-sm font-semibold text-slate-800">{{ clientAnalysis.taxModel || '—' }}</div>
+                    </div>
+                    <div class="bg-slate-50 rounded p-3">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold mb-1">Benefity pracownicze</div>
+                      <div class="text-sm font-semibold" :class="clientAnalysis.benefits === 'Tak' ? 'text-emerald-600' : clientAnalysis.benefits === 'Nie' ? 'text-rose-500' : 'text-slate-400'">{{ clientAnalysis.benefits ?? '—' }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <h5 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Wywiad kwalifikacyjny</h5>
+                  <div class="space-y-0 divide-y divide-slate-100">
+                    <div class="flex items-center justify-between py-2">
+                      <span class="text-sm text-slate-600">Planowane inwestycje</span>
+                      <span class="text-sm font-bold" :class="clientAnalysis.investmentsPlanned === true ? 'text-emerald-600' : clientAnalysis.investmentsPlanned === false ? 'text-slate-400' : 'text-slate-300'">{{ clientAnalysis.investmentsPlanned === true ? 'Tak' : clientAnalysis.investmentsPlanned === false ? 'Nie' : '—' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                      <span class="text-sm text-slate-600">Wysokie składki ZUS</span>
+                      <span class="text-sm font-bold" :class="clientAnalysis.zusHighCost === true ? 'text-amber-600' : clientAnalysis.zusHighCost === false ? 'text-slate-400' : 'text-slate-300'">{{ clientAnalysis.zusHighCost === true ? 'Tak' : clientAnalysis.zusHighCost === false ? 'Nie' : '—' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                      <span class="text-sm text-slate-600">Wdrażanie oszczędności</span>
+                      <span class="text-sm font-bold" :class="clientAnalysis.implementingSavings === true ? 'text-emerald-600' : clientAnalysis.implementingSavings === false ? 'text-slate-400' : 'text-slate-300'">{{ clientAnalysis.implementingSavings === true ? 'Tak' : clientAnalysis.implementingSavings === false ? 'Nie' : '—' }}</span>
+                    </div>
+                    <div class="flex items-center justify-between py-2">
+                      <span class="text-sm text-slate-600">Zadłużenia firmy</span>
+                      <span class="text-sm font-bold" :class="clientAnalysis.hasDebts === true ? 'text-rose-500' : clientAnalysis.hasDebts === false ? 'text-slate-400' : 'text-slate-300'">{{ clientAnalysis.hasDebts === true ? 'Tak' : clientAnalysis.hasDebts === false ? 'Nie' : '—' }}</span>
+                    </div>
+                    <div v-if="clientAnalysis.clientChallenge" class="py-3">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold mb-2">Największe wyzwanie klienta</div>
+                      <div class="text-sm text-slate-700 bg-slate-50 rounded p-3 leading-relaxed">{{ clientAnalysis.clientChallenge }}</div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
           <div v-else-if="activePanelTab === 'offers'" class="space-y-4">
             <div class="bg-white p-4 border border-gray-200 rounded">
               <div class="flex items-center justify-between mb-3">
@@ -1755,13 +1773,29 @@ if (route.query.expand) {
                   Odśwież
                 </button>
               </div>
-              <div v-if="calculationsLoading" class="text-sm text-gray-500">Ładowanie kalkulacji...</div>
+              <div v-if="calculationsLoading" class="space-y-2">
+                <div v-for="i in 3" :key="`calc-ck-${i}`" class="animate-pulse border border-gray-100 rounded p-3 bg-gray-50">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="h-4 bg-slate-200 rounded w-1/3"></div>
+                    <div class="h-3 bg-slate-200 rounded w-20"></div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-3">
+                    <div class="h-8 bg-slate-200 rounded"></div>
+                    <div class="h-8 bg-slate-200 rounded"></div>
+                    <div class="h-8 bg-slate-200 rounded"></div>
+                  </div>
+                </div>
+              </div>
               <div v-else-if="calculationsError" class="text-sm text-red-600">{{ calculationsError }}</div>
               <div v-else-if="clientCalculations.length === 0" class="text-sm text-gray-400">Brak kalkulacji.</div>
               <div v-else class="space-y-3">
                 <div v-for="calc in clientCalculations" :key="calc.id" class="border border-gray-200 rounded p-3 text-sm bg-gray-50">
                   <div class="flex items-center justify-between">
-                    <div class="font-semibold text-gray-800">Kalkulacja #{{ calc.id }}</div>
+                    <div class="flex items-center gap-2">
+                      <div class="font-semibold text-gray-800">Kalkulacja #{{ calc.id }}</div>
+                      <span v-if="calc.offerType === 'QUICK_SIMULATION'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">⚡ Szacunkowa</span>
+                      <span v-else-if="calc.offerType === 'DETAILED'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">📊 Lista płac</span>
+                    </div>
                     <div class="text-xs text-gray-400">{{ formatDateTime(calc.createdAt) }}</div>
                   </div>
                   <div class="mt-2 grid grid-cols-3 gap-3 text-xs text-gray-600">
@@ -1813,7 +1847,7 @@ if (route.query.expand) {
         </div>
       </div>
 
-      <div v-if="isRescheduleOpen" class="absolute inset-0 z-[60] flex items-center justify-center">
+      <div v-if="isRescheduleOpen" class="absolute inset-0 z-60 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/40" @click="closeRescheduleModal"></div>
         <div class="relative bg-white w-full max-w-md rounded-xl shadow-2xl border border-gray-200 p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-2">Wstrzymaj spotkanie</h3>
@@ -1831,7 +1865,7 @@ if (route.query.expand) {
         </div>
       </div>
 
-      <div v-if="isContactEditOpen" class="absolute inset-0 z-[60] flex items-center justify-center">
+      <div v-if="isContactEditOpen" class="absolute inset-0 z-60 flex items-center justify-center">
         <div class="absolute inset-0 bg-black/40" @click="closeContactEdit"></div>
         <div class="relative bg-white w-full max-w-md rounded-xl shadow-2xl border border-gray-200 p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-2">Edytuj kontakt</h3>
@@ -1871,129 +1905,12 @@ if (route.query.expand) {
     </div>
 
     <!-- Client Edit Modal -->
-    <div
-      v-if="isClientEditOpen"
-      class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px]"
-      @click.self="isClientEditOpen = false"
-    >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <!-- Header -->
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">Edycja danych klienta</h3>
-            <p class="text-xs text-gray-500 mt-0.5">Zaktualizuj informacje kontaktowe i branżowe</p>
-          </div>
-          <button
-            @click="isClientEditOpen = false"
-            class="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <AppIcon name="x-mark" class="w-5 h-5" />
-          </button>
-        </div>
-
-        <!-- Form Content -->
-        <div class="p-6 overflow-y-auto custom-scrollbar">
-          <div class="grid grid-cols-2 gap-6">
-            <!-- Basic Info -->
-            <div class="col-span-2 space-y-4">
-              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Dane Postawowe</h4>
-              
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Nazwa Firmy</label>
-                  <input
-                    v-model="clientEditForm.companyName"
-                    type="text"
-                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                    placeholder="Wpisz nazwę firmy..."
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Branża</label>
-                  <div class="relative">
-                    <select
-                      v-model="clientEditForm.industry"
-                      class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all pr-8"
-                    >
-                      <option value="" disabled>Wybierz branżę...</option>
-                      <option v-for="ind in industries" :key="ind" :value="ind">{{ ind }}</option>
-                    </select>
-                    <AppIcon name="chevron-down" class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Contact Info -->
-            <div class="col-span-2 space-y-4 pt-4 border-t border-gray-100">
-              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Kontakt</h4>
-              
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Osoba Kontaktowa</label>
-                  <input
-                    v-model="clientEditForm.contactName"
-                    type="text"
-                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                    placeholder="Imię i nazwisko"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Telefon</label>
-                  <input
-                    v-model="clientEditForm.contactPhone"
-                    type="text"
-                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                    placeholder="+48..."
-                  />
-                </div>
-                <div class="col-span-2">
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    v-model="clientEditForm.contactEmail"
-                    type="email"
-                    class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                    placeholder="adres@email.com"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <!-- Notes -->
-            <div class="col-span-2 space-y-4 pt-4 border-t border-gray-100">
-              <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Notatki</h4>
-              <div>
-                <textarea
-                  v-model="clientEditForm.contactPosition"
-                  rows="3"
-                  class="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
-                  placeholder="Dodatkowe informacje..."
-                ></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
-          <button
-            @click="isClientEditOpen = false"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all"
-            :disabled="isSubmitting"
-          >
-            Anuluj
-          </button>
-          <button
-            @click="handleUpdateClient"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            :disabled="isSubmitting"
-          >
-            <AppIcon v-if="isSubmitting" name="arrow-path" class="w-4 h-4 animate-spin" />
-            <span>{{ isSubmitting ? 'Zapisywanie...' : 'Zapisz zmiany' }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <ClientCardModal
+      :open="isClientEditOpen"
+      :client="selectedClientForEdit ?? undefined"
+      @close="isClientEditOpen = false"
+      @saved="clientStore.refreshApiData()"
+    />
 
     <!-- Notification Modal -->
     <div v-if="showMsgModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">

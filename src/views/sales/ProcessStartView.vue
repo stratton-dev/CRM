@@ -11,9 +11,10 @@ import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import { useToastStore } from '@/stores/toast'
 import { useClientStore } from '@/stores/client'
+import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
-import { useViewPermissionsStore } from '@/stores/viewPermissions'
+import { mapNipReservationState } from './processStartNip'
 import type { FileCategory, KnowledgeFile } from '@/types/models'
 import { VueFilesPreview } from 'vue-files-preview'
 import 'vue-files-preview/lib/style.css'
@@ -525,17 +526,14 @@ const checkNipReservation = async (value: string) => {
   }
   isCheckingNip.value = true
   try {
-    const { data } = await api.get('/v1/clients/check-nip', { params: { nip }, timeout: 60000 })
-    const reserved = Boolean(data?.reserved)
-    nipBlocked.value = reserved
-    if (reserved) {
-      const ownerName = data?.owner_name ? ` (${data.owner_name})` : ''
-      const validUntil = data?.valid_until ? ` do ${data.valid_until}` : ''
-      nipBlockMessage.value = `NIP jest już zarezerwowany${ownerName}${validUntil}.`
-    } else {
-      nipBlockMessage.value = null
-    }
-    return reserved
+    const params: Record<string, string> = { nip }
+    if (clientId.value) params.client_id = String(clientId.value)
+    if (meetingId.value) params.meeting_id = String(meetingId.value)
+    const { data } = await api.get('/v1/clients/check-nip', { params, timeout: 60000 })
+    const reservation = mapNipReservationState(data)
+    nipBlocked.value = reservation.conflict
+    nipBlockMessage.value = reservation.message
+    return reservation.conflict
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się sprawdzić rezerwacji NIP.'
     toast.error(message)
@@ -941,31 +939,21 @@ const updateCrmReservationAndStatus = async () => {
 }
 
 const updateCrmStatus = async (
-  status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED'
+  status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED' | 'IN_TALKS' | 'OFFER_GENERATED' | 'SPECIAL_OFFER'
 ) => {
   if (!auth.enabled || !clientId.value) return
   try {
-    let profile: any = null
     if (!crmProfileId.value) {
       const { data } = await api.get('/v1/crm-client-profiles', { params: { client_id: clientId.value, per_page: 1 } })
       const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
-      profile = list.length ? list[0] : null
+      const profile = list.length ? list[0] : null
       crmProfileId.value = profile?.id ? String(profile.id) : null
-    }
-
-    let reservationEndDate: string | null = null
-    if (meetingId.value) {
-      const { data: meeting } = await api.get(`/v1/meetings/${meetingId.value}`)
-      reservationEndDate = meeting?.valid_until || null
     }
 
     const payload: Record<string, any> = {
       client_id: clientId.value,
       owner_user_id: currentUser.value?.id || null,
       status,
-    }
-    if (reservationEndDate) {
-      payload.reservation_end_date = reservationEndDate
     }
 
     if (crmProfileId.value) {
@@ -998,6 +986,8 @@ const saveMeetingAnalysis = async () => {
       financing_purpose: analysis.value.financingPurpose || null,
       employees_count: analysis.value.uopCount ?? null,
       benefits: analysis.value.hasBenefits === null ? null : analysis.value.hasBenefits ? 'Tak' : 'Nie',
+      implementing_savings: analysis.value.implementingSavings === null ? null : analysis.value.implementingSavings ? 1 : 0,
+      client_challenge: analysis.value.clientChallenge || null,
     }
 
     if (meetingAnalysisId.value) {
@@ -1022,15 +1012,22 @@ const saveMeetingAnalysis = async () => {
 const finalizeMeeting = async () => {
   if (!auth.enabled || !meetingId.value) return
   
-  // Ostatnie sprawdzenie rezerwacji NIP przed finalizacją (krok 4)
+  // Sprawdzenie rezerwacji NIP z krótkim timeoutem — nie blokujemy procesu jeśli API nie odpowiada
   const nip = normalizeNip(companyData.value.nip)
   if (nip) {
-    const isReserved = await checkNipReservation(nip)
-    if (isReserved) {
-      toast.error(nipBlockMessage.value || 'NIP został w międzyczasie zarezerwowany przez innego handlowca.')
-      // Cofamy do kroku 1, aby handlowiec widział błąd rezerwacji
-      step.value = 1
-      throw new Error('NIP_RESERVED')
+    try {
+      const nipCheckPromise = checkNipReservation(nip)
+      const timeoutPromise = new Promise<false>((resolve) => setTimeout(() => resolve(false), 5000))
+      const isReserved = await Promise.race([nipCheckPromise, timeoutPromise])
+      if (isReserved) {
+        toast.error(nipBlockMessage.value || 'NIP został w międzyczasie zarezerwowany przez innego handlowca.')
+        step.value = 1
+        throw new Error('NIP_RESERVED')
+      }
+    } catch (e: any) {
+      if (e?.message === 'NIP_RESERVED') throw e
+      // Inne błędy (np. timeout API) — logujemy ale nie blokujemy
+      console.warn('NIP reservation check failed, proceeding:', e?.message)
     }
   }
 
@@ -1038,7 +1035,7 @@ const finalizeMeeting = async () => {
     await api.patch(`/v1/meetings/${meetingId.value}`, {
       status: 'completed',
       calculation_shown: true,
-      reserve_nip: true // Wysyłamy flagę do backendu, aby dokonał rezerwacji przy pierwszej ofercie
+      reserve_nip: true
     })
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się zakończyć spotkania.'
@@ -1097,30 +1094,10 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
         industrySearch.value = clientIndustry
     }
 
-    if (!route.query.step && profileStatus === 'OFFER_PREPARING' && meetingId.value) {
-      const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
-      router.push({
-        path: targetPath,
-        query: {
-          meetingId: meetingId.value || undefined,
-          clientId: clientId.value || undefined,
-        },
-      })
-      return
-    }
-
-    if (!route.query.step && profileStatus === 'OFFER_GENERATED' && meetingId.value) {
-      const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
-      router.push({
-        path: targetPath,
-        query: {
-          meetingId: meetingId.value || undefined,
-          clientId: clientId.value || undefined,
-          step: 'summary',
-        },
-      })
-      return
-    }
+    // Zamiast natychmiastowego przekierowania do kalkulatora, pozwól użytkownikowi
+    // wrócić do ankiety lub kroku 4 wyboru kalkulatora — dzieło się to wcześniej i
+    // powodowało pominięcie ankiety firmy (krok 3) przy ponownym otwarciu procesu.
+    // Logika kroku jest ustawiana poniżej (if (!route.query.step) { ... }).
 
     const { data: consentEntries } = await api.get(`/v1/clients/${clientId.value}/consents`)
     const consentsData = Array.isArray(consentEntries) ? consentEntries : []
@@ -1156,8 +1133,12 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
             ? null
             : Boolean(Number(analysisItem?.zus_cost_level)),
         zusCost: analysisItem?.zus_cost_level ?? null,
-        planningInvestments: typeof analysisItem?.investments_planned === 'boolean' ? analysisItem?.investments_planned : null,
-        isInvesting: typeof analysisItem?.investments_planned === 'boolean' ? analysisItem?.investments_planned : null,
+        planningInvestments: analysisItem?.investments_planned != null
+          ? Boolean(analysisItem.investments_planned)
+          : null,
+        isInvesting: analysisItem?.investments_planned != null
+          ? Boolean(analysisItem.investments_planned)
+          : null,
         hasDebts:
           analysisItem?.debt_level === 'yes' ? true : analysisItem?.debt_level === 'no' ? false : null,
         needsFinancing:
@@ -1175,6 +1156,10 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
                   : analysisItem?.benefits === 'Nie'
                     ? false
                 : null,
+        implementingSavings: analysisItem?.implementing_savings != null
+          ? Boolean(Number(analysisItem.implementing_savings))
+          : null,
+        clientChallenge: analysisItem?.client_challenge || '',
       }
       
       // Update industry search field
@@ -1351,6 +1336,14 @@ const nextStep = async () => {
        await calculatorStore.generateAiDiagnosis(analysis.value.clientChallenge);
     }
 
+    // Inject remaining survey fields into store for email generation
+    calculatorStore.firma.zusWysokie = analysis.value.highZUSPayments === null
+      ? undefined
+      : analysis.value.highZUSPayments ? 'tak' : 'nie';
+    calculatorStore.firma.wdrazaOszczednosci = analysis.value.implementingSavings === null
+      ? undefined
+      : analysis.value.implementingSavings ? 'tak' : 'nie';
+
     const ok = await saveMeetingAnalysis()
     if (!ok) return
   }
@@ -1361,8 +1354,11 @@ const nextStep = async () => {
   }
 
   try {
-    await updateCrmStatus('OFFER_PREPARING')
-    await finalizeMeeting()
+    // updateCrmStatus i finalizeMeeting równolegle — oszczędzamy jedno RTT
+    await Promise.all([
+      updateCrmStatus('OFFER_PREPARING'),
+      finalizeMeeting(),
+    ])
   } catch (err) {
     // błąd obsłużony wewnątrz finalizeMeeting
     return 
@@ -1383,6 +1379,7 @@ const nextStep = async () => {
       uzSalaryNet: analysis.value.uzSalaryNet || undefined,
       // Fallback for legacy calculators
       employees: (analysis.value.uopCount || 0) + (analysis.value.uzCount || 0) || undefined,
+      step: calcTarget.value === 'detailed' ? '1' : undefined,
       source: 'process'
     },
   })
@@ -1470,11 +1467,30 @@ onMounted(() => {
     isProcessActive.value = true
   }
 
-  void bootstrap().then(() => {
-    if (targetClientId) {
-      loadExistingProcess(targetClientId, targetMeetingId)
-    }
-  })
+  // Load consents and process data in parallel
+  const bootstrapPromise = bootstrap()
+  
+  if (targetClientId) {
+    // Start fetching client/meeting concurrently
+    // Note: loadExistingProcess sets step based on current consents (which might be empty initially)
+    // We will re-evaluate step after both are done.
+    const processPromise = loadExistingProcess(targetClientId, targetMeetingId)
+    
+    Promise.all([bootstrapPromise, processPromise]).then(() => {
+        // Re-evaluate step logic to ensure correct step if consents loaded late
+        if (!route.query.step && meetingId.value) {
+           const hasRequiredUnchecked = consentList.value.filter((c) => c.required).some((c) => !consentAccepted.value[c.id])
+           if (hasRequiredUnchecked) {
+             step.value = 2
+           } else if (!meetingAnalysisId.value) {
+             step.value = 3
+           }
+        }
+    })
+  } else {
+    // Just wait for bootstrap
+    void bootstrapPromise
+  }
 })
 </script>
 
@@ -1482,7 +1498,7 @@ onMounted(() => {
 <template>
   <div v-if="!isProcessActive" class="view-transition pb-20 space-y-8">
     <div class="w-full pt-6">
-      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex-1">
           <div class="flex items-center gap-4 mb-3">
              <RouterLink to="/app/dashboard" class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition shadow-sm">
@@ -1498,7 +1514,7 @@ onMounted(() => {
         <RouterLink to="/app/leads" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Leady" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
@@ -1514,7 +1530,7 @@ onMounted(() => {
         <RouterLink v-if="canViewMeetings" to="/app/meetings" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Spotkania" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold relative">
@@ -1548,7 +1564,7 @@ onMounted(() => {
         <div @click="openNewMeeting" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-900 border border-slate-700">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1552581234-26160f608093?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Nowa Sprzedaż" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
@@ -1564,7 +1580,7 @@ onMounted(() => {
         <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Klienci w obsłudze" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
@@ -1581,7 +1597,7 @@ onMounted(() => {
         <div @click="router.push('/app/payroll')" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700 cursor-pointer">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1554224155-1696413565d3?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Lista Płac" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
@@ -1597,7 +1613,7 @@ onMounted(() => {
         <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Szybka Kalkulacja" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
@@ -1613,7 +1629,7 @@ onMounted(() => {
         <RouterLink to="/app/calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Szczegółowa Kalkulacja" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
@@ -1629,7 +1645,7 @@ onMounted(() => {
         <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <div class="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
@@ -1652,7 +1668,7 @@ onMounted(() => {
 
   <div v-else class="view-transition pb-20 space-y-8">
     <div class="w-full pt-6">
-      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 rounded-3xl shadow-xl border border-slate-800 p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6">
         <div class="flex-1">
           <div class="flex items-center gap-4 mb-3">
              <button @click="goBack" class="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition shadow-sm">
@@ -2238,7 +2254,46 @@ onMounted(() => {
             >
               Wstecz
             </button>
+
+            <!-- Krok 4: Karty wyboru rodzaju kalkulacji -->
+            <template v-if="step === 4">
+              <div class="flex items-center gap-3">
+                <!-- Symulacja szacunkowa → quick-calculator -->
+                <button
+                  type="button"
+                  class="group flex flex-col items-start gap-2 px-5 py-4 bg-slate-900 border border-slate-700 rounded-xl hover:border-stratton-gold transition-all text-left active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
+                  :disabled="isSavingStep || !isStepValid"
+                  @click="calcTarget = 'quick'; nextStep()"
+                >
+                  <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-stratton-gold/10 border border-stratton-gold/20 rounded-lg text-stratton-gold group-hover:bg-stratton-gold group-hover:text-white transition-colors">
+                      <AppIcon name="bolt" class="w-4 h-4" />
+                    </div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Symulacja szacunkowa</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 leading-relaxed">Szybka oferta bez listy płac. Wyślesz ją od razu do klienta.</p>
+                </button>
+                <!-- Kalkulacja z listy płac → calculator step=1 -->
+                <button
+                  type="button"
+                  class="group flex flex-col items-start gap-2 px-5 py-4 bg-slate-900 border border-slate-700 rounded-xl hover:border-blue-500 transition-all text-left active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
+                  :disabled="isSavingStep || !isStepValid"
+                  @click="calcTarget = 'detailed'; nextStep()"
+                >
+                  <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                      <AppIcon name="table-cells" class="w-4 h-4" />
+                    </div>
+                    <span class="text-xs font-black text-white uppercase tracking-wider">Kalkulacja z listy płac</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 leading-relaxed">Pełna analiza. Przejdziesz do kroku Pracownicy.</p>
+                </button>
+              </div>
+            </template>
+
+            <!-- Pozostałe kroki: standardowy przycisk Dalej -->
             <button
+              v-else
               type="button"
               class="bg-stratton-gold text-stratton-900 px-8 py-4 rounded-xl font-bold uppercase tracking-wide hover:bg-white transition flex items-center gap-3 shadow-lg shadow-stratton-gold/20 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               :disabled="isSavingStep || isCheckingNip || isFetchingGus || !isStepValid"
@@ -2253,7 +2308,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="showPreview" class="fixed inset-0 z-[60] flex items-center justify-center">
+    <div v-if="showPreview" class="fixed inset-0 z-60 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/50" @click="closePreview"></div>
       <div ref="previewContainer" class="relative bg-white w-[90vw] max-w-5xl h-[80vh] rounded-2xl shadow-2xl border border-slate-200 p-4 flex flex-col">
         <div class="flex items-center justify-between mb-2">
@@ -2279,7 +2334,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="showFetchMeetingModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div v-if="showFetchMeetingModal" class="fixed inset-0 z-60 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showFetchMeetingModal = false"></div>
       <div class="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[80vh] animate-scale-in">
         <div class="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
@@ -2332,7 +2387,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="isContactEditOpen" class="fixed inset-0 z-[60] flex items-center justify-center">
+    <div v-if="isContactEditOpen" class="fixed inset-0 z-60 flex items-center justify-center">
       <div class="absolute inset-0 bg-black/40" @click="closeContactEdit"></div>
       <div class="relative bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 p-6">
         <h3 class="text-lg font-bold text-slate-900 mb-2">Edytuj kontakt</h3>

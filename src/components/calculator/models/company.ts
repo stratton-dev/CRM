@@ -23,6 +23,8 @@ export interface Firma {
   kwotaOszczednosciDeklarowana?: string;
   zadluzenia?: string;
   ryczaltVat?: string;
+  zusWysokie?: string;          // 'tak' | 'nie' — czy składki ZUS są wysokie
+  wdrazaOszczednosci?: string;  // 'tak' | 'nie' — czy firma wdraża oszczędności
   wyzwanieKlienta?: string; // New field for client challenge
   aiDiagnoza?: string; // New field for AI diagnosis
   kontakty?: ContactPerson[];
