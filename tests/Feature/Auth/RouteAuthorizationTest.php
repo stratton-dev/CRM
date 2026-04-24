@@ -4,7 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\Client;
 use App\Models\User;
-use App\Http\Middleware\KeycloakAuthenticate;
+use App\Http\Middleware\SupabaseAuthenticate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,7 +14,7 @@ class RouteAuthorizationTest extends TestCase
 
     public function test_forbidden_without_clients_view_permission(): void
     {
-        $this->withoutMiddleware(KeycloakAuthenticate::class);
+        $this->withoutMiddleware(SupabaseAuthenticate::class);
 
         Client::create([
             'name' => 'Acme Sp. z o.o.',

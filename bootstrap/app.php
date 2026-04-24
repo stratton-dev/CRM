@@ -17,7 +17,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
 
         $middleware->alias([
-            'keycloak'  => \App\Http\Middleware\KeycloakAuthenticate::class,
             'supabase'  => \App\Http\Middleware\SupabaseAuthenticate::class,
         ]);
     })

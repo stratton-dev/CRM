@@ -66,10 +66,10 @@ class TokenContext
             return $user?->role_cached ?: $user?->role?->code;
         }
 
-        $roleMap = config('supabase.role_map', config('keycloak.role_map', []));
+        $roleMap = config('supabase.role_map', []);
         $mappedRoles = array_map(fn (string $role) => $roleMap[$role] ?? $role, $roles);
 
-        $rolePriority = config('supabase.role_priority', config('keycloak.role_priority', []));
+        $rolePriority = config('supabase.role_priority', []);
         foreach ($rolePriority as $roleCode) {
             if (in_array($roleCode, $mappedRoles, true)) {
                 return Str::upper($roleCode);

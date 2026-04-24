@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Structure;
 
-use App\Http\Middleware\KeycloakAuthenticate;
+use App\Http\Middleware\SupabaseAuthenticate;
 use App\Models\User;
 use App\Services\Structure\HierarchicalCodeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,7 +14,7 @@ class StructureEndpointsTest extends TestCase
 
     public function test_creates_users_idempotently_with_the_same_idempotency_key(): void
     {
-        $this->withoutMiddleware(KeycloakAuthenticate::class);
+        $this->withoutMiddleware(SupabaseAuthenticate::class);
 
         $actor = User::factory()->create([
             'keycloak_id' => 'actor-1',
@@ -55,7 +55,7 @@ class StructureEndpointsTest extends TestCase
 
     public function test_prevents_moving_a_user_under_its_descendant(): void
     {
-        $this->withoutMiddleware(KeycloakAuthenticate::class);
+        $this->withoutMiddleware(SupabaseAuthenticate::class);
 
         $actor = User::factory()->create([
             'keycloak_id' => 'actor-2',
