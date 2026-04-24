@@ -14,7 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'keycloak' => \App\Http\Middleware\KeycloakAuthenticate::class,
+            'keycloak'  => \App\Http\Middleware\KeycloakAuthenticate::class,
+            'supabase'  => \App\Http\Middleware\SupabaseAuthenticate::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

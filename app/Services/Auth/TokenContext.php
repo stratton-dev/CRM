@@ -10,14 +10,20 @@ class TokenContext
 {
     public function __construct(
         private readonly Request $request,
-        private readonly KeycloakTokenService $tokens
+        private readonly SupabaseTokenService $tokens
     ) {
     }
 
     public function payload(): array
     {
-        $payload = $this->request->attributes->get('keycloak_payload');
-        return is_array($payload) ? $payload : [];
+        // Supabase middleware stores payload under 'supabase_payload'
+        $payload = $this->request->attributes->get('supabase_payload');
+        if (is_array($payload)) {
+            return $payload;
+        }
+        // Fallback: legacy Keycloak attribute name
+        $legacy = $this->request->attributes->get('keycloak_payload');
+        return is_array($legacy) ? $legacy : [];
     }
 
     public function actorKeycloakId(): string
@@ -60,12 +66,10 @@ class TokenContext
             return $user?->role_cached ?: $user?->role?->code;
         }
 
-        $roleMap = config('keycloak.role_map', []);
-        $mappedRoles = array_map(function (string $role) use ($roleMap): string {
-            return $roleMap[$role] ?? $role;
-        }, $roles);
+        $roleMap = config('supabase.role_map', config('keycloak.role_map', []));
+        $mappedRoles = array_map(fn (string $role) => $roleMap[$role] ?? $role, $roles);
 
-        $rolePriority = config('keycloak.role_priority', []);
+        $rolePriority = config('supabase.role_priority', config('keycloak.role_priority', []));
         foreach ($rolePriority as $roleCode) {
             if (in_array($roleCode, $mappedRoles, true)) {
                 return Str::upper($roleCode);
@@ -77,19 +81,7 @@ class TokenContext
 
     public function teamGroupPath(): ?string
     {
-        $payload = $this->payload();
-        $groups = $payload['groups'] ?? [];
-        if (is_array($groups)) {
-            foreach ($groups as $group) {
-                if (!is_string($group)) {
-                    continue;
-                }
-                if (str_starts_with($group, '/teams/')) {
-                    return $group;
-                }
-            }
-        }
-
+        // Supabase nie uzywa grup Keycloak – fallback do danych usera
         return $this->request->user()?->team_group_path;
     }
 

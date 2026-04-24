@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
@@ -68,13 +68,13 @@ use App\Http\Controllers\Api\AiController;
 Route::get('offers/{token}', PublicOffersController::class);
 Route::post('autenti/webhook', AutentiWebhookController::class);
 
-Broadcast::routes(['middleware' => ['keycloak']]);
+Broadcast::routes(['middleware' => ['supabase']]);
 
 Route::prefix('v1')->group(function () {
     Route::get('imap-service/configs', [ImapServiceController::class, 'configs']);
 });
 
-Route::prefix('v1')->middleware('keycloak')->group(function () {
+Route::prefix('v1')->middleware('supabase')->group(function () {
     Route::get('me', MeController::class);
 
     Route::get('structure', [StructureController::class, 'index']);
@@ -558,3 +558,4 @@ Route::options('/{any}', function() {
         ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         ->header('Access-Control-Allow-Headers', 'Content-Type, X-Auth-Token, Origin, Authorization');
 })->where('any', '.*');
+
