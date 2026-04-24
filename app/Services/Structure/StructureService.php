@@ -9,8 +9,6 @@ use App\Events\Structure\StructureUserRestored;
 use App\Models\User;
 use App\Services\Auth\TokenContext;
 use App\Services\Autenti\AutentiOnboardingService;
-use App\Services\Keycloak\KeycloakProvisioningService;
-use App\Services\Keycloak\KeycloakTeamService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -19,8 +17,6 @@ class StructureService
 {
     public function __construct(
         private readonly HierarchicalCodeService $codes,
-        private readonly KeycloakTeamService $teams,
-        private readonly KeycloakProvisioningService $provisioning,
         private readonly AutentiOnboardingService $autenti
     )
     {
@@ -100,16 +96,9 @@ class StructureService
 
         $parentCode = $parent?->hierarchical_code;
         $hierarchicalCode = $this->codes->generate($teamPath, $parentCode, $this->initialsFromName($data['name'] ?? null));
-        $keycloakId = $data['keycloak_id'] ?? null;
+        $keycloakId = $data['keycloak_id'] ?? Str::uuid()->toString();
         $inviteSent = null;
         $inviteError = null;
-        if (!$keycloakId && config('keycloak.sync_enabled')) {
-            $provisioned = $this->provisioning->provisionUser($data, $teamPath, $role);
-            $keycloakId = $provisioned['id'] ?? null;
-            $inviteSent = $provisioned['invite_sent'] ?? null;
-            $inviteError = $provisioned['invite_error'] ?? null;
-        }
-        $keycloakId = $keycloakId ?: Str::uuid()->toString();
 
         $user = User::create([
             'keycloak_id' => $keycloakId,
@@ -159,12 +148,11 @@ class StructureService
             ]);
         }
 
-        $result = $this->provisioning->restoreUser($user, $teamPath, $role);
-        $newKeycloakId = $result['id'] ?? $user->keycloak_id;
-        $inviteSent = $result['invite_sent'] ?? null;
-        $inviteError = $result['invite_error'] ?? null;
-        $restored = $result['restored'] ?? false;
-        $created = $result['created'] ?? false;
+        $newKeycloakId = $user->keycloak_id;
+        $inviteSent = null;
+        $inviteError = null;
+        $restored = true;
+        $created = false;
 
         $result = \Illuminate\Support\Facades\DB::transaction(function () use (
             $user,
@@ -253,17 +241,8 @@ class StructureService
         $parentCode = $newParent?->hierarchical_code;
         $newCode = $this->codes->generate($targetTeamPath, $parentCode, $this->initialsFromName($user->name));
 
-        if ($targetTeamPath !== $user->team_group_path && config('keycloak.sync_enabled')) {
-            $subtree = $this->collectSubtreeUsers($user);
-            try {
-                foreach ($subtree as $member) {
-                    $this->teams->moveUserToTeam($member->keycloak_id, $targetTeamPath);
-                }
-            } catch (\Throwable $exception) {
-                throw ValidationException::withMessages([
-                    'new_team_group_path' => ['Keycloak team update failed: '.$exception->getMessage()],
-                ]);
-            }
+        if ($targetTeamPath !== $user->team_group_path) {
+            // team_group_path is updated in DB only (no external sync needed)
         }
 
         $movedUser = \Illuminate\Support\Facades\DB::transaction(function () use (
@@ -300,16 +279,6 @@ class StructureService
         }
 
         Gate::authorize('structure.remove', [$user]);
-
-        if (config('keycloak.sync_enabled')) {
-            try {
-                $this->provisioning->deleteUser($user);
-            } catch (\Throwable $exception) {
-                throw ValidationException::withMessages([
-                    'user_keycloak_id' => ['Keycloak deletion failed: '.$exception->getMessage()],
-                ]);
-            }
-        }
 
         $user->fill([
             'is_removed_from_structure' => true,
