@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Ensure CORS headers are always added before any auth middleware runs
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
+
         $middleware->alias([
             'keycloak'  => \App\Http\Middleware\KeycloakAuthenticate::class,
             'supabase'  => \App\Http\Middleware\SupabaseAuthenticate::class,

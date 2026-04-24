@@ -19,6 +19,11 @@ class SupabaseAuthenticate
 
     public function handle(Request $request, Closure $next)
     {
+        // Pass OPTIONS preflight requests through — CORS middleware handles them
+        if ($request->isMethod('OPTIONS')) {
+            return $next($request);
+        }
+
         $token = $request->bearerToken();
         if (!$token) {
             return response()->json(['message' => 'Missing bearer token.'], 401);

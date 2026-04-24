@@ -37,7 +37,38 @@ RUN echo 'server { \n\
     server_name _; \n\
     root /var/www/html/public; \n\
     index index.php; \n\
-    location / { try_files $uri $uri/ /index.php?$query_string; } \n\
+    add_header Access-Control-Allow-Origin * always; \n\
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always; \n\
+    add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With" always; \n\
+    location /app/ { \n\
+        proxy_pass http://127.0.0.1:8088; \n\
+        proxy_http_version 1.1; \n\
+        proxy_set_header Upgrade $http_upgrade; \n\
+        proxy_set_header Connection "upgrade"; \n\
+        proxy_set_header Host $host; \n\
+        proxy_set_header X-Real-IP $remote_addr; \n\
+        proxy_read_timeout 300s; \n\
+    } \n\
+    location /apps/ { \n\
+        proxy_pass http://127.0.0.1:8088; \n\
+        proxy_http_version 1.1; \n\
+        proxy_set_header Upgrade $http_upgrade; \n\
+        proxy_set_header Connection "upgrade"; \n\
+        proxy_set_header Host $host; \n\
+        proxy_set_header X-Real-IP $remote_addr; \n\
+        proxy_read_timeout 300s; \n\
+    } \n\
+    location / { \n\
+        if ($request_method = OPTIONS) { \n\
+            add_header Access-Control-Allow-Origin * always; \n\
+            add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always; \n\
+            add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With" always; \n\
+            add_header Content-Length 0; \n\
+            add_header Content-Type text/plain; \n\
+            return 204; \n\
+        } \n\
+        try_files $uri $uri/ /index.php?$query_string; \n\
+    } \n\
     location ~ \.php$ { \n\
         fastcgi_pass 127.0.0.1:9000; \n\
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; \n\
@@ -65,6 +96,15 @@ stderr_logfile_maxbytes=0 \n\
 \n\
 [program:nginx] \n\
 command=nginx -g "daemon off;" \n\
+autostart=true \n\
+autorestart=true \n\
+stdout_logfile=/dev/stdout \n\
+stdout_logfile_maxbytes=0 \n\
+stderr_logfile=/dev/stderr \n\
+stderr_logfile_maxbytes=0 \n\
+\n\
+[program:reverb] \n\
+command=php /var/www/html/artisan reverb:start --port=8088 --no-interaction \n\
 autostart=true \n\
 autorestart=true \n\
 stdout_logfile=/dev/stdout \n\
