@@ -334,7 +334,7 @@ const fetchFiles = async () => {
 
     // 2. Try backend sync (background update)
     try {
-        const response = await api.get('/payroll-spreadsheets', {
+        const response = await api.get('/v1/payroll-spreadsheets', {
             params: { client_id: selectedClientId.value }
         });
         if (response.data && Array.isArray(response.data.data)) {
@@ -414,7 +414,7 @@ const uploadFile = async (file: File) => {
     formData.append('client_id', selectedClientId.value.toString());
 
     try {
-        await api.post('/payroll-spreadsheets', formData, {
+        await api.post('/v1/payroll-spreadsheets', formData, {
             headers: { 'Content-Type': 'multipart/form-data' } 
         });
         toast.success('Plik został przesłany.');
@@ -521,7 +521,7 @@ const deleteFile = async (file: any) => {
     if (!confirm('Czy na pewno chcesz usunąć ten plik?')) return;
     
     try {
-        await api.delete(`/payroll-spreadsheets/${file.id}`);
+        await api.delete(`/v1/payroll-spreadsheets/${file.id}`);
         toast.success('Plik został usunięty.');
     } catch (e) {
         // If backend delete failed (likely because file is local mock), just delete from array
