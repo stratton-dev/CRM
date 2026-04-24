@@ -78,6 +78,5 @@ EXPOSE 80
 # Startup: migracje + cache + uruchom serwisy
 CMD php artisan migrate --force && \
     php artisan config:cache && \
-    php artisan route:cache && \
     php artisan view:cache && \
     supervisord -c /etc/supervisor/conf.d/supervisord.conf

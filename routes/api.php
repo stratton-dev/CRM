@@ -265,21 +265,25 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
         ->only(['index', 'show'])
         ->middleware('can:client-consents.view')
         ->shallow()
+        ->names(['index' => 'client-consents.index', 'show' => 'client-consents.show'])
         ->parameters(['consents' => 'clientConsent']);
     Route::apiResource('clients.consents', ClientConsentsController::class)
         ->only(['store'])
         ->middleware('can:client-consents.create')
         ->shallow()
+        ->names(['store' => 'client-consents.store'])
         ->parameters(['consents' => 'clientConsent']);
     Route::apiResource('clients.consents', ClientConsentsController::class)
         ->only(['update'])
         ->middleware('can:client-consents.update')
         ->shallow()
+        ->names(['update' => 'client-consents.update'])
         ->parameters(['consents' => 'clientConsent']);
     Route::apiResource('clients.consents', ClientConsentsController::class)
         ->only(['destroy'])
         ->middleware('can:client-consents.delete')
         ->shallow()
+        ->names(['destroy' => 'client-consents.destroy'])
         ->parameters(['consents' => 'clientConsent']);
 
     Route::patch('client-consents/{clientConsent}', [ClientConsentsController::class, 'update'])
