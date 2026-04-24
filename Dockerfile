@@ -25,7 +25,7 @@ COPY . .
 RUN php -r "\$l=json_decode(file_get_contents('composer.lock'),true);\$l['packages']=array_values(array_filter(\$l['packages'],fn(\$p)=>\$p['name']!=='autenti/autenti-php-sdk'));\$l['packages-dev']=array_values(array_filter(\$l['packages-dev']??[],fn(\$p)=>\$p['name']!=='autenti/autenti-php-sdk'));file_put_contents('composer.lock',json_encode(\$l,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));"
 
 # Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-audit
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Storage permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
