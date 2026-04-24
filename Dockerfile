@@ -21,9 +21,11 @@ WORKDIR /var/www/html
 # Copy app
 COPY . .
 
-# Install dependencies (update first to resolve platform issues, then install)
-RUN composer update --no-dev --no-interaction --no-scripts --no-audit --ignore-platform-req=ext-gd --ignore-platform-req=ext-soap \
-    && composer install --no-dev --optimize-autoloader --no-interaction --no-audit
+# Remove autenti path dependency from lock file (local path, not available on Railway)
+RUN php -r "\$l=json_decode(file_get_contents('composer.lock'),true);\$l['packages']=array_values(array_filter(\$l['packages'],fn(\$p)=>\$p['name']!=='autenti/autenti-php-sdk'));\$l['packages-dev']=array_values(array_filter(\$l['packages-dev']??[],fn(\$p)=>\$p['name']!=='autenti/autenti-php-sdk'));file_put_contents('composer.lock',json_encode(\$l,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));"
+
+# Install dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-audit
 
 # Storage permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
