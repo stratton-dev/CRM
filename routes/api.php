@@ -58,6 +58,8 @@ use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\GusController;
 use App\Http\Controllers\Api\Admin\KeycloakSyncController;
 use App\Http\Controllers\Api\Admin\KeycloakTeamsController;
+use App\Http\Controllers\Api\Admin\SupabaseSyncController;
+use App\Http\Controllers\Api\Admin\StructureTeamsController;
 use App\Http\Controllers\Api\StructureController;
 use App\Http\Controllers\Api\StructureUsersController;
 use App\Http\Controllers\Api\UsersController;
@@ -88,10 +90,10 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
     Route::post('structure/teams/restore', [StructureController::class, 'restoreTeam']);
     Route::post('structure/teams/delete', [StructureController::class, 'deleteRemovedTeamUsersFromDb']);
     Route::post('structure/regenerate-codes', [StructureController::class, 'regenerateCodes']);
-    Route::post('admin/keycloak/sync', KeycloakSyncController::class);
-    Route::get('admin/keycloak/teams', [KeycloakTeamsController::class, 'index']);
-    Route::post('admin/keycloak/teams', [KeycloakTeamsController::class, 'store']);
-    Route::delete('admin/keycloak/teams', [KeycloakTeamsController::class, 'destroy']);
+    Route::post('admin/keycloak/sync', SupabaseSyncController::class);
+    Route::get('admin/keycloak/teams', [StructureTeamsController::class, 'index']);
+    Route::post('admin/keycloak/teams', [StructureTeamsController::class, 'store']);
+    Route::delete('admin/keycloak/teams', [StructureTeamsController::class, 'destroy']);
 
     Route::post('users', [StructureUsersController::class, 'store']);
     Route::get('gus', [GusController::class, 'byNip']);

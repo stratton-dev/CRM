@@ -7,7 +7,6 @@ use App\Http\Requests\StructureMoveRequest;
 use App\Http\Requests\StructureRemoveRequest;
 use App\Models\User;
 use App\Services\Auth\TokenContext;
-use App\Services\Keycloak\KeycloakSyncService;
 use App\Services\Structure\StructureService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,27 +18,9 @@ class StructureController extends Controller
     public function index(
         Request $request,
         TokenContext $context,
-        StructureService $structure,
-        KeycloakSyncService $sync
+        StructureService $structure
     ): JsonResponse
     {
-        $shouldSync = $request->boolean('sync') && $context->primaryRole() === 'ADMIN';
-        if ($shouldSync) {
-            try {
-                $report = $sync->withLock(fn () => $sync->syncAllUsers(true));
-                Log::channel('keycloak')->info('Keycloak sync completed', [
-                    'actor_keycloak_id' => $context->actorKeycloakId(),
-                    'report' => $report instanceof \JsonSerializable ? $report->jsonSerialize() : $report,
-                ]);
-            } catch (\Throwable $e) {
-                Log::channel('keycloak')->error('Keycloak sync failed', [
-                    'actor_keycloak_id' => $context->actorKeycloakId(),
-                    'error' => $e->getMessage(),
-                ]);
-                throw $e;
-            }
-        }
-
         $users = $structure->listUsers($context);
 
         return response()->json(
