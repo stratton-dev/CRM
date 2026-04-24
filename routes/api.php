@@ -261,35 +261,22 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
     Route::apiResource('consents', ConsentsController::class)
         ->only(['destroy'])
         ->middleware('can:consents.delete');
-    Route::apiResource('clients.consents', ClientConsentsController::class)
-        ->only(['index', 'show'])
+    // Client consents — explicit routes (avoids consents.show name collision with shallow apiResource)
+    Route::get('clients/{client}/consents', [ClientConsentsController::class, 'index'])
         ->middleware('can:client-consents.view')
-        ->shallow()
-        ->names(['index' => 'client-consents.index', 'show' => 'client-consents.show'])
-        ->parameters(['consents' => 'clientConsent']);
-    Route::apiResource('clients.consents', ClientConsentsController::class)
-        ->only(['store'])
+        ->name('client-consents.index');
+    Route::get('client-consents/{clientConsent}', [ClientConsentsController::class, 'show'])
+        ->middleware('can:client-consents.view')
+        ->name('client-consents.show');
+    Route::post('clients/{client}/consents', [ClientConsentsController::class, 'store'])
         ->middleware('can:client-consents.create')
-        ->shallow()
-        ->names(['store' => 'client-consents.store'])
-        ->parameters(['consents' => 'clientConsent']);
-    Route::apiResource('clients.consents', ClientConsentsController::class)
-        ->only(['update'])
+        ->name('client-consents.store');
+    Route::match(['put', 'patch'], 'client-consents/{clientConsent}', [ClientConsentsController::class, 'update'])
         ->middleware('can:client-consents.update')
-        ->shallow()
-        ->names(['update' => 'client-consents.update'])
-        ->parameters(['consents' => 'clientConsent']);
-    Route::apiResource('clients.consents', ClientConsentsController::class)
-        ->only(['destroy'])
-        ->middleware('can:client-consents.delete')
-        ->shallow()
-        ->names(['destroy' => 'client-consents.destroy'])
-        ->parameters(['consents' => 'clientConsent']);
-
-    Route::patch('client-consents/{clientConsent}', [ClientConsentsController::class, 'update'])
-        ->middleware('can:client-consents.update');
+        ->name('client-consents.update');
     Route::delete('client-consents/{clientConsent}', [ClientConsentsController::class, 'destroy'])
-        ->middleware('can:client-consents.delete');
+        ->middleware('can:client-consents.delete')
+        ->name('client-consents.destroy');
 
     // Meetings and analysis
     Route::apiResource('meetings', MeetingsController::class)
