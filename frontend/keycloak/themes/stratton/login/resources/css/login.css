@@ -1,0 +1,94 @@
+html,
+body.stratton-login {
+  background: #f1f5f9;
+  min-height: 100vh;
+  margin: 0;
+}
+
+body.stratton-login .login-pf-page,
+body.stratton-login .login-pf,
+body.stratton-login .pf-c-login {
+  background: transparent !important;
+  min-height: 100vh;
+}
+
+body.stratton-login .login-pf-page,
+body.stratton-login .pf-c-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  padding-top: 0 !important;
+}
+
+.login-pf-page-header{
+   display: none !important;
+}
+
+.login-pf-page{
+    padding-top: 0 !important;
+}
+
+body.stratton-login .login-pf-page-header,
+body.stratton-login #kc-header,
+body.stratton-login #kc-header-wrapper,
+body.stratton-login #kc-page-title,
+body.stratton-login .kc-logo-text,
+body.stratton-login .kc-logo-text span {
+  display: none !important;
+}
+
+body.stratton-login .card-pf,
+body.stratton-login .pf-c-login__container,
+body.stratton-login .pf-c-login__main,
+body.stratton-login .pf-c-login__main-header,
+body.stratton-login .pf-c-login__main-body,
+body.stratton-login .pf-c-login__main-footer {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+}
+
+body.stratton-login #kc-content,
+body.stratton-login #kc-content-wrapper,
+body.stratton-login #kc-form,
+body.stratton-login #kc-form-wrapper,
+body.stratton-login #kc-form-login {
+  width: 100%;
+}
+
+body.stratton-login .form-group {
+  margin-bottom: 1rem;
+}
+
+body.stratton-login label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+body.stratton-login input[type="text"],
+body.stratton-login input[type="email"],
+body.stratton-login input[type="password"],
+body.stratton-login input[type="tel"],
+body.stratton-login input[type="number"],
+body.stratton-login select,
+body.stratton-login textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  background: #ffffff;
+}
+
+body.stratton-login input:focus,
+body.stratton-login select:focus,
+body.stratton-login textarea:focus {
+  outline: none;
+  border-color: #c5a059;
+  box-shadow: 0 0 0 2px rgba(197, 160, 89, 0.2);
+}

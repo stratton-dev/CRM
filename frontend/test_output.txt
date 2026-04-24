@@ -1,0 +1,27 @@
+
+> crm@0.1.1 test
+> vitest run --config vitest.config.ts
+
+
+ RUN  v2.1.9 /app
+
+ ❯ src/__tests__/sidebar-routes.spec.ts (4 tests | 1 failed) 43502ms
+   × sidebar routes > renders sidebar routes for ADMIN 37075ms
+     → Test timed out in 15000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   ✓ sidebar routes > renders sidebar routes for DIRECTOR 3416ms
+   ✓ sidebar routes > renders sidebar routes for MANAGER 1091ms
+   ✓ sidebar routes > renders sidebar routes for SALES 1914ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/sidebar-routes.spec.ts > sidebar routes > renders sidebar routes for ADMIN
+Error: Test timed out in 15000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  18:44:45
+   Duration  149.55s (transform 10.11s, setup 707ms, collect 30.72s, tests 43.50s, environment 64.83s, prepare 5.96s)
+

@@ -1,0 +1,275 @@
+{
+  "realm": "stratton",
+  "enabled": true,
+  "displayName": "Stratton CRM",
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "internationalizationEnabled": true,
+  "defaultLocale": "pl",
+  "supportedLocales": ["pl", "en"],
+
+  "clients": [
+    {
+      "clientId": "stratton-crm",
+      "name": "Stratton CRM",
+      "protocol": "openid-connect",
+
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+
+      "rootUrl": "",
+      "baseUrl": "",
+      "adminUrl": "",
+
+      "redirectUris": [
+        "http://localhost:1420/*",
+        "http://localhost:3003/*",
+        "https://crm.stratton-prime.pl/*",
+        "https://crm.stratton.loc/*",
+        "tauri://localhost/*"
+      ],
+      "webOrigins": [
+        "http://localhost:1420",
+        "http://localhost:3003",
+        "https://crm.stratton-prime.pl",
+        "https://crm.stratton.loc",
+        "tauri://localhost"
+      ],
+
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+
+      "protocolMappers": [
+        {
+          "name": "client-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "client.id": "stratton-crm",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        },
+        {
+          "name": "audience-stratton-crm",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "stratton-crm",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        }
+      ],
+
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "email",
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "kc-admin-sync",
+      "name": "Keycloak Admin Sync",
+      "protocol": "openid-connect",
+
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+
+      "clientAuthenticatorType": "client-secret",
+      "secret": "pL0vn0dwsfPDtHeAS4XG1zXEBFnv1lW6",
+
+      "redirectUris": [],
+      "webOrigins": []
+    }
+  ],
+
+  "roles": {
+    "client": {
+      "stratton-crm": [
+        { "name": "ADMIN" },
+        { "name": "DIRECTOR" },
+        { "name": "MANAGER" },
+        { "name": "SALES" },
+        { "name": "CLIENT_HR" }
+      ]
+    }
+  },
+
+  "groups": [
+    {
+      "name": "teams",
+      "path": "/teams",
+      "subGroups": [
+        {
+          "name": "example_team_01",
+          "path": "/teams/example_team_01",
+          "attributes": {
+            "teamId": ["example_team_01"]
+          }
+        },
+        {
+          "name": "example_team_02",
+          "path": "/teams/example_team_02",
+          "attributes": {
+            "teamId": ["example_team_02"]
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "service-account-kc-admin-sync",
+      "enabled": true,
+      "serviceAccountClientId": "kc-admin-sync",
+      "clientRoles": {
+        "realm-management": [
+          "view-clients",
+          "query-clients",
+          "view-users",
+          "query-users",
+          "manage-users",
+          "view-groups",
+          "query-groups",
+          "manage-groups",
+          "manage-clients",
+          "view-realm"
+        ]
+      }
+    },
+    {
+      "username": "admin@stratton.pl",
+      "enabled": true,
+      "email": "admin@stratton.pl",
+      "emailVerified": true,
+      "firstName": "Super",
+      "lastName": "Admin",
+      "credentials": [{ "type": "password", "value": "123", "temporary": true }],
+      "clientRoles": {
+        "stratton-crm": ["ADMIN"]
+      }
+    },
+
+    {
+      "username": "director01@stratton.pl",
+      "enabled": true,
+      "email": "director01@stratton.pl",
+      "emailVerified": true,
+      "firstName": "Director",
+      "lastName": "One",
+      "credentials": [{ "type": "password", "value": "123", "temporary": true }],
+      "clientRoles": {
+        "stratton-crm": ["DIRECTOR"]
+      },
+      "groups": ["/teams/example_team_01"]
+    },
+    {
+      "username": "manager01@stratton.pl",
+      "enabled": true,
+      "email": "manager01@stratton.pl",
+      "emailVerified": true,
+      "firstName": "Manager",
+      "lastName": "One",
+      "credentials": [{ "type": "password", "value": "123", "temporary": true }],
+      "clientRoles": {
+        "stratton-crm": ["MANAGER"]
+      },
+      "groups": ["/teams/example_team_01"]
+    },
+    {
+      "username": "sales01@stratton.pl",
+      "enabled": true,
+      "email": "sales01@stratton.pl",
+      "emailVerified": true,
+      "firstName": "Sales",
+      "lastName": "One",
+      "credentials": [{ "type": "password", "value": "123", "temporary": true }],
+      "clientRoles": {
+        "stratton-crm": ["SALES"]
+      },
+      "groups": ["/teams/example_team_01"]
+    },
+
+    {
+      "username": "director02@stratton.pl",
+      "enabled": true,
+      "email": "director02@stratton.pl",
+      "emailVerified": true,
+      "firstName": "Director",
+      "lastName": "Two",
+      "credentials": [{ "type": "password", "value": "123", "temporary": true }],
+      "clientRoles": {
+        "stratton-crm": ["DIRECTOR"]
+      },
+      "groups": ["/teams/example_team_02"]
+    },
+    {
+      "username": "manager02@stratton.pl",
+      "enabled": true,
+      "email": "manager02@stratton.pl",
+      "emailVerified": true,
+      "firstName": "Manager",
+      "lastName": "Two",
+      "credentials": [{ "type": "password", "value": "123", "temporary": true }],
+      "clientRoles": {
+        "stratton-crm": ["MANAGER"]
+      },
+      "groups": ["/teams/example_team_02"]
+    },
+    {
+      "username": "sales02@stratton.pl",
+      "enabled": true,
+      "email": "sales02@stratton.pl",
+      "emailVerified": true,
+      "firstName": "Sales",
+      "lastName": "Two",
+      "credentials": [{ "type": "password", "value": "123", "temporary": true }],
+      "clientRoles": {
+        "stratton-crm": ["SALES"]
+      },
+      "groups": ["/teams/example_team_02"]
+    }
+  ]
+}

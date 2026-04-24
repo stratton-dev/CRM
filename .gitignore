@@ -1,0 +1,17 @@
+# Root gitignore dla monorepo
+
+# Pliki wrażliwe — nigdy nie commitować
+claude.md
+*.env
+.env
+.env.local
+.env.*.local
+
+# System
+.DS_Store
+Thumbs.db
+
+# Edytory
+.idea/
+*.suo
+*.sw?

@@ -1,0 +1,23 @@
+services:
+  crm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-frontend
+    restart: unless-stopped
+    networks:
+      - stratton
+    labels:
+      - "traefik.enable=true"
+
+      # ROUTER
+      - "traefik.http.routers.crm.rule=Host(`crm.stratton.pl`)"
+      - "traefik.http.routers.crm.entrypoints=websecure"
+      - "traefik.http.routers.crm.tls.certresolver=le"
+
+      # SERVICE
+      - "traefik.http.services.crm.loadbalancer.server.port=80"
+
+networks:
+  stratton:
+    external: true

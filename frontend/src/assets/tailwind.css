@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Cinzel:wght@400..900&display=swap');
+@import "tailwindcss";
+@import "./custom.css";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-serif: "DM Sans", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-cinzel: "Cinzel", serif;
+
+  --color-stratton-50:  #E6ECF4;
+  --color-stratton-100: #C4D2E4;
+  --color-stratton-200: #9BB5D3;
+  --color-stratton-300: #6F95BE;
+  --color-stratton-400: #3E6DA2;
+  --color-stratton-500: #001B3C; /* base */
+  --color-stratton-600: #001630;
+  --color-stratton-700: #001024;
+  --color-stratton-800: #000A18;
+  --color-stratton-900: #00050D;
+  --color-stratton-gold: #C5A059;
+  --color-stratton-dark: #0F172A;
+  --color-stratton-blue: #1E3A8A;
+
+  /* Centralized Design Tokens (Audit 2026-02-25) */
+  --color-primary: #C5A065; 
+  --color-primary-hover: #B08D55;
+  --color-primary-light: #F3EAD8;
+
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #F8FAFC; /* slate-50 */
+  --color-surface-dark: #0F172A;   /* slate-900 */
+  
+  --color-border: #E2E8F0;         /* slate-200 */
+
+  --radius-card: 1.5rem;   /* 24px - unified rounded-3xl */
+  --radius-btn: 0.75rem;   /* 12px */
+  --radius-input: 0.5rem;  /* 8px */
+
+  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-card-hover: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
+/* Alias utilities to match calc naming */
+@utility textstratton50 { color: var(--color-stratton-50); }
+@utility textstratton100 { color: var(--color-stratton-100); }
+@utility textstratton200 { color: var(--color-stratton-200); }
+@utility textstratton300 { color: var(--color-stratton-300); }
+@utility textstratton400 { color: var(--color-stratton-400); }
+@utility textstratton500 { color: var(--color-stratton-500); }
+@utility textstratton600 { color: var(--color-stratton-600); }
+@utility textstratton700 { color: var(--color-stratton-700); }
+@utility textstratton800 { color: var(--color-stratton-800); }
+@utility textstratton900 { color: var(--color-stratton-900); }
+@utility text-stratton-gold { color: var(--color-stratton-gold); }
+@utility text-stratton-dark { color: var(--color-stratton-dark); }
+@utility text-stratton-blue { color: var(--color-stratton-blue); }
+
+@utility bgstratton50 { background-color: var(--color-stratton-50); }
+@utility bgstratton100 { background-color: var(--color-stratton-100); }
+@utility bgstratton200 { background-color: var(--color-stratton-200); }
+@utility bgstratton300 { background-color: var(--color-stratton-300); }
+@utility bgstratton400 { background-color: var(--color-stratton-400); }
+@utility bgstratton500 { background-color: var(--color-stratton-500); }
+@utility bgstratton600 { background-color: var(--color-stratton-600); }
+@utility bgstratton700 { background-color: var(--color-stratton-700); }
+@utility bgstratton800 { background-color: var(--color-stratton-800); }
+@utility bgstratton900 { background-color: var(--color-stratton-900); }
+@utility bg-stratton-gold { background-color: var(--color-stratton-gold); }
+@utility bg-stratton-dark { background-color: var(--color-stratton-dark); }
+@utility bg-stratton-blue { background-color: var(--color-stratton-blue); }
+
+@utility borderstratton50 { border-color: var(--color-stratton-50); }
+@utility borderstratton100 { border-color: var(--color-stratton-100); }
+@utility borderstratton200 { border-color: var(--color-stratton-200); }
+@utility borderstratton300 { border-color: var(--color-stratton-300); }
+@utility borderstratton400 { border-color: var(--color-stratton-400); }
+@utility borderstratton500 { border-color: var(--color-stratton-500); }
+@utility borderstratton600 { border-color: var(--color-stratton-600); }
+@utility borderstratton700 { border-color: var(--color-stratton-700); }
+@utility borderstratton800 { border-color: var(--color-stratton-800); }
+@utility borderstratton900 { border-color: var(--color-stratton-900); }
+@utility border-stratton-gold { border-color: var(--color-stratton-gold); }
+
+/* Route transition */
+.route-enter-from,
+.route-leave-to { opacity: 0; transform: translateY(8px); }
+.route-enter-active,
+.route-leave-active { transition: opacity 220ms ease, transform 220ms ease; }
+
+/* Unified form controls */
+.crm-form :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea
+) {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: #fff;
+  color: #0f172a;
+}
+
+.crm-form :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea
+):focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+.crm-form :is(
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea
+)[disabled] {
+  background-color: #f8fafc;
+  color: #94a3b8;
+}
+
+@layer utilities {
+  .rounded-card { @apply rounded-[1.5rem]; }
+  .rounded-btn { @apply rounded-xl; }
+  .rounded-input { @apply rounded-lg; }
+}
+
+@layer components {
+  /* 
+    CRM Tile Component - "Jaw Dropping" Edition 
+    Features: 
+    - Smooth lift
+    - Top border slide-in animation
+    - Dynamic colored glow based on --tile-color
+  */
+  .crm-tile {
+    /* Default accent color (Stratton Gold) if not specified */
+    --tile-color: #C5A059; 
+    
+    @apply relative flex flex-col items-center justify-center p-6 rounded-2xl shadow-sm transition-all duration-300 ease-out overflow-hidden cursor-pointer;
+  }
+
+  /* The slide-in top border */
+  .crm-tile::before {
+    content: "";
+    @apply absolute top-0 left-0 w-0 h-1 transition-all duration-300 ease-out;
+    background-color: var(--tile-color);
+  }
+
+  /* Hover states */
+  .crm-tile:hover {
+    @apply -translate-y-2;
+    /* Stronger, more dramatic glow effect */
+    box-shadow: 0 25px 30px -5px color-mix(in srgb, var(--tile-color) 40%, transparent),
+                0 10px 15px -3px color-mix(in srgb, var(--tile-color) 30%, transparent);
+    border-color: color-mix(in srgb, var(--tile-color) 50%, white);
+  }
+
+  .crm-tile:hover::before {
+    @apply w-full;
+  }
+
+  /* Icon formatting */
+  .crm-tile-icon {
+    @apply mb-4 p-4 rounded-xl transition-all duration-300;
+    /* Subtle background by default */
+    background-color: color-mix(in srgb, var(--tile-color) 8%, white); 
+    color: var(--tile-color);
+  }
+
+  .crm-tile:hover .crm-tile-icon {
+    background-color: var(--tile-color);
+    color: white;
+    @apply scale-110 rotate-3 shadow-lg;
+    /* Adding a shadow to the icon itself for depth */
+    box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--tile-color) 40%, transparent);
+  }
+
+  /* Title formatting */
+  .crm-tile-title {
+    @apply text-lg font-bold text-slate-800 mb-1 transition-colors duration-300;
+  }
+  
+  .crm-tile:hover .crm-tile-title {
+    color: var(--tile-color);
+  }
+
+  /* Description formatting */
+  .crm-tile-desc {
+    @apply text-xs text-slate-500 font-medium;
+  }
+
+  .crm-tile .crm-tile-title, 
+  .crm-tile .crm-tile-desc {
+    @apply text-center w-full;
+  }
+
+  /* Alternative Layout (Left Aligned for Lists/Grid) */
+  .crm-tile-alt {
+    --tile-color: #C5A059;
+    @apply relative flex flex-col items-start p-6 bg-white rounded-2xl shadow-sm transition-all duration-300 ease-out overflow-hidden cursor-pointer border border-slate-100 h-full;
+  }
+
+  .crm-tile-alt::before {
+    content: "";
+    @apply absolute top-0 left-0 w-0 h-1 transition-all duration-300 ease-out;
+    background-color: var(--tile-color);
+  }
+
+  .crm-tile-alt:hover {
+    @apply -translate-y-2;
+    /* Stronger, matching main dashboard glow */
+    box-shadow: 0 25px 30px -5px color-mix(in srgb, var(--tile-color) 40%, transparent),
+                0 10px 15px -3px color-mix(in srgb, var(--tile-color) 30%, transparent);
+    border-color: color-mix(in srgb, var(--tile-color) 50%, white);
+  }
+
+  .crm-tile-alt:hover::before {
+    @apply w-full;
+  }
+
+  .crm-tile-alt .crm-tile-icon {
+    @apply mb-4 p-3 rounded-lg;
+  }
+
+  .crm-tile-alt .crm-tile-title {
+    @apply text-left;
+  }
+  
+  .crm-tile-alt .crm-tile-desc {
+    @apply text-left;
+  }
+
+  /* Modifiers for Colors */
+  .crm-tile-emerald { --tile-color: #10b981; }
+  .crm-tile-blue { --tile-color: #3b82f6; }
+  .crm-tile-indigo { --tile-color: #6366f1; }
+  .crm-tile-violet { --tile-color: #8b5cf6; }
+  .crm-tile-purple { --tile-color: #a855f7; }
+  .crm-tile-fuchsia { --tile-color: #d946ef; }
+  .crm-tile-pink { --tile-color: #ec4899; }
+  .crm-tile-rose { --tile-color: #f43f5e; }
+  .crm-tile-orange { --tile-color: #f97316; }
+  .crm-tile-amber { --tile-color: #f59e0b; }
+  .crm-tile-cyan { --tile-color: #06b6d4; }
+  .crm-tile-sky { --tile-color: #0ea5e9; }
+  .crm-tile-gold { --tile-color: #D4AF37; }
+}
