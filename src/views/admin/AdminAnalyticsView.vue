@@ -58,7 +58,7 @@ const runMonthlyInvoicing = () => {
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
+      <div class="bg-linear-to-br from-slate-800 to-slate-900 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
         <p class="text-slate-400 text-sm font-bold uppercase tracking-wider">Przychód Całkowity</p>
         <h3 class="text-3xl font-extrabold mt-2">{{ Math.round(stats.revenue).toLocaleString() }} PLN</h3>
         <div class="mt-4 flex items-center text-xs text-green-400">

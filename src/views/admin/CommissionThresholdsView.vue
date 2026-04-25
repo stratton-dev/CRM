@@ -366,11 +366,11 @@ onMounted(() => {
                   </div>
                 </div>
 
-                <div :style="{ width: `${node.level * 28}px` }" class="flex-shrink-0"></div>
+                <div :style="{ width: `${node.level * 28}px` }" class="shrink-0"></div>
 
                 <button
                   type="button"
-                  class="w-6 h-6 flex items-center justify-center mr-1 flex-shrink-0 text-gray-400 hover:text-sky-600 rounded-full hover:bg-gray-200"
+                  class="w-6 h-6 flex items-center justify-center mr-1 shrink-0 text-gray-400 hover:text-sky-600 rounded-full hover:bg-gray-200"
                   @click.stop="toggleNode(node.id)"
                 >
                   <svg v-if="node.hasChildren" class="w-4 h-4 transition-transform duration-200" :class="isExpanded(node.id) ? 'rotate-90' : ''" fill="currentColor" viewBox="0 0 20 20">
@@ -380,7 +380,7 @@ onMounted(() => {
                 </button>
 
                 <div
-                  class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm mr-3"
+                  class="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border shadow-sm mr-3"
                   :class="{
                     'bg-amber-100 text-amber-800 border-amber-200': node.role === 'DIRECTOR',
                     'bg-sky-100 text-sky-800 border-sky-200': node.role === 'MANAGER',
@@ -426,7 +426,7 @@ onMounted(() => {
     <div v-if="selectedUser" class="fixed inset-0 z-40">
       <div class="absolute inset-0 bg-black/30" @click="closePanel"></div>
       <div class="fixed top-0 right-0 h-full w-full max-w-md bg-gray-50 z-50 shadow-2xl flex flex-col animate-slide-in-right">
-        <div class="p-4 bg-white border-b border-gray-200 flex-shrink-0">
+        <div class="p-4 bg-white border-b border-gray-200 shrink-0">
           <div class="flex justify-between items-start">
             <div>
               <h3 class="text-lg font-bold text-gray-900">{{ selectedUser.name }}</h3>
@@ -458,7 +458,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="p-4 bg-white border-t border-gray-200 flex-shrink-0 flex justify-end gap-3">
+        <div class="p-4 bg-white border-t border-gray-200 shrink-0 flex justify-end gap-3">
           <button type="button" class="px-4 py-2 bg-white border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50" @click="closePanel">Anuluj</button>
           <button type="button" class="px-4 py-2 bg-sky-600 text-white rounded text-sm hover:bg-sky-700 shadow-sm font-semibold" @click="saveChanges">Zapisz Zmiany</button>
         </div>

@@ -28,3 +28,7 @@ tmp/oferta-nowa.pdf
 .gitignore
 wzor_oferty.pdf
 oferta-z-systemu.pdf
+
+.docker-compose.yml
+.vercel
+.env*.local

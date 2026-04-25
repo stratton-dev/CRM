@@ -101,7 +101,122 @@ const logout = async () => {
       </div>
     </div>
 
-    <div class="space-y-6 animate-fade-in px-8 pb-8 -mt-6">
+    <div class="animate-fade-in px-8 pb-4 -mt-6">
+      <!-- Admin tiles -->
+      <div class="mb-2">
+        <h2 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-l-4 border-stratton-gold pl-3">Panel Administracyjny</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-6">
+
+          <!-- Zarządzanie użytkownikami -->
+          <RouterLink to="/app/users" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+            <div class="absolute inset-0 z-0">
+              <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Użytkownicy" />
+              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
+            </div>
+            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+              <div class="text-stratton-gold"><AppIcon name="users" class="w-8 h-8" /></div>
+              <div>
+                <h3 class="crm-tile-title text-xl text-white mb-1">Użytkownicy</h3>
+                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj zespołem</p>
+              </div>
+            </div>
+          </RouterLink>
+
+          <!-- Aktualności -->
+          <RouterLink to="/app/news-management" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+            <div class="absolute inset-0 z-0">
+              <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Aktualności" />
+              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
+            </div>
+            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+              <div class="text-stratton-gold"><AppIcon name="newspaper" class="w-8 h-8" /></div>
+              <div>
+                <h3 class="crm-tile-title text-xl text-white mb-1">Aktualności</h3>
+                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj newsami</p>
+              </div>
+            </div>
+          </RouterLink>
+
+          <!-- Analityka -->
+          <RouterLink to="/app/admin-analytics" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+            <div class="absolute inset-0 z-0">
+              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Analityka" />
+              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
+            </div>
+            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+              <div class="text-stratton-gold"><AppIcon name="chart-bar" class="w-8 h-8" /></div>
+              <div>
+                <h3 class="crm-tile-title text-xl text-white mb-1">Analityka</h3>
+                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Statystyki globalne</p>
+              </div>
+            </div>
+          </RouterLink>
+
+          <!-- Logi systemowe -->
+          <RouterLink to="/app/admin-logs" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+            <div class="absolute inset-0 z-0">
+              <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=2668&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Logi" />
+              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
+            </div>
+            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+              <div class="text-stratton-gold"><AppIcon name="terminal" class="w-8 h-8" /></div>
+              <div>
+                <h3 class="crm-tile-title text-xl text-white mb-1">Logi systemowe</h3>
+                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Monitoruj aktywność</p>
+              </div>
+            </div>
+          </RouterLink>
+
+          <!-- Faktury admin -->
+          <RouterLink to="/app/admin-invoices" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+            <div class="absolute inset-0 z-0">
+              <img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Faktury" />
+              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
+            </div>
+            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+              <div class="text-stratton-gold"><AppIcon name="document-text" class="w-8 h-8" /></div>
+              <div>
+                <h3 class="crm-tile-title text-xl text-white mb-1">Faktury</h3>
+                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj fakturami</p>
+              </div>
+            </div>
+          </RouterLink>
+
+          <!-- Autenti -->
+          <RouterLink to="/app/autenti-panel" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+            <div class="absolute inset-0 z-0">
+              <img src="https://images.unsplash.com/photo-1568667256549-094345857637?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Autenti" />
+              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
+            </div>
+            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+              <div class="text-stratton-gold"><AppIcon name="pen" class="w-8 h-8" /></div>
+              <div>
+                <h3 class="crm-tile-title text-xl text-white mb-1">Autenti</h3>
+                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Podpisy elektroniczne</p>
+              </div>
+            </div>
+          </RouterLink>
+
+          <!-- Progi prowizji -->
+          <RouterLink to="/app/commission-thresholds" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+            <div class="absolute inset-0 z-0">
+              <img src="https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?q=80&w=2787&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Prowizje" />
+              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
+            </div>
+            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+              <div class="text-stratton-gold"><AppIcon name="currency-dollar" class="w-8 h-8" /></div>
+              <div>
+                <h3 class="crm-tile-title text-xl text-white mb-1">Progi prowizji</h3>
+                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Konfiguruj stawki</p>
+              </div>
+            </div>
+          </RouterLink>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-6 animate-fade-in px-8 pb-8">
       <DashboardView :show-admin-panel="false" />
     </div>
   </div>

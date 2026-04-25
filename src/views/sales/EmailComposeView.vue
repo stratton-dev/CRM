@@ -382,7 +382,7 @@ const sendEmail = async () => {
         <button type="button" class="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors text-base" @click="cancel">
           Anuluj
         </button>
-        <button type="button" class="px-8 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#C5A059] text-white rounded-xl font-bold shadow-md hover:brightness-110 hover:shadow-lg transition-all flex items-center text-base uppercase tracking-wider" @click="sendEmail">
+        <button type="button" class="px-8 py-2.5 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white rounded-xl font-bold shadow-md hover:brightness-110 hover:shadow-lg transition-all flex items-center text-base uppercase tracking-wider" @click="sendEmail">
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
           Wyślij Ofertę
         </button>

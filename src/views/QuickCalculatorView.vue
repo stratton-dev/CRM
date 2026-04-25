@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import QuickSimulation from '@/components/calculator/steps/QuickSimulation.vue';
 import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore';
+import { useAuthStore } from '@/stores/auth';
+import { api } from '@/api/client';
 
 const router = useRouter();
 const route = useRoute();
 const store = useCalculatorStore();
+const auth = useAuthStore();
 
 const meetingId = computed(() => {
   const id = Array.isArray(route.query.meetingId) ? route.query.meetingId[0] : route.query.meetingId;
@@ -35,15 +38,38 @@ const initialContractType = computed(() => {
   return 'UOP';
 });
 
+// Email kontaktu klienta (decision maker lub pierwszy kontakt) — używany do adresowania oferty szacunkowej
+const contactEmail = ref<string | null>(null);
+const contactName = ref<string | null>(null);
+
 store.setContext({ meetingId: meetingId.value, clientId: clientId.value, source: 'quick' });
 
 // Ensure we start fresh when entering Quick Calculator
 store.resetSession();
 
+onMounted(async () => {
+  if (auth.enabled && clientId.value) {
+    try {
+      const { data } = await api.get(`/v1/clients/${clientId.value}/contacts`);
+      const contacts = Array.isArray(data) ? data : [];
+      const dm = contacts.find((c: any) => c.is_decision_maker) || contacts[0] || null;
+      if (dm) {
+        contactEmail.value = dm.email ?? null;
+        contactName.value = dm.name ?? null;
+      }
+    } catch {
+      // kontakty opcjonalne — ignorujemy błąd
+    }
+  }
+});
+
 const goToDetails = () => {
   void router.push({
     path: '/app/calculator',
-    query: route.query,
+    query: {
+      ...route.query,
+      step: '1',
+    },
   });
 };
 </script>
@@ -53,6 +79,9 @@ const goToDetails = () => {
     :initial-employees="initialEmployees"
     :initial-avg-wage="initialAvgWage"
     :initial-contract-type="initialContractType"
+    :contact-email="contactEmail"
+    :contact-name="contactName"
+    :client-id="clientId"
     @transfer="goToDetails"
   />
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useStructureStore } from '@/stores/structure'
 import { useSessionStore } from '@/stores/session'
@@ -12,6 +12,11 @@ const session = useSessionStore()
 const { currentUser } = storeToRefs(session)
 const { users } = storeToRefs(structure)
 const gamification = useGamificationStore()
+
+const isLoading = ref(true)
+onMounted(() => {
+  structure.fetchStructure().finally(() => { isLoading.value = false })
+})
 
 const currentUserRef = computed(() => currentUser.value)
 
@@ -98,6 +103,23 @@ const getInitials = (name?: string) => {
       </div>
 
       <div class="overflow-y-auto flex-1 custom-scrollbar">
+        <!-- Skeleton rows while loading -->
+        <template v-if="isLoading">
+          <div v-for="i in 8" :key="`lb-sk-${i}`" class="grid grid-cols-12 items-center px-6 py-4 border-b border-slate-100 animate-pulse">
+            <div class="col-span-1 flex justify-center"><div class="h-6 w-6 bg-slate-200 rounded"></div></div>
+            <div class="col-span-1 flex justify-center"><div class="h-6 w-6 bg-slate-200 rounded-full"></div></div>
+            <div class="col-span-5 flex items-center pl-4 gap-3">
+              <div class="w-10 h-10 rounded-full bg-slate-200 shrink-0"></div>
+              <div class="space-y-1 flex-1">
+                <div class="h-3 bg-slate-200 rounded w-2/3"></div>
+                <div class="h-3 bg-slate-200 rounded w-1/3"></div>
+              </div>
+            </div>
+            <div class="col-span-5">
+              <div class="h-3 bg-slate-200 rounded-full w-full"></div>
+            </div>
+          </div>
+        </template>
         <div
           v-for="user in leaderboardData"
           :key="user.id"
@@ -122,7 +144,7 @@ const getInitials = (name?: string) => {
 
           <div class="col-span-5 flex items-center pl-4">
             <div
-              class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 shadow-sm mr-4 transition-transform group-hover:scale-110"
+              class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 shadow-sm mr-4 transition-transform group-hover:scale-110"
               :class="{
                 'bg-slate-800 text-white border-slate-600': user.role === 'DIRECTOR',
                 'bg-white text-slate-700 border-slate-200': user.role === 'MANAGER',
@@ -151,7 +173,7 @@ const getInitials = (name?: string) => {
                 <div
                   class="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
                   :style="{ width: `${user.progress.progress}%` }"
-                  :class="user.position <= 3 ? 'bg-gradient-to-r from-[#B1905E] to-[#d4af37]' : user.id === currentUserRef?.id ? 'bg-emerald-500' : 'bg-slate-400'"
+                  :class="user.position <= 3 ? 'bg-linear-to-r from-[#B1905E] to-[#d4af37]' : user.id === currentUserRef?.id ? 'bg-emerald-500' : 'bg-slate-400'"
                 >
                   <div class="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]"></div>
                 </div>

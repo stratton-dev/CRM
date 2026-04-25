@@ -1,7 +1,7 @@
 @layer components {
   .crm-section { @apply space-y-4; }
   .crm-section-header { @apply flex items-center justify-between; }
-  .crm-heading { @apply text-2xl font-semibold textstratton700; }
+  .crm-heading { @apply text-2xl font-semibold text-stratton-700; }
   .crm-action-btn { @apply px-3 py-2 text-sm font-medium text-slate-700 border border-slate-200 rounded-lg bg-white hover:bg-gray-50 transition-colors; }
 
   .crm-card { @apply bg-white rounded-card border border-border shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden; }
@@ -16,8 +16,8 @@
   .crm-table-error { @apply px-4 py-3 text-red-600; }
   .crm-loading { @apply flex items-center gap-2; }
 
-  .crm-input { @apply w-full rounded-input border border-slate-300 px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary; }
-  .crm-select { @apply w-full rounded-input border border-slate-300 px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary; }
+  .crm-input { @apply w-full rounded-input border border-slate-300 px-3 py-2 text-sm text-slate-800 bg-white focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary; }
+  .crm-select { @apply w-full rounded-input border border-slate-300 px-3 py-2 text-sm text-slate-800 bg-white focus:outline-hidden focus:ring-2 focus:ring-primary/40 focus:border-primary; }
 
   /* Tailwind v4 does not allow @apply of custom classes, so keep the base utilities inline */
   .crm-badge { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full; }
