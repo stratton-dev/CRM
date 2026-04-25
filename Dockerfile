@@ -78,7 +78,7 @@ RUN echo 'server { \n\
     } \n\
     location ~ /\.(?!well-known).* { deny all; } \n\
     client_max_body_size 50m; \n\
-}' > /etc/nginx/sites-enabled/default.template
+}' > /etc/nginx/default.template
 
 # Supervisor config (uruchamia nginx + php-fpm razem)
 RUN echo '[supervisord] \n\
@@ -118,7 +118,7 @@ EXPOSE 80
 
 # Startup: podstaw PORT w nginx config, migracje + cache + uruchom serwisy
 CMD export PORT="${PORT:-80}" && \
-    envsubst '${PORT}' < /etc/nginx/sites-enabled/default.template > /etc/nginx/sites-enabled/default && \
+    envsubst '${PORT}' < /etc/nginx/default.template > /etc/nginx/sites-enabled/default && \
     php artisan migrate --force && \
     php artisan config:cache && \
     php artisan route:cache && \
