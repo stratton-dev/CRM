@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
     libzip-dev \
-    zip unzip git curl supervisor \
+    zip unzip git curl supervisor gettext-base \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd soap pdo pdo_pgsql pcntl opcache zip \
     && rm -rf /var/lib/apt/lists/*
@@ -31,9 +31,10 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Nginx config
+# Nginx config template — ${PORT} zastępowane przez envsubst przy starcie
+# Zmienne nginx ($host, $uri itp.) są pisane bez backslasha (single quotes = literał)
 RUN echo 'server { \n\
-    listen 80; \n\
+    listen ${PORT}; \n\
     server_name _; \n\
     root /var/www/html/public; \n\
     index index.php; \n\
@@ -77,7 +78,7 @@ RUN echo 'server { \n\
     } \n\
     location ~ /\.(?!well-known).* { deny all; } \n\
     client_max_body_size 50m; \n\
-}' > /etc/nginx/sites-enabled/default
+}' > /etc/nginx/sites-enabled/default.template
 
 # Supervisor config (uruchamia nginx + php-fpm razem)
 RUN echo '[supervisord] \n\
@@ -115,8 +116,10 @@ stderr_logfile_maxbytes=0 \n\
 
 EXPOSE 80
 
-# Startup: migracje + cache + uruchom serwisy
-CMD php artisan migrate --force && \
+# Startup: podstaw PORT w nginx config, migracje + cache + uruchom serwisy
+CMD export PORT="${PORT:-80}" && \
+    envsubst '${PORT}' < /etc/nginx/sites-enabled/default.template > /etc/nginx/sites-enabled/default && \
+    php artisan migrate --force && \
     php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache && \
