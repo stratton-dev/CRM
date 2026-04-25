@@ -14,8 +14,8 @@ class StructureMoveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_keycloak_id' => 'required|string|max:255',
-            'new_parent_keycloak_id' => 'nullable|string|max:255',
+            'user_supabase_id' => 'required|string|max:255',
+            'new_parent_supabase_id' => 'nullable|string|max:255',
             'new_team_group_path' => 'nullable|string|max:255',
         ];
     }

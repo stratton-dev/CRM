@@ -17,7 +17,7 @@ class AutentiOnboardingService
     ) {
     }
 
-    public function startForUser(User $user, array $documentsJson, string $initiatorKeycloakId): AutentiDocument
+    public function startForUser(User $user, array $documentsJson, string $initiatorSupabaseId): AutentiDocument
     {
         $templates = $this->resolveTemplates($documentsJson);
         if ($templates->isEmpty()) {
@@ -61,13 +61,13 @@ class AutentiOnboardingService
             throw new RuntimeException('Autenti process id missing in response.');
         }
 
-        return DB::transaction(function () use ($client, $processId, $process, $templates, $user, $initiatorKeycloakId) {
+        return DB::transaction(function () use ($client, $processId, $process, $templates, $user, $initiatorSupabaseId) {
             $docList = $templates->pluck('name')->implode(', ');
 
             $autentiDoc = AutentiDocument::create([
                 'user_id' => $user->id,
-                'user_keycloak_id' => $user->keycloak_id,
-                'initiator_keycloak_id' => $initiatorKeycloakId,
+                'user_supabase_id' => $user->supabase_id,
+                'initiator_supabase_id' => $initiatorSupabaseId,
                 'recipient_name' => $user->name,
                 'recipient_email' => $user->email,
                 'document_list' => $docList,

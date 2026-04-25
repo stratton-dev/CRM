@@ -10,16 +10,16 @@ Broadcast::channel('team.{teamId}', function ($user, $teamId) {
     return (string) $user->team_id === (string) $teamId;
 });
 
-Broadcast::channel('user.{keycloakId}', function ($user, $keycloakId) {
+Broadcast::channel('user.{supabaseId}', function ($user, $supabaseId) {
     if ($user->role_cached === 'ADMIN') {
         return true;
     }
 
-    if ($user->keycloak_id && (string) $user->keycloak_id === (string) $keycloakId) {
+    if ($user->supabase_id && (string) $user->supabase_id === (string) $supabaseId) {
         return true;
     }
 
-    return (string) $user->id === (string) $keycloakId;
+    return (string) $user->id === (string) $supabaseId;
 });
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {

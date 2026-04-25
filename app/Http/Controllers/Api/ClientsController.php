@@ -14,7 +14,7 @@ class ClientsController extends Controller
 {
     public function index(Request $request, TokenContext $context, StructureService $structure)
     {
-        $q = Client::query()->with(['crmProfile', 'crmProfile.owner:id,keycloak_id,name']);
+        $q = Client::query()->with(['crmProfile', 'crmProfile.owner:id,supabase_id,name']);
 
         $role = $context->primaryRole();
         if ($role !== 'ADMIN') {
@@ -65,7 +65,7 @@ class ClientsController extends Controller
             return response()->json(['reserved' => false]);
         }
 
-        // 2. Pobieramy ID zalogowanego usera (z keycloak/sanctum)
+        // 2. Pobieramy ID zalogowanego usera
         $currentUser = $request->user();
 
         // 3. Sprawdzamy czy istnieje aktywna rezerwacja (spotkanie w statusie 'open')
@@ -99,7 +99,7 @@ class ClientsController extends Controller
 
     public function show(Client $client)
     {
-        return $client->load(['crmProfile', 'crmProfile.owner:id,keycloak_id'])->loadCount(['contacts', 'meetings', 'payrolls']);
+        return $client->load(['crmProfile', 'crmProfile.owner:id,supabase_id'])->loadCount(['contacts', 'meetings', 'payrolls']);
     }
 
     public function store(Request $request, TokenContext $context)
@@ -126,7 +126,7 @@ class ClientsController extends Controller
         $client = Client::create($data);
 
         // Auto-register activity
-        $userId = $this->resolveUserId($context->actorKeycloakId());
+        $userId = $this->resolveUserId($context->actorSupabaseId());
         if ($userId) {
             CrmClientActivity::create([
                 'client_id' => $client->id,
@@ -182,7 +182,7 @@ class ClientsController extends Controller
         }
 
         // Auto-register activity
-        $userId = $this->resolveUserId($context->actorKeycloakId());
+        $userId = $this->resolveUserId($context->actorSupabaseId());
         if ($userId) {
             CrmClientActivity::create([
                 'client_id' => $client->id,
@@ -207,9 +207,9 @@ class ClientsController extends Controller
         if (!$value) return null;
         $query = User::query();
         if (is_numeric($value)) {
-            $query->where('id', (int) $value)->orWhere('keycloak_id', (string) $value);
+            $query->where('id', (int) $value)->orWhere('supabase_id', (string) $value);
         } else {
-            $query->where('keycloak_id', (string) $value);
+            $query->where('supabase_id', (string) $value);
         }
         return $query->first()?->id;
     }

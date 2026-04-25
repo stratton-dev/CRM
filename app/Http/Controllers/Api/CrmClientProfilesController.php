@@ -55,7 +55,7 @@ class CrmClientProfilesController extends Controller
         $crmClientProfile->update($data);
 
         // Auto-register activity if status changed or general update
-        $userId = $this->resolveUserId($context->actorKeycloakId());
+        $userId = $this->resolveUserId($context->actorSupabaseId());
         if ($userId) {
             $description = 'Zaktualizowano profil klienta';
             if (isset($data['status']) && $data['status'] !== $oldStatus) {
@@ -107,9 +107,9 @@ class CrmClientProfilesController extends Controller
         if (!$value) return null;
         $query = User::query();
         if (is_numeric($value)) {
-            $query->where('id', (int) $value)->orWhere('keycloak_id', (string) $value);
+            $query->where('id', (int) $value)->orWhere('supabase_id', (string) $value);
         } else {
-            $query->where('keycloak_id', (string) $value);
+            $query->where('supabase_id', (string) $value);
         }
         return $query->first()?->id;
     }

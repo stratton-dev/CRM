@@ -24,9 +24,9 @@ class MeetingCreated implements BroadcastsToReverb
             $channels[] = 'team.'.$user->team_id;
         }
 
-        $keycloakId = $user?->keycloak_id ?: (string) $user?->id;
-        if ($keycloakId) {
-            $channels[] = 'user.'.$keycloakId;
+        $supabaseId = $user?->supabase_id ?: (string) $user?->id;
+        if ($supabaseId) {
+            $channels[] = 'user.'.$supabaseId;
         }
 
         return $channels;
@@ -45,7 +45,7 @@ class MeetingCreated implements BroadcastsToReverb
                 'id' => (string) $this->meeting->id,
                 'clientId' => (string) $this->meeting->client_id,
                 'userId' => (string) $this->meeting->user_id,
-                'userKeycloakId' => $this->meeting->user?->keycloak_id,
+                'userSupabaseId' => $this->meeting->user?->supabase_id,
                 'status' => $this->meeting->status,
                 'calculationShown' => (bool) $this->meeting->calculation_shown,
                 'validUntil' => $this->meeting->valid_until?->toDateString(),

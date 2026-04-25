@@ -2,24 +2,16 @@
 
 namespace App\Services\Gus;
 
-use GusApi\Exception\InvalidUserKeyException;
-use GusApi\Exception\InvalidReportTypeException;
-use GusApi\Exception\NotFoundException;
-use GusApi\GusApi;
-use GusApi\ReportTypes;
-use GusApi\SearchReport;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class BirService
 {
+    private const MF_API_URL = 'https://wl-api.mf.gov.pl/api/search/nip/';
+
     public function lookupByNip(string $nip): array
     {
-        $key = (string) config('services.gus.bir');
-        if ($key === '') {
-            throw new RuntimeException('Missing GUS API key.');
-        }
-
         $clean = preg_replace('/\D+/', '', $nip);
         if (!is_string($clean) || strlen($clean) !== 10) {
             throw ValidationException::withMessages([
@@ -27,124 +19,67 @@ class BirService
             ]);
         }
 
-        $gus = new GusApi($key);
+        $date = now()->format('Y-m-d');
+        $url  = self::MF_API_URL . $clean;
 
-        try {
-            $gus->login();
-            $reports = $gus->getByNip($clean);
-        } catch (InvalidUserKeyException $exception) {
-            throw new RuntimeException('Invalid GUS API key.');
-        } catch (NotFoundException $exception) {
-            throw new RuntimeException('No data found.', 404);
+        $response = Http::timeout(10)
+            ->withHeaders(['Accept' => 'application/json'])
+            ->get($url, ['date' => $date]);
+
+        if ($response->status() === 404 || $response->failed()) {
+            throw new RuntimeException('Nie znaleziono podmiotu dla podanego NIP.', 404);
         }
 
-        foreach ($reports as $report) {
-            $data = [
-                'name' => $report->getName(),
-                'city' => $report->getCity(),
-                'street' => $report->getStreet(),
-                'houseNr' => $report->getPropertyNumber(),
-                'aptNr' => $report->getApartmentNumber(),
-                'zipCode' => $report->getZipCode(),
-                'regon' => $report->getRegon(),
-                'krs' => null,
-                'email' => null,
-                'phone' => null,
-                'fax' => null,
-                'website' => null,
-                'gusRaw' => null,
-            ];
+        $subject = $response->json('result.subject');
 
-            $fullReport = $this->getFullReportRow($gus, $report);
-            if ($fullReport) {
-                $data['email'] = $this->findFirstValue($fullReport, ['adresEmail']);
-                $data['phone'] = $this->findFirstValue($fullReport, ['numerTelefonu']);
-                $data['fax'] = $this->findFirstValue($fullReport, ['numerFaksu']);
-                $data['website'] = $this->findFirstValue($fullReport, ['adresStronyinternetowej']);
-                $data['krs'] = $this->findFirstValue($fullReport, ['krs', 'numerWRejestrzeEwidencji']);
-                $data['gusRaw'] = $fullReport;
-            }
-
-            return $data;
+        if (empty($subject) || empty($subject['name'])) {
+            throw new RuntimeException('Brak danych dla podanego NIP.', 404);
         }
 
-        throw new RuntimeException('No data found.', 404);
-    }
+        $address = $subject['residenceAddress'] ?? $subject['workingAddress'] ?? '';
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function getFullReportRow(GusApi $gus, SearchReport $report): array
-    {
-        $reportNames = $this->reportNamesFor($report);
-        foreach ($reportNames as $reportName) {
-            try {
-                $rows = $gus->getFullReport($report, $reportName);
-            } catch (InvalidReportTypeException $exception) {
-                continue;
-            } catch (NotFoundException $exception) {
-                continue;
-            }
-
-            if (is_array($rows) && $rows !== []) {
-                $first = $rows[0] ?? [];
-                if (is_array($first)) {
-                    return $first;
+        // Parse address string e.g. "BIAŁOŁĘCKA 388, 03-253 WARSZAWA" → street, zip, city
+        $street  = '';
+        $houseNr = '';
+        $zipCode = '';
+        $city    = '';
+        if ($address) {
+            // Split on comma: "STREET NUMBER, ZIP CITY"
+            $parts = array_map('trim', explode(',', $address, 2));
+            if (count($parts) === 2) {
+                // Separate street from house number: last token after last space
+                $streetPart = $parts[0];
+                if (preg_match('/^(.+?)\s+(\S+)$/', $streetPart, $m)) {
+                    $street  = $m[1];
+                    $houseNr = $m[2];
+                } else {
+                    $street = $streetPart;
                 }
+                // ZIP CODE + CITY: "00-000 CITY NAME"
+                $zipCity = $parts[1];
+                if (preg_match('/^(\d{2}-\d{3})\s+(.+)$/', $zipCity, $m)) {
+                    $zipCode = $m[1];
+                    $city    = $m[2];
+                } else {
+                    $city = $zipCity;
+                }
+            } else {
+                $street = $address;
             }
-        }
-
-        return [];
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function reportNamesFor(SearchReport $report): array
-    {
-        $type = $report->getType();
-
-        if ($type === SearchReport::TYPE_JURIDICAL_PERSON) {
-            return [ReportTypes::REPORT_ORGANIZATION];
-        }
-
-        if ($type === SearchReport::TYPE_LOCAL_ENTITY_JURIDICAL_PERSON) {
-            return [ReportTypes::REPORT_ORGANIZATION_LOCAL];
-        }
-
-        if ($type === SearchReport::TYPE_LOCAL_ENTITY_NATURAL_PERSON) {
-            return [ReportTypes::REPORT_PERSON_LOCAL];
         }
 
         return [
-            ReportTypes::REPORT_PERSON_CEIDG,
-            ReportTypes::REPORT_PERSON_AGRO,
-            ReportTypes::REPORT_PERSON_OTHER,
-            ReportTypes::REPORT_PERSON,
+            'name'      => $subject['name'] ?? '',
+            'address'   => $address,
+            'street'    => $street,
+            'houseNr'   => $houseNr,
+            'zipCode'   => $zipCode,
+            'city'      => $city,
+            'regon'     => $subject['regon'] ?? null,
+            'krs'       => $subject['krs'] ?? null,
+            'nip'       => $subject['nip'] ?? $clean,
+            'statusVat' => $subject['statusVat'] ?? null,
         ];
     }
 
-    /**
-     * @param array<string, mixed> $data
-     * @param array<int, string> $needles
-     */
-    private function findFirstValue(array $data, array $needles): ?string
-    {
-        foreach ($data as $key => $value) {
-            if (!is_string($value)) {
-                continue;
-            }
-            $trimmed = trim($value);
-            if ($trimmed === '') {
-                continue;
-            }
-            foreach ($needles as $needle) {
-                if (stripos((string) $key, $needle) !== false) {
-                    return $trimmed;
-                }
-            }
-        }
-
-        return null;
-    }
 }

@@ -24,9 +24,9 @@ class OfferOpened implements BroadcastsToReverb
             $channels[] = 'team.'.$user->team_id;
         }
 
-        $keycloakId = $user?->keycloak_id ?: (string) $user?->id;
-        if ($keycloakId) {
-            $channels[] = 'user.'.$keycloakId;
+        $supabaseId = $user?->supabase_id ?: (string) $user?->id;
+        if ($supabaseId) {
+            $channels[] = 'user.'.$supabaseId;
         }
 
         return $channels;

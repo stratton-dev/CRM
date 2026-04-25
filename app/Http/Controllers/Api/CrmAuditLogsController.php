@@ -11,7 +11,7 @@ class CrmAuditLogsController extends Controller
 {
     public function index(Request $request)
     {
-        $q = CrmAuditLog::query()->with('actor:id,keycloak_id,name,email');
+        $q = CrmAuditLog::query()->with('actor:id,supabase_id,name,email');
 
         if ($actorId = $this->resolveUserId($request->input('actor_id'))) {
             $q->where('actor_user_id', $actorId);
@@ -47,7 +47,7 @@ class CrmAuditLogsController extends Controller
             'details' => $data['details'],
         ]);
 
-        return response()->json($log->load('actor:id,keycloak_id,name,email'), 201);
+        return response()->json($log->load('actor:id,supabase_id,name,email'), 201);
     }
 
     private function resolveUserId($value): ?int
@@ -55,9 +55,9 @@ class CrmAuditLogsController extends Controller
         if (!$value) return null;
         $query = User::query();
         if (is_numeric($value)) {
-            $query->where('id', (int) $value)->orWhere('keycloak_id', (string) $value);
+            $query->where('id', (int) $value)->orWhere('supabase_id', (string) $value);
         } else {
-            $query->where('keycloak_id', (string) $value);
+            $query->where('supabase_id', (string) $value);
         }
         return $query->first()?->id;
     }

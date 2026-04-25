@@ -18,11 +18,11 @@ class IdempotencyService
         return IdempotencyKey::query()->where('key', $key)->first();
     }
 
-    public function start(string $key, string $actorKeycloakId, string $requestHash): IdempotencyKey
+    public function start(string $key, string $actorSupabaseId, string $requestHash): IdempotencyKey
     {
         return IdempotencyKey::create([
             'key' => $key,
-            'actor_keycloak_id' => $actorKeycloakId,
+            'actor_supabase_id' => $actorSupabaseId,
             'request_hash' => $requestHash,
             'status' => 'processing',
         ]);

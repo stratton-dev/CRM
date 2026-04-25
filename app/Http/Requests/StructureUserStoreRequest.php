@@ -23,12 +23,12 @@ class StructureUserStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'keycloak_id' => 'nullable|string|max:255',
+            'supabase_id' => 'nullable|string|max:255',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:255',
             'role' => 'required|string|in:ADMIN,DIRECTOR,MANAGER,SALES',
-            'parent_keycloak_id' => 'nullable|string|max:255',
+            'parent_supabase_id' => 'nullable|string|max:255',
             'team_group_path' => 'nullable|string|max:255',
             'contract_status' => 'nullable|string|max:255',
             'type' => 'nullable|string|max:255',

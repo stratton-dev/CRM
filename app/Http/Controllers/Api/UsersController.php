@@ -93,9 +93,9 @@ class UsersController extends Controller
     public function update(Request $request, User $user, TokenContext $context)
     {
         $roleCode   = $context->primaryRole();
-        $actorUuid  = $context->actorKeycloakId();
+        $actorUuid  = $context->actorSupabaseId();
         $isAdmin    = in_array($roleCode, ['ADMIN', 'DIRECTOR'], true);
-        $isSelf     = $actorUuid !== '' && $user->keycloak_id === $actorUuid;
+        $isSelf     = $actorUuid !== '' && $user->supabase_id === $actorUuid;
         $isManagerOfUser = $roleCode === 'MANAGER'
             && $request->user()?->team_id !== null
             && $user->team_id === $request->user()->team_id;
@@ -170,16 +170,15 @@ class UsersController extends Controller
     private function formatUser(User $user): array
     {
         return [
-            'id' => (string) ($user->keycloak_id ?: $user->id),
-            'keycloakId' => $user->keycloak_id,
-            'keycloakUsername' => $user->keycloak_username,
+            'id' => (string) ($user->supabase_id ?: $user->id),
+            'supabaseId' => $user->supabase_id,
             'organizationId' => $user->organization_id ? (string) $user->organization_id : null,
             'roleId' => $user->role_id ? (string) $user->role_id : null,
             'role' => $user->role_cached ?: $user->role?->code,
             'roleName' => $user->role?->name,
             'teamId' => $user->team_id,
             'parentId' => $user->parent_id ? (string) $user->parent_id : null,
-            'parentKeycloakId' => $user->parent_keycloak_id,
+            'parentSupabaseId' => $user->parent_supabase_id,
             'hierarchicalId' => $user->hierarchical_id,
             'hierarchicalCode' => $user->hierarchical_code,
             'crmNumber' => $user->crm_number,

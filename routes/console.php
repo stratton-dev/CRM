@@ -60,7 +60,7 @@ Artisan::command('structure:import-csv {file} {--delimiter=} {--organization-id=
             'first_name', 'last_name', 'name',
             'email', 'phone',
             'team_group_path', 'team', 'team_code',
-            'keycloak_id',
+            'supabase_id',
             'crm_number',
             'active', 'enabled', 'pending_setup',
             'is_removed_from_structure', 'is_blocked',
@@ -168,7 +168,7 @@ Artisan::command('structure:import-csv {file} {--delimiter=} {--organization-id=
 
             $email = trim((string) ($rowData['email'] ?? '')) ?: null;
             $phone = trim((string) ($rowData['phone'] ?? '')) ?: null;
-            $keycloakId = trim((string) ($rowData['keycloak_id'] ?? '')) ?: null;
+            $supabaseId = trim((string) ($rowData['supabase_id'] ?? '')) ?: null;
             $crmNumber = trim((string) ($rowData['crm_number'] ?? '')) ?: null;
 
             $active = $toBool($rowData['active'] ?? null);
@@ -191,7 +191,7 @@ Artisan::command('structure:import-csv {file} {--delimiter=} {--organization-id=
                 'phone' => $phone,
                 'role_cached' => $roleCached,
                 'team_group_path' => $teamGroupPath,
-                'keycloak_id' => $keycloakId,
+                'supabase_id' => $supabaseId,
                 'crm_number' => $crmNumber,
                 'active' => $active,
                 'enabled' => $enabled,
@@ -228,7 +228,7 @@ Artisan::command('structure:import-csv {file} {--delimiter=} {--organization-id=
             $byCode = [];
 
             foreach ($items as $item) {
-                $keycloakId = $item['keycloak_id'] ?: Str::uuid()->toString();
+                $supabaseId = $item['supabase_id'] ?: Str::uuid()->toString();
 
                 $roleCode = strtolower($item['role_cached']);
                 $roleId = $roleByCode->get($roleCode)->id ?? null;
@@ -237,13 +237,13 @@ Artisan::command('structure:import-csv {file} {--delimiter=} {--organization-id=
                     'organization_id' => $orgId ?: null,
                     'role_id' => $roleId,
                     'parent_id' => null,
-                    'parent_keycloak_id' => null,
+                    'parent_supabase_id' => null,
                     'hierarchical_code' => $item['code'],
                     'hierarchical_id' => $item['code'],
                     'crm_number' => $item['crm_number'],
                     'role_cached' => $item['role_cached'],
                     'team_group_path' => $item['team_group_path'],
-                    'keycloak_id' => $keycloakId,
+                    'supabase_id' => $supabaseId,
                     'name' => $item['name'],
                     'email' => $item['email'],
                     'phone' => $item['phone'],
@@ -271,7 +271,7 @@ Artisan::command('structure:import-csv {file} {--delimiter=} {--organization-id=
                 $child = $byCode[$item['code']];
                 $child->update([
                     'parent_id' => $parent->id,
-                    'parent_keycloak_id' => $parent->keycloak_id,
+                    'parent_supabase_id' => $parent->supabase_id,
                 ]);
             }
 });
@@ -355,13 +355,13 @@ Artisan::command('structure:export-team-json {team_group_path} {file?}', functio
         return 1;
     }
 
-    $byKeycloak = $users->keyBy('keycloak_id');
+    $bySupabase = $users->keyBy('supabase_id');
 
-        $rows = $users->map(function (User $user) use ($byKeycloak) {
+        $rows = $users->map(function (User $user) use ($bySupabase) {
             $parentCode = null;
             $parentEmail = null;
-            if ($user->parent_keycloak_id && $byKeycloak->has($user->parent_keycloak_id)) {
-                $parent = $byKeycloak->get($user->parent_keycloak_id);
+            if ($user->parent_supabase_id && $bySupabase->has($user->parent_supabase_id)) {
+                $parent = $bySupabase->get($user->parent_supabase_id);
                 $parentCode = $parent?->hierarchical_code ?: $parent?->hierarchical_id;
                 $parentEmail = $parent?->email;
             }
@@ -369,8 +369,8 @@ Artisan::command('structure:export-team-json {team_group_path} {file?}', functio
         return [
             'code' => $user->hierarchical_code ?: $user->hierarchical_id,
             'parent_code' => $parentCode,
-            'keycloak_id' => $user->keycloak_id,
-            'parent_keycloak_id' => $user->parent_keycloak_id,
+            'supabase_id' => $user->supabase_id,
+            'parent_supabase_id' => $user->parent_supabase_id,
             'parent_email' => $parentEmail,
             'role' => $user->role_cached,
             'name' => $user->name,
@@ -503,31 +503,31 @@ Artisan::command('structure:regenerate-codes {--reset-counters} {--dry-run}', fu
         ->where('role_cached', '!=', 'ADMIN')
         ->get();
 
-    $byId = $users->keyBy('keycloak_id');
+    $byId = $users->keyBy('supabase_id');
     $childrenByParent = [];
     foreach ($users as $user) {
-        $parentKey = $user->parent_keycloak_id;
+        $parentKey = $user->parent_supabase_id;
         $childrenByParent[$parentKey][] = $user;
     }
 
     foreach ($childrenByParent as &$list) {
         usort($list, function (User $a, User $b): int {
-            return [$a->name, $a->keycloak_id] <=> [$b->name, $b->keycloak_id];
+            return [$a->name, $a->supabase_id] <=> [$b->name, $b->supabase_id];
         });
     }
     unset($list);
 
     $roots = $users->filter(function (User $user) use ($byId): bool {
-        if (!$user->parent_keycloak_id) {
+        if (!$user->parent_supabase_id) {
             return true;
         }
-        return !$byId->has($user->parent_keycloak_id);
+        return !$byId->has($user->parent_supabase_id);
     })->values();
 
     $roots = $roots->sortBy([
         fn (User $user) => $user->team_group_path,
         fn (User $user) => $user->name,
-        fn (User $user) => $user->keycloak_id,
+        fn (User $user) => $user->supabase_id,
     ])->values();
 
     $initialsFromName = function (?string $name): string {
@@ -557,9 +557,9 @@ Artisan::command('structure:regenerate-codes {--reset-counters} {--dry-run}', fu
         }
 
         $code = $codes->generate($teamPath, $parentCode, $initialsFromName($user->name));
-        $updates[$user->keycloak_id] = $code;
+        $updates[$user->supabase_id] = $code;
 
-        $children = $childrenByParent[$user->keycloak_id] ?? [];
+        $children = $childrenByParent[$user->supabase_id] ?? [];
         foreach ($children as $child) {
             $walk($child, $code);
         }
@@ -577,9 +577,9 @@ Artisan::command('structure:regenerate-codes {--reset-counters} {--dry-run}', fu
     }
 
     \DB::transaction(function () use ($updates): void {
-        foreach ($updates as $keycloakId => $code) {
+        foreach ($updates as $supabaseId => $code) {
             User::query()
-                ->where('keycloak_id', $keycloakId)
+                ->where('supabase_id', $supabaseId)
                 ->update([
                     'hierarchical_code' => $code,
                     'hierarchical_id' => $code,

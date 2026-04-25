@@ -18,9 +18,8 @@ class MeController extends Controller
         $user->load('role');
 
         return response()->json([
-            'id' => $user->keycloak_id ?? (string) $user->id,
-            'keycloak_id' => $user->keycloak_id,
-            'keycloak_username' => $user->keycloak_username,
+            'id' => $user->supabase_id ?? (string) $user->id,
+            'supabase_id' => $user->supabase_id,
             'organization_id' => $user->organization_id,
             'role_id' => $user->role_id,
             'role' => $user->role_cached ?: $user->role?->code,

@@ -14,7 +14,7 @@ class StructureRemoveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_keycloak_id' => 'required|string|max:255',
+            'user_supabase_id' => 'required|string|max:255',
         ];
     }
 }

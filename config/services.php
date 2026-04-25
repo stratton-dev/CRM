@@ -39,7 +39,8 @@ return [
         'gemini_key' => env('GEMINI_API_KEY'),
     ],
     'gus'=>[
-        'bir'=> env('GUS_BIR')
+        'bir'  => env('GUS_BIR'),
+        'env'  => env('GUS_ENV', 'test'),
     ]
 
 ];

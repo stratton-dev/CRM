@@ -145,9 +145,9 @@ class DocumentTemplatesController extends Controller
             return response()->file($path, ['Content-Type' => 'application/pdf']);
         }
 
-        $userId = $request->string('user_keycloak_id')->toString();
+        $userId = $request->string('user_supabase_id')->toString();
         $user = $userId !== ''
-            ? User::query()->where('keycloak_id', $userId)->first()
+            ? User::query()->where('supabase_id', $userId)->first()
             : null;
         if (!$user) {
             $user = $request->integer('user_id') ? User::query()->find($request->integer('user_id')) : null;

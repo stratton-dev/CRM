@@ -20,12 +20,12 @@ abstract class NotificationEvent implements BroadcastsToReverb
 
     public function broadcastChannels(): array
     {
-        $keycloakId = $this->user->keycloak_id ?: (string) $this->user->id;
-        if ($keycloakId === '') {
+        $supabaseId = $this->user->supabase_id ?: (string) $this->user->id;
+        if ($supabaseId === '') {
             return [];
         }
 
-        return ['user.'.$keycloakId];
+        return ['user.'.$supabaseId];
     }
 
     public function broadcastPayload(): array
@@ -49,7 +49,7 @@ abstract class NotificationEvent implements BroadcastsToReverb
                 'body' => $this->notification->body,
                 'readAt' => $this->notification->read_at?->toISOString(),
             ],
-            'userKeycloakId' => $this->user->keycloak_id,
+            'userSupabaseId' => $this->user->supabase_id,
         ];
     }
 }

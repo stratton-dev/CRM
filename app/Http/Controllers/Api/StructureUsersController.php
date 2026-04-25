@@ -27,7 +27,7 @@ class StructureUsersController extends Controller
         $payload = $request->validated();
         $payload['role'] = Str::upper($payload['role']);
 
-        $actorId = $context->actorKeycloakId();
+        $actorId = $context->actorSupabaseId();
         if ($actorId === '') {
             return response()->json(['message' => 'Missing actor identity.'], 401);
         }
@@ -36,7 +36,7 @@ class StructureUsersController extends Controller
         $existing = $idempotency->find($key);
 
         if ($existing) {
-            if ($existing->actor_keycloak_id !== $actorId || $existing->request_hash !== $hash) {
+            if ($existing->actor_supabase_id !== $actorId || $existing->request_hash !== $hash) {
                 return response()->json(['message' => 'Idempotency key conflict.'], 409);
             }
 
@@ -71,8 +71,8 @@ class StructureUsersController extends Controller
     private function formatUser(User $user): array
     {
         return [
-            'id' => (string) $user->keycloak_id,
-            'parentKeycloakId' => $user->parent_keycloak_id,
+            'id' => (string) $user->supabase_id,
+            'parentSupabaseId' => $user->parent_supabase_id,
             'hierarchicalCode' => $user->hierarchical_code,
             'hierarchicalId' => $user->hierarchical_code,
             'teamGroupPath' => $user->team_group_path,

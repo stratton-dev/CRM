@@ -17,7 +17,7 @@ class StructureEndpointsTest extends TestCase
         $this->withoutMiddleware(SupabaseAuthenticate::class);
 
         $actor = User::factory()->create([
-            'keycloak_id' => 'actor-1',
+            'supabase_id' => 'actor-1',
             'role_cached' => 'ADMIN',
             'team_group_path' => '/teams/warszawa01',
         ]);
@@ -25,7 +25,7 @@ class StructureEndpointsTest extends TestCase
         $this->actingAs($actor);
 
         $payload = [
-            'keycloak_id' => 'user-1',
+            'supabase_id' => 'user-1',
             'name' => 'Jan Kowalski',
             'email' => 'jan.kowalski@example.test',
             'role' => 'DIRECTOR',
@@ -39,7 +39,7 @@ class StructureEndpointsTest extends TestCase
         $second->assertStatus(200);
 
         $this->assertSame($first->json('hierarchicalCode'), $second->json('hierarchicalCode'));
-        $this->assertSame(1, User::query()->where('keycloak_id', 'user-1')->count());
+        $this->assertSame(1, User::query()->where('supabase_id', 'user-1')->count());
     }
 
     public function test_increments_hierarchical_code_counters_within_a_scope(): void
@@ -58,40 +58,40 @@ class StructureEndpointsTest extends TestCase
         $this->withoutMiddleware(SupabaseAuthenticate::class);
 
         $actor = User::factory()->create([
-            'keycloak_id' => 'actor-2',
+            'supabase_id' => 'actor-2',
             'role_cached' => 'ADMIN',
             'team_group_path' => '/teams/warszawa01',
         ]);
 
         $root = User::factory()->create([
-            'keycloak_id' => 'root-1',
+            'supabase_id' => 'root-1',
             'role_cached' => 'DIRECTOR',
             'team_group_path' => '/teams/warszawa01',
-            'parent_keycloak_id' => null,
+            'parent_supabase_id' => null,
             'hierarchical_code' => 'WAR001/AA001',
         ]);
 
         $child = User::factory()->create([
-            'keycloak_id' => 'child-1',
+            'supabase_id' => 'child-1',
             'role_cached' => 'MANAGER',
             'team_group_path' => '/teams/warszawa01',
-            'parent_keycloak_id' => 'root-1',
+            'parent_supabase_id' => 'root-1',
             'hierarchical_code' => 'WAR001/AA001/BB001',
         ]);
 
         User::factory()->create([
-            'keycloak_id' => 'grandchild-1',
+            'supabase_id' => 'grandchild-1',
             'role_cached' => 'SALES',
             'team_group_path' => '/teams/warszawa01',
-            'parent_keycloak_id' => 'child-1',
+            'parent_supabase_id' => 'child-1',
             'hierarchical_code' => 'WAR001/AA001/BB001/CC001',
         ]);
 
         $this->actingAs($actor);
 
         $response = $this->postJson('/api/v1/structure/move', [
-            'user_keycloak_id' => $root->keycloak_id,
-            'new_parent_keycloak_id' => 'grandchild-1',
+            'user_supabase_id' => $root->supabase_id,
+            'new_parent_supabase_id' => 'grandchild-1',
         ]);
 
         $response->assertStatus(422);

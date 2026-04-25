@@ -12,7 +12,7 @@ Keycloak config (env):
 - Optional: `KC_AUDIENCE`, `KC_ISSUER`, `KC_JWKS_URL`
 
 Role/permission mapping:
-- Configure `config/keycloak.php` for role priority and optional role/permission sync.
+- Configure `config/supabase.php` for role priority and optional role/permission sync.
 - Roles in token are read from `realm_access.roles` and `resource_access.<client_id>.roles`.
 
 Permissions:

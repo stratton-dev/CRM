@@ -41,7 +41,7 @@ class StructureService
         }
 
         if ($role === 'DIRECTOR') {
-             $actor = User::query()->where('keycloak_id', $context->actorKeycloakId())->first();
+             $actor = User::query()->where('supabase_id', $context->actorSupabaseId())->first();
             if (!$actor) {
                 return $query->whereRaw('1 = 0')->get();
             }
@@ -55,7 +55,7 @@ class StructureService
         }
 
         if ($role === 'MANAGER') {
-            $actor = User::query()->where('keycloak_id', $context->actorKeycloakId())->first();
+            $actor = User::query()->where('supabase_id', $context->actorSupabaseId())->first();
             if (!$actor) {
                 return $query->whereRaw('1 = 0')->get();
             }
@@ -68,7 +68,7 @@ class StructureService
         }
 
         if ($role === 'SALES') {
-            return $query->where('keycloak_id', $context->actorKeycloakId())->get();
+            return $query->where('supabase_id', $context->actorSupabaseId())->get();
         }
 
         return $query->whereRaw('1 = 0')->get();
@@ -77,13 +77,13 @@ class StructureService
     public function createUser(array $data, TokenContext $context): array
     {
         $parent = null;
-        if (!empty($data['parent_keycloak_id'])) {
+        if (!empty($data['parent_supabase_id'])) {
             $parent = User::query()
-                ->where('keycloak_id', $data['parent_keycloak_id'])
+                ->where('supabase_id', $data['parent_supabase_id'])
                 ->first();
             if (!$parent) {
                 throw ValidationException::withMessages([
-                    'parent_keycloak_id' => ['Parent user not found.'],
+                    'parent_supabase_id' => ['Parent user not found.'],
                 ]);
             }
         }
@@ -96,13 +96,13 @@ class StructureService
 
         $parentCode = $parent?->hierarchical_code;
         $hierarchicalCode = $this->codes->generate($teamPath, $parentCode, $this->initialsFromName($data['name'] ?? null));
-        $keycloakId = $data['keycloak_id'] ?? Str::uuid()->toString();
+        $supabaseUuid = $data['supabase_id'] ?? Str::uuid()->toString();
         $inviteSent = null;
         $inviteError = null;
 
         $user = User::create([
-            'keycloak_id' => $keycloakId,
-            'parent_keycloak_id' => $data['parent_keycloak_id'] ?? null,
+            'supabase_id' => $supabaseUuid,
+            'parent_supabase_id' => $data['parent_supabase_id'] ?? null,
             'team_id' => $teamId,
             'team_group_path' => $teamPath,
             'role_cached' => $role,
@@ -122,10 +122,10 @@ class StructureService
         ]);
 
         if (config('autenti.enabled') && !empty($data['documents_json'])) {
-            $this->autenti->startForUser($user, (array) $data['documents_json'], $context->actorKeycloakId());
+            $this->autenti->startForUser($user, (array) $data['documents_json'], $context->actorSupabaseId());
         }
 
-        event(new StructureUserCreated($user, $context->actorKeycloakId()));
+        event(new StructureUserCreated($user, $context->actorSupabaseId()));
 
         return [
             'user' => $user,
@@ -134,10 +134,10 @@ class StructureService
         ];
     }
 
-    public function restoreUser(string $userKeycloakId, TokenContext $context): array
+    public function restoreUser(string $userSupabaseId, TokenContext $context): array
     {
         $user = User::query()
-            ->where('keycloak_id', $userKeycloakId)
+            ->where('supabase_id', $userSupabaseId)
             ->firstOrFail();
 
         $teamPath = $user->team_group_path;
@@ -148,7 +148,7 @@ class StructureService
             ]);
         }
 
-        $newKeycloakId = $user->keycloak_id;
+        $newSupabaseUuid = $user->supabase_id;
         $inviteSent = null;
         $inviteError = null;
         $restored = true;
@@ -156,24 +156,24 @@ class StructureService
 
         $result = \Illuminate\Support\Facades\DB::transaction(function () use (
             $user,
-            $newKeycloakId,
+            $newSupabaseUuid,
             $inviteSent,
             $inviteError,
             $restored,
             $created
         ) {
-            $oldKeycloakId = $user->keycloak_id;
+            $oldSupabaseUuid = $user->supabase_id;
             $user->fill([
-                'keycloak_id' => $newKeycloakId,
+                'supabase_id' => $newSupabaseUuid,
                 'is_removed_from_structure' => false,
                 'enabled' => true,
-                'sync_error' => null,
+
             ])->save();
 
-            if ($oldKeycloakId && $newKeycloakId && $oldKeycloakId !== $newKeycloakId) {
+            if ($oldSupabaseUuid && $newSupabaseUuid && $oldSupabaseUuid !== $newSupabaseUuid) {
                 User::query()
-                    ->where('parent_keycloak_id', $oldKeycloakId)
-                    ->update(['parent_keycloak_id' => $newKeycloakId]);
+                    ->where('parent_supabase_id', $oldSupabaseUuid)
+                    ->update(['parent_supabase_id' => $newSupabaseUuid]);
             }
 
             return [
@@ -185,37 +185,37 @@ class StructureService
             ];
         });
 
-        event(new StructureUserRestored($result['user'], $context->actorKeycloakId()));
+        event(new StructureUserRestored($result['user'], $context->actorSupabaseId()));
 
         return $result;
     }
 
     public function moveUser(
-        string $userKeycloakId,
-        ?string $newParentKeycloakId,
+        string $userSupabaseId,
+        ?string $newParentSupabaseId,
         TokenContext $context,
         ?string $newTeamGroupPath = null
     ): User
     {
         $user = User::query()
-            ->where('keycloak_id', $userKeycloakId)
+            ->where('supabase_id', $userSupabaseId)
             ->firstOrFail();
 
         $newParent = null;
-        if ($newParentKeycloakId) {
+        if ($newParentSupabaseId) {
             $newParent = User::query()
-                ->where('keycloak_id', $newParentKeycloakId)
+                ->where('supabase_id', $newParentSupabaseId)
                 ->first();
             if (!$newParent) {
                 throw ValidationException::withMessages([
-                    'new_parent_keycloak_id' => ['Parent user not found.'],
+                    'new_parent_supabase_id' => ['Parent user not found.'],
                 ]);
             }
         }
 
-        if ($newParent && $newParent->keycloak_id === $user->keycloak_id) {
+        if ($newParent && $newParent->supabase_id === $user->supabase_id) {
             throw ValidationException::withMessages([
-                'new_parent_keycloak_id' => ['Cannot move user under itself.'],
+                'new_parent_supabase_id' => ['Cannot move user under itself.'],
             ]);
         }
 
@@ -236,7 +236,7 @@ class StructureService
         Gate::authorize('structure.move', [$user, $newParent, $targetTeamPath]);
 
         $previousTeamId = $user->team_id;
-        $previousParentKeycloakId = $user->parent_keycloak_id;
+        $previousParentSupabaseId = $user->parent_supabase_id;
         $teamId = $this->extractTeamId($targetTeamPath);
         $parentCode = $newParent?->hierarchical_code;
         $newCode = $this->codes->generate($targetTeamPath, $parentCode, $this->initialsFromName($user->name));
@@ -252,29 +252,29 @@ class StructureService
             $newParent,
             $newCode
         ) {
-            $this->updateSubtreeCodes($user, $targetTeamPath, $teamId, $newParent?->keycloak_id, $newCode);
+            $this->updateSubtreeCodes($user, $targetTeamPath, $teamId, $newParent?->supabase_id, $newCode);
             return $user->refresh();
         });
 
         event(new StructureUserMoved(
             $movedUser,
-            $context->actorKeycloakId(),
+            $context->actorSupabaseId(),
             $previousTeamId,
-            $previousParentKeycloakId
+            $previousParentSupabaseId
         ));
 
         return $movedUser;
     }
 
-    public function removeUser(string $userKeycloakId, TokenContext $context): User
+    public function removeUser(string $userSupabaseId, TokenContext $context): User
     {
         $user = User::query()
-            ->where('keycloak_id', $userKeycloakId)
+            ->where('supabase_id', $userSupabaseId)
             ->firstOrFail();
 
-        if ($context->actorKeycloakId() !== '' && $context->actorKeycloakId() === $user->keycloak_id) {
+        if ($context->actorSupabaseId() !== '' && $context->actorSupabaseId() === $user->supabase_id) {
             throw ValidationException::withMessages([
-                'user_keycloak_id' => ['Cannot remove yourself from structure.'],
+                'user_supabase_id' => ['Cannot remove yourself from structure.'],
             ]);
         }
 
@@ -288,7 +288,7 @@ class StructureService
 
         $removedUser = $user->refresh();
 
-        event(new StructureUserRemoved($removedUser, $context->actorKeycloakId()));
+        event(new StructureUserRemoved($removedUser, $context->actorSupabaseId()));
 
         return $removedUser;
     }
@@ -308,11 +308,11 @@ class StructureService
         $errors = [];
         foreach ($users as $user) {
             try {
-                $this->restoreUser($user->keycloak_id, $context);
+                $this->restoreUser($user->supabase_id, $context);
                 $restored++;
             } catch (\Throwable $exception) {
                 $errors[] = [
-                    'keycloak_id' => $user->keycloak_id,
+                    'supabase_id' => $user->supabase_id,
                     'email' => $user->email,
                     'message' => $exception->getMessage(),
                 ];
@@ -351,7 +351,7 @@ class StructureService
         if ($parent) {
             if (!$parent->team_group_path) {
                 throw ValidationException::withMessages([
-                    'parent_keycloak_id' => ['Parent user has no team assigned.'],
+                    'parent_supabase_id' => ['Parent user has no team assigned.'],
                 ]);
             }
 
@@ -376,14 +376,14 @@ class StructureService
     {
         $cursor = $newParent;
         while ($cursor) {
-            if ($cursor->keycloak_id === $user->keycloak_id) {
+            if ($cursor->supabase_id === $user->supabase_id) {
                 throw ValidationException::withMessages([
-                    'new_parent_keycloak_id' => ['Cannot move user under a descendant.'],
+                    'new_parent_supabase_id' => ['Cannot move user under a descendant.'],
                 ]);
             }
 
-            $cursor = $cursor->parent_keycloak_id
-                ? User::query()->where('keycloak_id', $cursor->parent_keycloak_id)->first()
+            $cursor = $cursor->parent_supabase_id
+                ? User::query()->where('supabase_id', $cursor->parent_supabase_id)->first()
                 : null;
         }
     }
@@ -398,11 +398,11 @@ class StructureService
         User $user,
         string $teamGroupPath,
         ?string $teamId,
-        ?string $newParentKeycloakId,
+        ?string $newParentSupabaseId,
         string $newCode
     ): void {
         $user->fill([
-            'parent_keycloak_id' => $newParentKeycloakId,
+            'parent_supabase_id' => $newParentSupabaseId,
             'team_group_path' => $teamGroupPath,
             'team_id' => $teamId,
             'hierarchical_code' => $newCode,
@@ -410,12 +410,12 @@ class StructureService
         ])->save();
 
         $children = User::query()
-            ->where('parent_keycloak_id', $user->keycloak_id)
+            ->where('parent_supabase_id', $user->supabase_id)
             ->get();
 
         foreach ($children as $child) {
             $childCode = $this->codes->generate($teamGroupPath, $newCode, $this->initialsFromName($child->name));
-            $this->updateSubtreeCodes($child, $teamGroupPath, $teamId, $user->keycloak_id, $childCode);
+            $this->updateSubtreeCodes($child, $teamGroupPath, $teamId, $user->supabase_id, $childCode);
         }
     }
 
@@ -453,7 +453,7 @@ class StructureService
             $items[] = $current;
 
             $children = User::query()
-                ->where('parent_keycloak_id', $current->keycloak_id)
+                ->where('parent_supabase_id', $current->supabase_id)
                 ->get();
 
             foreach ($children as $child) {

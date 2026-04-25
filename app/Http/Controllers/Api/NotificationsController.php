@@ -32,7 +32,7 @@ class NotificationsController extends Controller
     {
         $data = $request->validate([
             'recipients' => 'required|array',
-            'recipients.*' => 'exists:users,keycloak_id',
+            'recipients.*' => 'exists:users,supabase_id',
             'type' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'body' => 'required|string',
@@ -41,10 +41,7 @@ class NotificationsController extends Controller
 
         $senderId = $request->user()?->id;
 
-        // Resolve database IDs from Keycloak IDs
-        // We use pluck('id', 'keycloak_id') to map input to DB IDs if needed,
-        // but here we just need the list of valid DB IDs.
-        $resolvedUserIds = \App\Models\User::whereIn('keycloak_id', $data['recipients'])->pluck('id');
+        $resolvedUserIds = \App\Models\User::whereIn('supabase_id', $data['recipients'])->pluck('id');
 
         $notifications = [];
         $now = now();
@@ -78,8 +75,8 @@ class NotificationsController extends Controller
     {
         $user = $request->user();
         if (!$user) {
-            if ($keycloakId = $request->string('user_keycloak_id')->toString()) {
-                $user = \App\Models\User::query()->where('keycloak_id', $keycloakId)->first();
+            if ($supabaseId = $request->string('user_supabase_id')->toString()) {
+                $user = \App\Models\User::query()->where('supabase_id', $supabaseId)->first();
             }
         }
 
@@ -94,12 +91,12 @@ class NotificationsController extends Controller
 
     public function index(Request $request)
     {
-        $q = Notification::query()->with('user:id,keycloak_id,name,email', 'sender:id,keycloak_id,name,email');
+        $q = Notification::query()->with('user:id,supabase_id,name,email', 'sender:id,supabase_id,name,email');
 
         if ($userId = $request->integer('user_id')) {
             $q->where('user_id', $userId);
-        } elseif ($keycloakId = $request->string('user_keycloak_id')->toString()) {
-            $user = \App\Models\User::query()->where('keycloak_id', $keycloakId)->first();
+        } elseif ($supabaseId = $request->string('user_supabase_id')->toString()) {
+            $user = \App\Models\User::query()->where('supabase_id', $supabaseId)->first();
             if ($user) $q->where('user_id', $user->id);
         } else {
              // By default, show notifications for the current user if no param is passed
@@ -132,15 +129,15 @@ class NotificationsController extends Controller
     {
         $data = $request->validate([
             'user_id' => 'nullable|exists:users,id',
-            'user_keycloak_id' => 'nullable|string',
+            'user_supabase_id' => 'nullable|string',
             'type' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'body' => 'required|string',
             'read_at' => 'nullable|date',
             'scheduled_at' => 'nullable|date',
         ]);
-        if (empty($data['user_id']) && !empty($data['user_keycloak_id'])) {
-            $user = \App\Models\User::query()->where('keycloak_id', $data['user_keycloak_id'])->first();
+        if (empty($data['user_id']) && !empty($data['user_supabase_id'])) {
+            $user = \App\Models\User::query()->where('supabase_id', $data['user_supabase_id'])->first();
             if ($user) {
                 $data['user_id'] = $user->id;
             }
@@ -148,7 +145,7 @@ class NotificationsController extends Controller
         if (empty($data['user_id'])) {
             return response()->json(['message' => 'User not found.'], 422);
         }
-        unset($data['user_keycloak_id']);
+        unset($data['user_supabase_id']);
 
         $data['sender_id'] = $request->user()?->id;
 

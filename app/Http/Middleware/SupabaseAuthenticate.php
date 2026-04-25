@@ -53,7 +53,7 @@ class SupabaseAuthenticate
         }
 
         $user = User::query()
-            ->when($supabaseId, fn ($q) => $q->where('keycloak_id', $supabaseId))
+            ->when($supabaseId, fn ($q) => $q->where('supabase_id', $supabaseId))
             ->when(!$supabaseId && $email, fn ($q) => $q->where('email', $email))
             ->first();
 
@@ -68,8 +68,7 @@ class SupabaseAuthenticate
 
         if (!$user) {
             $user = User::create([
-                'keycloak_id'      => $supabaseId ?: null,
-                'keycloak_username' => $email ?: null,
+                'supabase_id'      => $supabaseId ?: null,
                 'name'             => $name ?: 'Supabase User',
                 'email'            => $email ?: Str::uuid()->toString() . '@local',
                 'password'         => Str::random(32),
@@ -77,8 +76,7 @@ class SupabaseAuthenticate
             ]);
         } else {
             $user->fill([
-                'keycloak_id'      => $supabaseId ?: $user->keycloak_id,
-                'keycloak_username' => $email ?: $user->keycloak_username,
+                'supabase_id'      => $supabaseId ?: $user->supabase_id,
                 'name'             => $name ?: $user->name,
                 'active'           => true,
             ])->save();

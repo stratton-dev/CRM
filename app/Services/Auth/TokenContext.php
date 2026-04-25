@@ -16,17 +16,11 @@ class TokenContext
 
     public function payload(): array
     {
-        // Supabase middleware stores payload under 'supabase_payload'
         $payload = $this->request->attributes->get('supabase_payload');
-        if (is_array($payload)) {
-            return $payload;
-        }
-        // Fallback: legacy Keycloak attribute name
-        $legacy = $this->request->attributes->get('keycloak_payload');
-        return is_array($legacy) ? $legacy : [];
+        return is_array($payload) ? $payload : [];
     }
 
-    public function actorKeycloakId(): string
+    public function actorSupabaseId(): string
     {
         $payload = $this->payload();
         $subject = (string) ($payload['sub'] ?? '');
@@ -34,7 +28,7 @@ class TokenContext
             return $subject;
         }
 
-        $fallback = (string) ($this->request->user()?->keycloak_id ?? '');
+        $fallback = (string) ($this->request->user()?->supabase_id ?? '');
         if ($fallback !== '') {
             return $fallback;
         }

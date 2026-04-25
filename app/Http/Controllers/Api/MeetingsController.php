@@ -16,7 +16,7 @@ class MeetingsController extends Controller
 
     public function index(Request $request, TokenContext $context, StructureService $structure)
     {
-        $q = Meeting::query()->with(['client:id,name', 'user:id,name,keycloak_id']);
+        $q = Meeting::query()->with(['client:id,name', 'user:id,name,supabase_id']);
         $role = $context->primaryRole();
         $userIds = [];
         if ($role !== 'ADMIN') {
@@ -47,7 +47,7 @@ class MeetingsController extends Controller
     public function show(Meeting $meeting)
     {
         $this->authorize('view', $meeting);
-        return $meeting->load(['client:id,name', 'user:id,name,keycloak_id', 'analysis', 'calculations']);
+        return $meeting->load(['client:id,name', 'user:id,name,supabase_id', 'analysis', 'calculations']);
     }
 
     public function store(Request $request)
@@ -55,14 +55,14 @@ class MeetingsController extends Controller
         $data = $request->validate([
             'client_id' => 'required',
             'user_id' => 'nullable',
-            'user_keycloak_id' => 'nullable|string',
+            'user_supabase_id' => 'nullable|string',
             'status' => 'nullable|string',
             'offer_status' => 'nullable|string',
             'valid_until' => 'nullable|date',
             'resume_at' => 'nullable|date',
         ]);
 
-        $userId = $this->resolveUserId($data['user_id'] ?? null, $data['user_keycloak_id'] ?? null);
+        $userId = $this->resolveUserId($data['user_id'] ?? null, $data['user_supabase_id'] ?? null);
 
         if (!$userId && $request->user()) {
             $userId = $request->user()->id;
@@ -158,7 +158,7 @@ class MeetingsController extends Controller
         $data = $request->validate([
             'client_id' => 'sometimes|exists:companies,id',
             'user_id' => 'nullable',
-            'user_keycloak_id' => 'nullable|string',
+            'user_supabase_id' => 'nullable|string',
             'status' => 'nullable|in:open,completed,expired',
             'calculation_shown' => 'nullable|boolean',
             'offer_status' => 'nullable|in:preparing,generated,sent',
@@ -167,15 +167,15 @@ class MeetingsController extends Controller
             'resume_at' => 'nullable|date',
         ]);
         $this->authorize('update', $meeting);
-        if (array_key_exists('user_id', $data) || array_key_exists('user_keycloak_id', $data)) {
-            $resolved = $this->resolveUserId($data['user_id'] ?? null, $data['user_keycloak_id'] ?? null);
-            unset($data['user_keycloak_id']);
+        if (array_key_exists('user_id', $data) || array_key_exists('user_supabase_id', $data)) {
+            $resolved = $this->resolveUserId($data['user_id'] ?? null, $data['user_supabase_id'] ?? null);
+            unset($data['user_supabase_id']);
             if (!$resolved) {
                 return response()->json(['message' => 'User not found.'], 422);
             }
             $data['user_id'] = $resolved;
         } else {
-            unset($data['user_keycloak_id']);
+            unset($data['user_supabase_id']);
         }
         $meeting->update($data);
         return $meeting->refresh();
@@ -187,10 +187,10 @@ class MeetingsController extends Controller
         return response()->noContent();
     }
 
-    private function resolveUserId($userId, $userKeycloakId): ?int
+    private function resolveUserId($userId, $userSupabaseId): ?int
     {
-        if ($userKeycloakId) {
-            $user = User::query()->where('keycloak_id', $userKeycloakId)->first();
+        if ($userSupabaseId) {
+            $user = User::query()->where('supabase_id', $userSupabaseId)->first();
             if ($user) {
                 return $user->id;
             }
@@ -204,7 +204,7 @@ class MeetingsController extends Controller
             return (int) $userId;
         }
 
-        $user = User::query()->where('keycloak_id', (string) $userId)->first();
+        $user = User::query()->where('supabase_id', (string) $userId)->first();
         return $user?->id;
     }
 }

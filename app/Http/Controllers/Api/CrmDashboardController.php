@@ -216,9 +216,9 @@ class CrmDashboardController extends Controller
         if (!$value) return null;
         $query = User::query();
         if (is_numeric($value)) {
-            $query->where('id', (int) $value)->orWhere('keycloak_id', (string) $value);
+            $query->where('id', (int) $value)->orWhere('supabase_id', (string) $value);
         } else {
-            $query->where('keycloak_id', (string) $value);
+            $query->where('supabase_id', (string) $value);
         }
         return $query->first()?->id;
     }

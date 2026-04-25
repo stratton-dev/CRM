@@ -48,9 +48,8 @@ class StrukturaHandlowaSeeder extends Seeder
                 $user->password = $password;
             }
 
-            // Generate Keycloak ID if missing (Critical for frontend structure)
-            if (empty($user->keycloak_id)) {
-                $user->keycloak_id = 'dev-user-' . (string) Str::uuid();
+            if (empty($user->supabase_id)) {
+                $user->supabase_id = 'dev-user-' . (string) Str::uuid();
             }
 
             $user->name = $data['name'];
@@ -91,16 +90,16 @@ class StrukturaHandlowaSeeder extends Seeder
             if ($user) {
                 if ($parent && $parent->id !== $user->id) {
                     $user->parent_id = $parent->id;
-                    $user->parent_keycloak_id = $parent->keycloak_id;
+                    $user->parent_supabase_id = $parent->supabase_id;
                 } else {
                     // Start of tree or detached
                     // Attach to System Admin if not self-referencing to keep tree unified
                     if ($adminUser && $user->id !== $adminUser->id) {
                          $user->parent_id = $adminUser->id;
-                         $user->parent_keycloak_id = $adminUser->keycloak_id;
+                         $user->parent_supabase_id = $adminUser->supabase_id;
                     } else {
                          $user->parent_id = null;
-                         $user->parent_keycloak_id = null;
+                         $user->parent_supabase_id = null;
                     }
                 }
                 $user->save();

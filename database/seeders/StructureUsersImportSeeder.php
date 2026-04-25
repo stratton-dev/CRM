@@ -60,9 +60,9 @@ class StructureUsersImportSeeder extends Seeder
             'first_name', 'last_name', 'name',
             'email', 'phone',
             'team_group_path', 'team', 'team_code',
-            'keycloak_id',
+            'keycloak_id', 'supabase_id',
             'parent_id',
-            'parent_keycloak_id', 'parentkeycloakid',
+            'parent_keycloak_id', 'parentkeycloakid', 'parent_supabase_id',
             'parent_email', 'parentemail',
             'crm_number',
             'active', 'enabled', 'pending_setup',
@@ -185,19 +185,19 @@ class StructureUsersImportSeeder extends Seeder
                 ?? $rowData['aders_e_mail']
                 ?? '')) ?: null;
             $phone = trim((string) ($rowData['phone'] ?? $rowData['nr_telefonu'] ?? $rowData['nr_tel_do_bramki_sms'] ?? '')) ?: null;
-            $keycloakId = trim((string) ($rowData['keycloak_id'] ?? '')) ?: null;
-            $parentKeycloakId = trim((string) ($rowData['parent_keycloak_id'] ?? $rowData['parentkeycloakid'] ?? '')) ?: null;
+            $supabaseId = trim((string) ($rowData['supabase_id'] ?? $rowData['keycloak_id'] ?? '')) ?: null;
+            $parentSupabaseId = trim((string) ($rowData['parent_supabase_id'] ?? $rowData['parent_keycloak_id'] ?? $rowData['parentkeycloakid'] ?? '')) ?: null;
             $parentEmail = trim((string) ($rowData['parent_email'] ?? $rowData['parentemail'] ?? '')) ?: null;
-            if (!$parentKeycloakId && !empty($rowData['parent_id'])) {
+            if (!$parentSupabaseId && !empty($rowData['parent_id'])) {
                 $parentRow = $rawById[(string) $rowData['parent_id']] ?? null;
-                if (is_array($parentRow) && !empty($parentRow['keycloak_id'])) {
-                    $parentKeycloakId = trim((string) $parentRow['keycloak_id']);
+                if (is_array($parentRow) && !empty($parentRow['supabase_id'] ?? $parentRow['keycloak_id'] ?? '')) {
+                    $parentSupabaseId = trim((string) ($parentRow['supabase_id'] ?? $parentRow['keycloak_id']));
                 }
             }
-            if (!$parentKeycloakId && $parentEmail !== '') {
+            if (!$parentSupabaseId && $parentEmail !== '') {
                 $parentRow = $rawByEmail[strtolower($parentEmail)] ?? null;
-                if (is_array($parentRow) && !empty($parentRow['keycloak_id'])) {
-                    $parentKeycloakId = trim((string) $parentRow['keycloak_id']);
+                if (is_array($parentRow) && !empty($parentRow['supabase_id'] ?? $parentRow['keycloak_id'] ?? '')) {
+                    $parentSupabaseId = trim((string) ($parentRow['supabase_id'] ?? $parentRow['keycloak_id']));
                 }
             }
             $crmNumber = trim((string) ($rowData['crm_number'] ?? '')) ?: null;
@@ -252,8 +252,8 @@ class StructureUsersImportSeeder extends Seeder
                 'phone' => $phone,
                 'role_cached' => $roleCached,
                 'team_group_path' => $teamGroupPath,
-                'keycloak_id' => $keycloakId,
-                'parent_keycloak_id' => $parentKeycloakId,
+                'supabase_id' => $supabaseId,
+                'parent_supabase_id' => $parentSupabaseId,
                 'parent_email' => $parentEmail,
                 'crm_number' => $crmNumber,
                 'active' => $active,
@@ -262,7 +262,7 @@ class StructureUsersImportSeeder extends Seeder
                 'is_removed_from_structure' => $isRemoved,
                 'is_blocked' => $isBlocked,
                 'contract_status' => $contractStatus,
-                'local_keycloak_id' => $isFullExport && $sourceId ? 'local-'.$sourceId : null,
+                'local_supabase_id' => $isFullExport && $sourceId ? 'local-'.$sourceId : null,
             ];
         }
 
@@ -308,7 +308,7 @@ class StructureUsersImportSeeder extends Seeder
 
         DB::transaction(function () use ($items, $orgId, $roleByCode, $codes, $isFullExport) {
             $byCode = [];
-            $byKeycloakId = [];
+            $bySupabaseId = [];
             $bySourceId = [];
 
             $remaining = array_values($items);
@@ -337,12 +337,12 @@ class StructureUsersImportSeeder extends Seeder
                             }
                         }
                     } else {
-                        if (!empty($item['parent_keycloak_id'])) {
-                            $parent = $byKeycloakId[$item['parent_keycloak_id']] ?? null;
+                        if (!empty($item['parent_supabase_id'])) {
+                            $parent = $bySupabaseId[$item['parent_supabase_id']] ?? null;
                             if (!$parent) {
-                                $parent = User::query()->where('keycloak_id', $item['parent_keycloak_id'])->first();
+                                $parent = User::query()->where('supabase_id', $item['parent_supabase_id'])->first();
                                 if ($parent) {
-                                    $byKeycloakId[$item['parent_keycloak_id']] = $parent;
+                                    $bySupabaseId[$item['parent_supabase_id']] = $parent;
                                 }
                             }
                             if (!$parent) {
@@ -365,7 +365,7 @@ class StructureUsersImportSeeder extends Seeder
                         }
                     }
 
-                    $keycloakId = $item['local_keycloak_id'] ?: $item['keycloak_id'] ?: Str::uuid()->toString();
+                    $supabaseId = $item['local_supabase_id'] ?: $item['supabase_id'] ?: Str::uuid()->toString();
                     $roleCode = strtolower($item['role_cached']);
                     $roleId = $roleByCode->get($roleCode)->id ?? null;
                     if ($roleId === null) {
@@ -379,11 +379,11 @@ class StructureUsersImportSeeder extends Seeder
                     }
 
                     $existing = null;
-                    if (!empty($item['local_keycloak_id'])) {
-                        $existing = User::query()->where('keycloak_id', $item['local_keycloak_id'])->first();
+                    if (!empty($item['local_supabase_id'])) {
+                        $existing = User::query()->where('supabase_id', $item['local_supabase_id'])->first();
                     }
-                    if (!$existing && !empty($item['keycloak_id'])) {
-                        $existing = User::query()->where('keycloak_id', $item['keycloak_id'])->first();
+                    if (!$existing && !empty($item['supabase_id'])) {
+                        $existing = User::query()->where('supabase_id', $item['supabase_id'])->first();
                     }
                     if (!$existing && $email) {
                         $existing = User::query()->where('email', $email)->first();
@@ -402,14 +402,13 @@ class StructureUsersImportSeeder extends Seeder
                         'organization_id' => $orgId ?: null,
                         'role_id' => $roleId,
                         'parent_id' => $parent?->id,
-                        'parent_keycloak_id' => $parent?->keycloak_id ?? null,
+                        'parent_supabase_id' => $parent?->supabase_id ?? null,
                         'hierarchical_code' => $hierarchicalCode,
                         'hierarchical_id' => $hierarchicalCode,
                         'crm_number' => $item['crm_number'],
                         'role_cached' => $item['role_cached'],
                         'team_group_path' => $item['team_group_path'],
-                        'keycloak_id' => $keycloakId,
-                        'keycloak_username' => null,
+                        'supabase_id' => $supabaseId,
                         'name' => $item['name'],
                         'email' => $item['email'] ?: ($existing?->email ?? $email),
                         'phone' => $item['phone'],
@@ -419,8 +418,6 @@ class StructureUsersImportSeeder extends Seeder
                         'is_removed_from_structure' => $item['is_removed_from_structure'] ?? false,
                         'is_blocked' => $item['is_blocked'] ?? false,
                         'contract_status' => $item['contract_status'],
-                        'last_synced_at' => null,
-                        'sync_error' => null,
                     ];
 
                     if ($existing) {
@@ -434,8 +431,8 @@ class StructureUsersImportSeeder extends Seeder
                     if (!isset($byCode[$item['code']])) {
                         $byCode[$item['code']] = $user;
                     }
-                    if ($user->keycloak_id && !isset($byKeycloakId[$user->keycloak_id])) {
-                        $byKeycloakId[$user->keycloak_id] = $user;
+                    if ($user->supabase_id && !isset($bySupabaseId[$user->supabase_id])) {
+                        $bySupabaseId[$user->supabase_id] = $user;
                     }
                     if ($isFullExport && !empty($item['source_id']) && !isset($bySourceId[$item['source_id']])) {
                         $bySourceId[$item['source_id']] = $user;

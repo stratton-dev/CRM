@@ -35,8 +35,8 @@ class StructureController extends Controller
     ): JsonResponse {
         $data = $request->validated();
         $user = $structure->moveUser(
-            $data['user_keycloak_id'],
-            $data['new_parent_keycloak_id'] ?? null,
+            $data['user_supabase_id'],
+            $data['new_parent_supabase_id'] ?? null,
             $context,
             $data['new_team_group_path'] ?? null
         );
@@ -50,10 +50,10 @@ class StructureController extends Controller
         StructureService $structure
     ): JsonResponse {
         $data = $request->validated();
-        $user = $structure->removeUser($data['user_keycloak_id'], $context);
+        $user = $structure->removeUser($data['user_supabase_id'], $context);
         Log::channel('users')->info('Structure user deactivated', [
-            'actor_keycloak_id' => $context->actorKeycloakId(),
-            'user_keycloak_id' => $user->keycloak_id,
+            'actor_supabase_id' => $context->actorSupabaseId(),
+            'user_supabase_id' => $user->supabase_id,
             'user_email' => $user->email,
         ]);
 
@@ -70,10 +70,10 @@ class StructureController extends Controller
         }
 
         $data = $request->validate([
-            'user_keycloak_id' => ['required', 'string'],
+            'user_supabase_id' => ['required', 'string'],
         ]);
 
-        $result = $structure->restoreUser($data['user_keycloak_id'], $context);
+        $result = $structure->restoreUser($data['user_supabase_id'], $context);
         $user = $result['user'];
         $response = $this->formatUser($user);
         $response['inviteSent'] = $result['invite_sent'] ?? null;
@@ -137,7 +137,7 @@ class StructureController extends Controller
 
         $output = trim((string) Artisan::output());
         Log::channel('users')->info('Structure codes regenerated', [
-            'actor_keycloak_id' => $context->actorKeycloakId(),
+            'actor_supabase_id' => $context->actorSupabaseId(),
             'exit_code' => $exitCode,
         ]);
 
@@ -151,8 +151,8 @@ class StructureController extends Controller
     private function formatUser(User $user): array
     {
         return [
-            'id' => (string) $user->keycloak_id,
-            'parentKeycloakId' => $user->parent_keycloak_id,
+            'id' => (string) $user->supabase_id,
+            'parentSupabaseId' => $user->parent_supabase_id,
             'hierarchicalCode' => $user->hierarchical_code,
             'hierarchicalId' => $user->hierarchical_code,
             'teamGroupPath' => $user->team_group_path,

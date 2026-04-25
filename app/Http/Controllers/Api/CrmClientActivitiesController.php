@@ -11,7 +11,7 @@ class CrmClientActivitiesController extends Controller
 {
     public function index(Request $request)
     {
-        $q = CrmClientActivity::query()->with(['client:id,name', 'user:id,name,keycloak_id']);
+        $q = CrmClientActivity::query()->with(['client:id,name', 'user:id,name,supabase_id']);
         if ($clientId = $request->integer('client_id')) {
             $q->where('client_id', $clientId);
         }
@@ -49,7 +49,7 @@ class CrmClientActivitiesController extends Controller
             'is_completed' => $data['is_completed'] ?? false,
         ]);
 
-        return response()->json($activity->load(['client:id,name', 'user:id,name,keycloak_id']), 201);
+        return response()->json($activity->load(['client:id,name', 'user:id,name,supabase_id']), 201);
     }
 
     public function update(Request $request, CrmClientActivity $activity)
@@ -62,7 +62,7 @@ class CrmClientActivitiesController extends Controller
         ]);
 
         $activity->update($data);
-        return $activity->refresh()->load(['client:id,name', 'user:id,name,keycloak_id']);
+        return $activity->refresh()->load(['client:id,name', 'user:id,name,supabase_id']);
     }
 
     public function destroy(CrmClientActivity $crmClientActivity)
@@ -76,9 +76,9 @@ class CrmClientActivitiesController extends Controller
         if (!$value) return null;
         $query = User::query();
         if (is_numeric($value)) {
-            $query->where('id', (int) $value)->orWhere('keycloak_id', (string) $value);
+            $query->where('id', (int) $value)->orWhere('supabase_id', (string) $value);
         } else {
-            $query->where('keycloak_id', (string) $value);
+            $query->where('supabase_id', (string) $value);
         }
         $u = $query->first();
         return $u ? $u->id : null;

@@ -9,8 +9,8 @@ class AutentiDocument extends Model
 {
     protected $fillable = [
         'user_id',
-        'user_keycloak_id',
-        'initiator_keycloak_id',
+        'user_supabase_id',
+        'initiator_supabase_id',
         'recipient_name',
         'recipient_email',
         'document_list',

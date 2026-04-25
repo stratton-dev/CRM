@@ -21,7 +21,7 @@ class User extends Authenticatable
         'organization_id',
         'role_id',
         'parent_id',
-        'parent_keycloak_id',
+        'parent_supabase_id',
         'hierarchical_id',
         'hierarchical_code',
         'crm_number',
@@ -35,8 +35,7 @@ class User extends Authenticatable
         'points',
         'renewal_commission_rate',
         'override_commission_rate',
-        'keycloak_id',
-        'keycloak_username',
+        'supabase_id',
         'team_id',
         'team_group_path',
         'role_cached',
@@ -47,8 +46,6 @@ class User extends Authenticatable
         'active',
         'enabled',
         'pending_setup',
-        'last_synced_at',
-        'sync_error',
     ];
 
     /**
@@ -74,7 +71,6 @@ class User extends Authenticatable
             'active' => 'boolean',
             'enabled' => 'boolean',
             'pending_setup' => 'boolean',
-            'last_synced_at' => 'datetime',
             'address_json' => 'array',
         'documents_json' => 'array',
         'is_removed_from_structure' => 'boolean',
@@ -127,7 +123,7 @@ class User extends Authenticatable
         }
 
         return $query->where('id', $value)
-            ->orWhere('keycloak_id', $value)
+            ->orWhere('supabase_id', $value)
             ->firstOrFail();
     }
 }

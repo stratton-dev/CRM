@@ -13,8 +13,8 @@ class AutentiDocumentsController extends Controller
     {
         $query = AutentiDocument::query()->orderByDesc('sent_at');
 
-        if ($userKeycloakId = $request->string('user_keycloak_id')->toString()) {
-            $query->where('user_keycloak_id', $userKeycloakId);
+        if ($userSupabaseId = $request->string('user_supabase_id')->toString()) {
+            $query->where('user_supabase_id', $userSupabaseId);
         }
 
         return $query->get();

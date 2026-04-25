@@ -48,7 +48,7 @@ class DocumentTemplateRenderer
         $clientAddress = is_array($clientData['address_json'] ?? null) ? $clientData['address_json'] : [];
         $tokens = [
             'user.id' => (string) $user->id,
-            'user.keycloak_id' => (string) ($user->keycloak_id ?? ''),
+            'user.supabase_id' => (string) ($user->supabase_id ?? ''),
             'user.name' => $user->name,
             'user.first_name' => $firstName,
             'user.last_name' => $lastName,

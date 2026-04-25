@@ -73,11 +73,11 @@ return [
             'replace_placeholders' => true,
         ],
 
-        'keycloak' => [
+        'supabase' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/keycloak.log'),
-            'level' => env('LOG_KEYCLOAK_LEVEL', env('LOG_LEVEL', 'debug')),
-            'days' => env('LOG_KEYCLOAK_DAYS', 14),
+            'path' => storage_path('logs/supabase.log'),
+            'level' => env('LOG_SUPABASE_LEVEL', env('LOG_LEVEL', 'debug')),
+            'days' => env('LOG_SUPABASE_DAYS', 14),
             'replace_placeholders' => true,
         ],
 

@@ -10,7 +10,7 @@ class IdempotencyKey extends Model
 
     protected $fillable = [
         'key',
-        'actor_keycloak_id',
+        'actor_supabase_id',
         'request_hash',
         'response_body',
         'status',

@@ -48,8 +48,7 @@ Nullable fields are marked with `nullable`.
 ## UserDTO
 
 - id: integer
-- keycloak_id: string, nullable
-- keycloak_username: string, nullable
+- supabase_id: string, nullable
 - organization_id: integer, nullable
 - role_id: integer, nullable
 - name: string

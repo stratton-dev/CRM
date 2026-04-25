@@ -13,9 +13,9 @@ abstract class StructureUserEvent implements BroadcastsToReverb
 
     public function __construct(
         public User $user,
-        public string $actorKeycloakId,
+        public string $actorSupabaseId,
         public ?string $previousTeamId = null,
-        public ?string $previousParentKeycloakId = null
+        public ?string $previousParentSupabaseId = null
     ) {
     }
 
@@ -32,9 +32,9 @@ abstract class StructureUserEvent implements BroadcastsToReverb
             $channels[] = 'team.'.$this->previousTeamId;
         }
 
-        $keycloakId = $this->user->keycloak_id ?: (string) $this->user->id;
-        if ($keycloakId !== '') {
-            $channels[] = 'user.'.$keycloakId;
+        $supabaseId = $this->user->supabase_id ?: (string) $this->user->id;
+        if ($supabaseId !== '') {
+            $channels[] = 'user.'.$supabaseId;
         }
 
         return $channels;
@@ -46,8 +46,8 @@ abstract class StructureUserEvent implements BroadcastsToReverb
     protected function userPayload(): array
     {
         return [
-            'id' => (string) $this->user->keycloak_id,
-            'parentKeycloakId' => $this->user->parent_keycloak_id,
+            'id' => (string) $this->user->supabase_id,
+            'parentSupabaseId' => $this->user->parent_supabase_id,
             'hierarchicalCode' => $this->user->hierarchical_code,
             'teamId' => $this->user->team_id,
             'teamGroupPath' => $this->user->team_group_path,
@@ -69,10 +69,10 @@ abstract class StructureUserEvent implements BroadcastsToReverb
     protected function basePayload(): array
     {
         return [
-            'actorKeycloakId' => $this->actorKeycloakId,
+            'actorSupabaseId' => $this->actorSupabaseId,
             'user' => $this->userPayload(),
             'previousTeamId' => $this->previousTeamId,
-            'previousParentKeycloakId' => $this->previousParentKeycloakId,
+            'previousParentSupabaseId' => $this->previousParentSupabaseId,
         ];
     }
 
