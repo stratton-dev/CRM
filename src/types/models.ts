@@ -36,7 +36,7 @@ export interface User {
   role: UserRole
   phone?: string | null
   parentId?: string | null
-  parentKeycloakId?: string | null
+  parentSupabaseId?: string | null
   hierarchicalId?: string | null
   hierarchicalCode?: string | null
   crmNumber?: string

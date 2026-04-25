@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -288,7 +288,7 @@ onMounted(() => {
 <template>
   <div class="p-6 max-w-[1920px] mx-auto space-y-8">
     <!-- Header -->
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover border border-slate-800 relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div class="text-white rounded-card p-8 shadow-card-hover border relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       
       <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full">
         <div class="flex items-center gap-6">

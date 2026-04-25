@@ -53,7 +53,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
   const teamNodesMap = new Map<string, User & { isTeamNode: true }>()
   const extraTeams = Array.isArray(teamGroups.value) ? teamGroups.value : []
   const normalizedUsers = allUsers.map((user) => {
-    if (user.role !== 'ADMIN' && !user.parentKeycloakId) {
+    if (user.role !== 'ADMIN' && !user.parentSupabaseId) {
       const teamKey = teamNodeId(user.teamGroupPath)
       if (!teamNodesMap.has(teamKey)) {
         teamNodesMap.set(teamKey, {
@@ -62,7 +62,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
           name: teamLabel(user.teamGroupPath),
           role: 'CLIENT_HR',
           type: 'PRIVATE',
-          parentKeycloakId: null,
+          parentSupabaseId: null,
           hierarchicalId: null,
           hierarchicalCode: null,
           teamGroupPath: user.teamGroupPath || null,
@@ -75,7 +75,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
           isTeamNode: true,
         })
       }
-      return { ...user, parentKeycloakId: teamKey }
+      return { ...user, parentSupabaseId: teamKey }
     }
     return user
   })
@@ -89,7 +89,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
         name: teamLabel(path),
         role: 'CLIENT_HR',
         type: 'PRIVATE',
-        parentKeycloakId: null,
+        parentSupabaseId: null,
         hierarchicalId: null,
         hierarchicalCode: null,
         teamGroupPath: path,
@@ -108,7 +108,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
   const childrenByParentId = new Map<string | null, User[]>()
 
   treeUsers.forEach((user) => {
-    const parentKey = user.parentKeycloakId ?? null
+    const parentKey = user.parentSupabaseId ?? null
     const bucket = childrenByParentId.get(parentKey) || []
     bucket.push(user)
     childrenByParentId.set(parentKey, bucket)
@@ -116,7 +116,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
 
   childrenByParentId.forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)))
 
-  const roots = treeUsers.filter((user) => user.role === 'ADMIN' || !user.parentKeycloakId)
+  const roots = treeUsers.filter((user) => user.role === 'ADMIN' || !user.parentSupabaseId)
   roots.sort((a, b) => a.name.localeCompare(b.name))
 
   const nodes: TreeNode[] = []

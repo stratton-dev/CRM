@@ -26,12 +26,10 @@ const toast = useToastStore()
 const viewPermissions = useViewPermissionsStore()
 const session = useSessionStore()
 
-const modeLabel = computed(() => auth.enabled ? 'Keycloak (PROD)' : 'DEV (auth wyłączony)')
+const modeLabel = computed(() => auth.enabled ? 'Supabase (PROD)' : 'DEV (auth wyłączony)')
 const currentUser = computed(() => auth.user || null)
 const currentRole = computed(() => session.currentUser?.role || auth.user?.roles?.find((r) => typeof r === 'string') || null)
-const kcUrl = import.meta.env.VITE_KEYCLOAK_URL || ''
-const kcRealm = import.meta.env.VITE_KEYCLOAK_REALM || ''
-const kcClientId = import.meta.env.VITE_KEYCLOAK_CLIENT_ID || ''
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const appOrigin = window.location.origin
 const activeTab = ref<'backend' | 'auth' | 'mail' | 'consents' | 'crm-permissions' | 'calculator' | 'statuses' | 'broadcasts'>('backend')
 const settingsTabs = [
@@ -707,7 +705,7 @@ const fetchTeams = async () => {
   if (!auth.enabled || !isSuperAdmin.value) return
   teamsLoading.value = true
   try {
-    const { data } = await api.get('/v1/admin/keycloak/teams')
+    const { data } = await api.get('/v1/admin/teams')
     const paths = Array.isArray(data?.paths) ? data.paths : []
     teams.value = paths
   } catch (error: any) {
@@ -1225,18 +1223,10 @@ watch(
         </span>
       </div>
 
-      <div v-if="auth.enabled" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div v-if="auth.enabled" class="grid grid-cols-1 sm:grid-cols-1 gap-3">
         <div>
-          <div class="text-sm text-gray-600">Keycloak URL</div>
-          <div class="text-sm font-mono break-all">{{ kcUrl || '—' }}</div>
-        </div>
-        <div>
-          <div class="text-sm text-gray-600">Realm</div>
-          <div class="text-sm font-mono">{{ kcRealm || '—' }}</div>
-        </div>
-        <div>
-          <div class="text-sm text-gray-600">Client ID</div>
-          <div class="text-sm font-mono">{{ kcClientId || '—' }}</div>
+          <div class="text-sm text-gray-600">Supabase URL</div>
+          <div class="text-sm font-mono break-all">{{ supabaseUrl || '—' }}</div>
         </div>
       </div>
 
@@ -1260,12 +1250,11 @@ watch(
       </div>
 
       <div class="text-xs text-gray-500 border-t pt-3">
-        Aby włączyć logowanie przez Keycloak ustaw w <code>.env</code>:
+        Aby włączyć logowanie przez Supabase ustaw w <code>.env</code>:
         <pre class="whitespace-pre-wrap mt-1">VITE_AUTH_ENABLED=true
-VITE_KEYCLOAK_URL=https://keycloak.example.com
-VITE_KEYCLOAK_REALM=your-realm
-VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
-        Upewnij się, że w kliencie Keycloak dozwolony jest redirect na Twój origin: {{ appOrigin }}
+VITE_SUPABASE_URL=https://&lt;project-ref&gt;.supabase.co
+VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
+        Origin aplikacji: {{ appOrigin }}
       </div>
       </div>
 
@@ -2207,7 +2196,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
           </div>
           <div class="bg-slate-50 border border-slate-200 rounded p-4 text-xs text-slate-600">
             <div class="font-semibold text-slate-800 mb-1">Odbiorcy</div>
-            Dodaj role lub zespoły. `ALL_TEAMS` oznacza wszystkie zespoły Keycloak.
+            Dodaj role lub zespoły. `ALL_TEAMS` oznacza wszystkie zespoły.
           </div>
         </div>
 
@@ -2246,7 +2235,7 @@ VITE_KEYCLOAK_CLIENT_ID=crm-frontend</pre>
               </div>
             </div>
             <div>
-              <label class="text-xs font-semibold text-gray-500">Zespoły (Keycloak, tag ALL_TEAMS)</label>
+              <label class="text-xs font-semibold text-gray-500">Zespoły (tag ALL_TEAMS)</label>
               <div class="mt-2 flex flex-wrap gap-2">
                 <button type="button" class="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50" @click="addBroadcastTarget({ target_type: 'TEAM', target_value: 'ALL_TEAMS' })">
                   ALL_TEAMS

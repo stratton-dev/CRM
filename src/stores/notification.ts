@@ -14,7 +14,7 @@ type ApiNotification = {
   body: string
   read_at?: string | null
   created_at?: string
-  user?: { id: number | string; keycloak_id?: string | null }
+  user?: { id: number | string; supabase_id?: string | null }
 }
 
 export const useNotificationStore = defineStore('notification', () => {
@@ -28,7 +28,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
   const mapApiNotification = (item: ApiNotification): Notification => ({
     id: String(item.id),
-    userId: String(item.user?.keycloak_id || item.user_id),
+    userId: String(item.user?.supabase_id || item.user_id),
     type: item.type as Notification['type'],
     message: item.body || item.title,
     date: item.created_at || new Date().toISOString(),
@@ -44,7 +44,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const { data: resp } = await api.get('/v1/notifications', {
       params: {
         per_page: 200,
-        user_keycloak_id: userId || undefined,
+        user_supabase_id: userId || undefined,
       },
     })
     const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
@@ -56,7 +56,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const userId = session.currentUser?.id
     try {
       const { data: resp } = await api.get('/v1/notifications/sent', {
-         params: { user_keycloak_id: userId }
+         params: { user_supabase_id: userId }
       })
       const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
       sentNotifications.value = list.map(mapApiNotification)
@@ -114,7 +114,7 @@ export const useNotificationStore = defineStore('notification', () => {
   const add = (notification: Omit<Notification, 'id' | 'date' | 'read'>) => {
     if (auth.enabled) {
       return api.post('/v1/notifications', {
-        user_keycloak_id: notification.userId,
+        user_supabase_id: notification.userId,
         type: notification.type,
         title: notification.message,
         body: notification.message,
@@ -157,7 +157,7 @@ export const useNotificationStore = defineStore('notification', () => {
     
     if (auth.enabled) {
       try {
-        await api.post('/v1/notifications/mark-all-read', { user_keycloak_id: userId })
+        await api.post('/v1/notifications/mark-all-read', { user_supabase_id: userId })
       } catch (e) {
           console.error("Failed to mark all as read", e)
       }

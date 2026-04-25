@@ -12,7 +12,7 @@ type ApiAuditLog = {
   target_id?: string | null
   details: string
   created_at?: string
-  actor?: { id: number | string; keycloak_id?: string | null }
+  actor?: { id: number | string; supabase_id?: string | null }
 }
 
 export const useAuditLogStore = defineStore('audit-log', () => {
@@ -24,7 +24,7 @@ export const useAuditLogStore = defineStore('audit-log', () => {
 
   const mapApiLog = (log: ApiAuditLog): AuditLog => ({
     id: String(log.id),
-    actorId: String(log.actor?.keycloak_id || log.actor_user_id),
+    actorId: String(log.actor?.supabase_id || log.actor_user_id),
     action: log.action,
     targetId: log.target_id || undefined,
     details: log.details,

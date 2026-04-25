@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMailboxStore } from '@/stores/mailbox'
@@ -339,7 +339,7 @@ watch(
   <div class="p-4 md:p-6 lg:p-8 max-w-[1920px] mx-auto space-y-6 h-full flex flex-col bg-[#F8FAFC]">
     
     <!-- Header: Reimagined with more depth and professional feel -->
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden shrink-0 group">
+    <div class="rounded-card shadow-card-hover border p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden shrink-0 group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       <!-- Decorative element for "enterprise" feel -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
       

@@ -16,7 +16,7 @@ export const useStructureStore = defineStore('structure', () => {
   const normalizedLocalUsers = computed<User[]>(() =>
     (Array.isArray(localUsers.value) ? localUsers.value : []).map((user) => ({
       ...user,
-      parentKeycloakId: user.parentKeycloakId ?? user.parentId,
+      parentSupabaseId: user.parentSupabaseId ?? user.parentId,
       hierarchicalId: user.hierarchicalId ?? user.hierarchicalCode,
     }))
   )
@@ -25,7 +25,7 @@ export const useStructureStore = defineStore('structure', () => {
 
   const normalizeApiUser = (user: User) => ({
     ...user,
-    parentKeycloakId: user.parentKeycloakId ?? user.parentId,
+    parentSupabaseId: user.parentSupabaseId ?? user.parentId,
     hierarchicalId: user.hierarchicalId ?? user.hierarchicalCode,
   })
 
@@ -48,9 +48,9 @@ export const useStructureStore = defineStore('structure', () => {
     }
   }
 
-  const syncKeycloak = async () => {
+  const syncUsers = async () => {
     if (!auth.enabled) return
-    const { data } = await api.post('/v1/admin/keycloak/sync')
+    const { data } = await api.post('/v1/admin/sync')
     return data as { status: string; created: number; updated: number; skipped: number; errors: number; messages: string[] }
   }
 
@@ -65,7 +65,7 @@ export const useStructureStore = defineStore('structure', () => {
   const fetchTeams = async (options?: { refresh?: boolean }) => {
     if (!auth.enabled) return
     const params = options?.refresh ? { refresh: 1 } : undefined
-    const { data } = await api.get('/v1/admin/keycloak/teams', { params })
+    const { data } = await api.get('/v1/admin/teams', { params })
     const paths = Array.isArray(data?.paths) ? data.paths : []
     teamGroups.value = Array.from(new Set(paths))
     return paths as string[]
@@ -73,7 +73,7 @@ export const useStructureStore = defineStore('structure', () => {
 
   const createTeam = async (code: string, displayName?: string) => {
     if (!auth.enabled) return
-    const { data } = await api.post('/v1/admin/keycloak/teams', {
+    const { data } = await api.post('/v1/admin/teams', {
       code,
       display_name: displayName || undefined,
     })
@@ -86,7 +86,7 @@ export const useStructureStore = defineStore('structure', () => {
 
   const deleteTeam = async (path: string) => {
     if (!auth.enabled) return
-    const { data } = await api.delete('/v1/admin/keycloak/teams', { data: { path } })
+    const { data } = await api.delete('/v1/admin/teams', { data: { path } })
     teamGroups.value = teamGroups.value.filter((item) => item !== path)
     return data as { id: string; path: string }
   }
@@ -96,7 +96,7 @@ export const useStructureStore = defineStore('structure', () => {
     const { data } = await api.post('/v1/structure/teams/restore', {
       team_group_path: teamGroupPath,
     })
-    return data as { total: number; restored: number; errors: { keycloak_id: string; email?: string | null; message: string }[] }
+    return data as { total: number; restored: number; errors: { supabase_id: string; email?: string | null; message: string }[] }
   }
 
   const deleteRemovedTeamUsersFromDb = async (teamGroupPath: string) => {
@@ -124,7 +124,7 @@ export const useStructureStore = defineStore('structure', () => {
   )
 
   const getSubtreeUserIds = (rootUserId: string): string[] => {
-    const directReports = users.value.filter((user) => user.parentKeycloakId === rootUserId && !user.isRemovedFromStructure)
+    const directReports = users.value.filter((user) => user.parentSupabaseId === rootUserId && !user.isRemovedFromStructure)
     let ids = directReports.map((user) => user.id)
     directReports.forEach((child) => {
       ids = [...ids, ...getSubtreeUserIds(child.id)]
@@ -162,14 +162,14 @@ export const useStructureStore = defineStore('structure', () => {
         email: userData.email,
         phone: userData.phone || null,
         role: userData.role,
-        parent_keycloak_id: userData.parentKeycloakId || null,
+        parent_supabase_id: userData.parentSupabaseId || null,
         team_group_path: userData.teamGroupPath || null,
         contract_status: userData.contractStatus || 'DRAFT',
         type: userData.type || null,
         address_json: userData.addressData || null,
         documents_json: userData.documents || null,
         hierarchical_preview: userData.hierarchicalId || null,
-        keycloak_id: userData.id,
+        supabase_id: userData.id,
       }
       try {
         const { data: created } = await api.post('/v1/users', payload, {
@@ -188,7 +188,7 @@ export const useStructureStore = defineStore('structure', () => {
 
     const newUser: User = {
       ...userData,
-      parentId: userData.parentKeycloakId ?? userData.parentId,
+      parentId: userData.parentSupabaseId ?? userData.parentId,
       id: Math.random().toString(36).substr(2, 9),
       contractStatus: 'DRAFT',
       rank: 'JUNIOR',
@@ -221,8 +221,8 @@ export const useStructureStore = defineStore('structure', () => {
 
     if (auth.enabled) {
       const { data: updated } = await api.post('/v1/structure/move', {
-        user_keycloak_id: userId,
-        new_parent_keycloak_id: newParentId,
+        user_supabase_id: userId,
+        new_parent_supabase_id: newParentId,
         new_team_group_path: newTeamGroupPath ?? null,
       })
       upsertApiUser(updated)
@@ -233,14 +233,14 @@ export const useStructureStore = defineStore('structure', () => {
       toast.error('W trybie lokalnym nie można przenieść użytkownika do zespołu bez przełożonego.')
       return
     }
-    const oldParent = users.value.find((user) => user.id === userToMove.parentKeycloakId)
+    const oldParent = users.value.find((user) => user.id === userToMove.parentSupabaseId)
     const initials = getInitials(userToMove.name)
     const newHierarchicalId = newParent.hierarchicalId
       ? `${newParent.hierarchicalId}/${initials}`
       : `${(newParent.addressData?.city?.substring(0, 2) || 'XX').toUpperCase()}${initials}`
 
     const updateChildrenIds = async (parentId: string, parentHierarchicalId: string) => {
-      const children = users.value.filter((user) => user.parentKeycloakId === parentId)
+      const children = users.value.filter((user) => user.parentSupabaseId === parentId)
       for (const child of children) {
         const childInitials = getInitials(child.name)
         const childNewHierarchicalId = `${parentHierarchicalId}/${childInitials}`
@@ -258,7 +258,7 @@ export const useStructureStore = defineStore('structure', () => {
   const restoreUser = async (user: User) => {
     if (!auth.enabled) return user
     const { data: restored } = await api.post('/v1/structure/restore', {
-      user_keycloak_id: user.id,
+      user_supabase_id: user.id,
     })
 
     if (restored.id && restored.id !== user.id) {
@@ -269,9 +269,6 @@ export const useStructureStore = defineStore('structure', () => {
   }
 
   const fetchGusData = async (nip: string) => {
-    if (!auth.enabled) {
-      throw new Error('GUS lookup requires API mode.')
-    }
     const { data } = await api.get('/v1/gus', {
       params: { nip },
     })
@@ -390,7 +387,7 @@ export const useStructureStore = defineStore('structure', () => {
   const removeUserFromStructure = async (userToRemove: User, initiator: User) => {
     if (auth.enabled) {
       const { data: updated } = await api.post('/v1/structure/remove', {
-        user_keycloak_id: userToRemove.id,
+        user_supabase_id: userToRemove.id,
       })
       upsertApiUser(updated)
     } else {
@@ -456,7 +453,7 @@ export const useStructureStore = defineStore('structure', () => {
     users,
     teamGroups,
     fetchStructure,
-    syncKeycloak,
+    syncUsers,
     fetchTeams,
     createTeam,
     deleteTeam,

@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <div class="view-transition pb-10 space-y-4">
     <!-- Header -->
     <div class="w-full pt-2">
-      <div class="bg-surface-dark rounded-card shadow-card-hover border border-slate-800 p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="rounded-card shadow-card-hover border p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="flex items-center gap-6 self-start md:self-center">
             <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="router.back()">
               <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
@@ -334,7 +334,7 @@ const fetchFiles = async () => {
 
     // 2. Try backend sync (background update)
     try {
-        const response = await api.get('/payroll-spreadsheets', {
+        const response = await api.get('/v1/payroll-spreadsheets', {
             params: { client_id: selectedClientId.value }
         });
         if (response.data && Array.isArray(response.data.data)) {
@@ -414,7 +414,7 @@ const uploadFile = async (file: File) => {
     formData.append('client_id', selectedClientId.value.toString());
 
     try {
-        await api.post('/payroll-spreadsheets', formData, {
+        await api.post('/v1/payroll-spreadsheets', formData, {
             headers: { 'Content-Type': 'multipart/form-data' } 
         });
         toast.success('Plik został przesłany.');
@@ -521,7 +521,7 @@ const deleteFile = async (file: any) => {
     if (!confirm('Czy na pewno chcesz usunąć ten plik?')) return;
     
     try {
-        await api.delete(`/payroll-spreadsheets/${file.id}`);
+        await api.delete(`/v1/payroll-spreadsheets/${file.id}`);
         toast.success('Plik został usunięty.');
     } catch (e) {
         // If backend delete failed (likely because file is local mock), just delete from array

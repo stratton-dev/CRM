@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSessionStore } from '@/stores/session'
@@ -444,7 +444,7 @@ watch(
 <template>
   <div class="view-transition pb-10 space-y-4">
     <div v-if="viewMode === 'hub'" class="w-full pt-2">
-      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="rounded-card shadow-card-hover border p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="flex-1">
           <h1 class="font-serif font-bold text-3xl text-white mb-2 tracking-tight">Dzień dobry, {{ firstName }}</h1>
           <div class="flex flex-col gap-1.5 max-w-md">
@@ -470,164 +470,164 @@ watch(
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 mb-10 px-4">
-        <div @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-900 border border-slate-700">
+        <div @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Dashboard" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Dashboard" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="layout-dashboard" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Dashboard</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Statystyki i raporty</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Dashboard</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Statystyki i raporty</p>
             </div>
           </div>
         </div>
         
-        <div v-if="canAddClient" @click="handleAddClientClick" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <div v-if="canAddClient" @click="handleAddClientClick" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Strefa Klienta" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Strefa Klienta" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="user-plus" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Strefa Klienta</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Rozpocznij proces</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Strefa Klienta</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Rozpocznij proces</p>
             </div>
           </div>
         </div>
         
-        <div v-else @click="handleAddClientClick" class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-900 border border-slate-700">
+        <div v-else @click="handleAddClientClick" class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20" alt="Strefa Klienta" />
-             <div class="absolute inset-0 bg-slate-900/80"></div>
+             <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-10" alt="Strefa Klienta" />
+             <div class="absolute inset-0 bg-slate-100/80"></div>
           </div>
            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
-            <div class="text-slate-500">
+            <div class="text-slate-400">
                <AppIcon name="user-plus" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-slate-400 mb-1">Strefa Klienta</h3>
-              <p class="crm-tile-desc text-xs text-slate-600 font-medium">Brak uprawnień</p>
+              <h3 class="crm-tile-title text-xl text-slate-500 mb-1">Strefa Klienta</h3>
+              <p class="crm-tile-desc text-xs text-slate-400 font-medium">Brak uprawnień</p>
             </div>
           </div>
         </div>
 
-        <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Kalkulator" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Kalkulator" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="calculator" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Kalkulator</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Nowoczesna symulacja</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Kalkulator</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Nowoczesna symulacja</p>
             </div>
           </div>
         </RouterLink>
 
         <!-- Removed duplicate Payroll Link -->
 
-        <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="book-open" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Baza Wiedzy</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Wiedza i Certyfikaty</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Baza Wiedzy</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Wiedza i Certyfikaty</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/settlements" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <RouterLink to="/app/settlements" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1580519542036-c47de6196ba5?q=80&w=2671&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Moje rozliczenia" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1580519542036-c47de6196ba5?q=80&w=2671&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Moje rozliczenia" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="wallet" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Moje rozliczenia</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Moje finanse</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Moje rozliczenia</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Moje finanse</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Klienci" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Klienci" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="file-contract" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Klienci w obsłudze</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj umowami</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Klienci w obsłudze</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Zarządzaj umowami</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink v-if="userRole !== 'SALES'" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <RouterLink v-if="userRole !== 'SALES'" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Rekrutacja" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Rekrutacja" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="users" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Rekrutacja</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj kandydatami</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Rekrutacja</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Zarządzaj kandydatami</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/mailbox" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <RouterLink to="/app/mailbox" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1596526131083-e8c633c948d2?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Poczta" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1596526131083-e8c633c948d2?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Poczta" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="mail" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Poczta</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Korespondencja</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Poczta</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Korespondencja</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/calendar" class="crm-tile h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
+        <RouterLink to="/app/calendar" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=2668&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Kalendarz" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
+             <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=2668&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Kalendarz" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
           </div>
           <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="text-stratton-gold">
                <AppIcon name="calendar" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-white mb-1">Kalendarz</h3>
-              <p class="crm-tile-desc text-xs text-slate-300 font-medium">Harmonogram</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Kalendarz</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Harmonogram</p>
             </div>
           </div>
         </RouterLink>
@@ -635,7 +635,7 @@ watch(
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div class="relative bg-white rounded-card shadow-card border border-slate-100 p-6 group transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:-translate-y-0.5">
-          <div class="absolute inset-0 bg-linear-to-br from-slate-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div class="absolute inset-0 bg-linear-to-br from-slate-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
           <div class="relative z-10">
             <div class="flex justify-between items-center mb-4">
@@ -681,7 +681,7 @@ watch(
              ></div>
           </Transition>
 
-          <div class="absolute inset-0 bg-linear-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div class="absolute inset-0 bg-linear-to-br from-amber-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
           <div class="relative z-10">
             <div class="flex justify-between items-center mb-4">
@@ -732,7 +732,7 @@ watch(
     </div>
 
     <div v-else class="space-y-8 max-w-7xl mx-auto pt-6">
-      <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-8">
+      <div class="rounded-card shadow-card-hover border p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 pb-8 border-b border-slate-800 gap-6">
           <div class="flex items-center gap-6">
             <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="viewMode = 'hub'">

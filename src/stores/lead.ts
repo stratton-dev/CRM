@@ -25,7 +25,7 @@ export const useLeadStore = defineStore('lead', () => {
   const fetchLeads = async (params: any = {}) => {
     loading.value = true
     try {
-      const response = await api.get('/leads', { params })
+      const response = await api.get('/v1/leads', { params })
       leads.value = response.data.data // Pagination structure
     } catch (error) {
       console.error('Failed to fetch leads', error)
@@ -37,7 +37,7 @@ export const useLeadStore = defineStore('lead', () => {
 
   const createLead = async (leadData: Partial<Lead>) => {
     try {
-      const response = await api.post('/leads', leadData)
+      const response = await api.post('/v1/leads', leadData)
       leads.value.unshift(response.data)
       toast.success('Lead dodany pomyślnie')
       return response.data
@@ -54,7 +54,7 @@ export const useLeadStore = defineStore('lead', () => {
 
   const updateLead = async (id: number, leadData: Partial<Lead>) => {
     try {
-      const response = await api.put(`/leads/${id}`, leadData)
+      const response = await api.put(`/v1/leads/${id}`, leadData)
       const index = leads.value.findIndex(l => l.id === id)
       if (index !== -1) {
         leads.value[index] = response.data
@@ -68,7 +68,7 @@ export const useLeadStore = defineStore('lead', () => {
 
   const convertLead = async (id: number) => {
     try {
-      const response = await api.post(`/leads/${id}/convert`)
+      const response = await api.post(`/v1/leads/${id}/convert`)
       // Remove from list or update status
       const index = leads.value.findIndex(l => l.id === id)
       if (index !== -1) {
@@ -87,7 +87,7 @@ export const useLeadStore = defineStore('lead', () => {
       // Custom logic if separate endpoint exists, typically update status + note
       // For now using update
       try {
-        const response = await api.put(`/leads/${id}`, { status: 'qualified', notes: note })
+        const response = await api.put(`/v1/leads/${id}`, { status: 'qualified', notes: note })
         const index = leads.value.findIndex(l => l.id === id)
         if (index !== -1) {
           leads.value[index] = response.data
@@ -102,7 +102,7 @@ export const useLeadStore = defineStore('lead', () => {
 
   const deleteLead = async (id: number) => {
       try {
-          await api.delete(`/leads/${id}`)
+          await api.delete(`/v1/leads/${id}`)
           leads.value = leads.value.filter(l => l.id !== id)
           toast.success('Lead usunięty')
       } catch (error) {

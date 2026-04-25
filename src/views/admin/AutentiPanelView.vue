@@ -82,7 +82,7 @@ const connectionTone = computed(() => {
 
 const templateFields = [
   { key: 'user.id', label: 'ID uzytkownika', description: 'ID rekordu uzytkownika', group: 'user' },
-  { key: 'user.keycloak_id', label: 'ID Keycloak', description: 'Identyfikator w Keycloak', group: 'user' },
+  { key: 'user.supabase_id', label: 'ID Supabase', description: 'Identyfikator w Supabase', group: 'user' },
   { key: 'user.name', label: 'Imie i nazwisko', description: 'Pelne imie i nazwisko', group: 'user' },
   { key: 'user.first_name', label: 'Imie', description: 'Pierwsze imie', group: 'user' },
   { key: 'user.last_name', label: 'Nazwisko', description: 'Nazwisko', group: 'user' },
@@ -388,7 +388,7 @@ const previewTemplate = async (template: DocumentTemplate) => {
   if (!auth.enabled) return
   try {
     const currentUserId = session.currentUser?.id || ''
-    const url = `/v1/document-templates/${template.id}/preview${currentUserId ? `?user_keycloak_id=${currentUserId}` : ''}`
+    const url = `/v1/document-templates/${template.id}/preview${currentUserId ? `?user_supabase_id=${currentUserId}` : ''}`
     const response = await api.get(url, { responseType: 'blob' })
     const blob = new Blob([response.data], { type: 'application/pdf' })
     const blobUrl = window.URL.createObjectURL(blob)
@@ -539,8 +539,8 @@ const mapAutentiDoc = (doc: any): AutentiDocument => ({
   sentDate: doc.sent_at,
   viewedDate: doc.viewed_at || undefined,
   signedDate: doc.signed_at || undefined,
-  userId: doc.user_keycloak_id || String(doc.user_id || ''),
-  initiatorId: doc.initiator_keycloak_id || '',
+  userId: doc.user_supabase_id || String(doc.user_id || ''),
+  initiatorId: doc.initiator_supabase_id || '',
   autentiProcessId: doc.autenti_process_id || undefined,
   autentiStatus: doc.autenti_status || undefined,
 })

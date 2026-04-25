@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
@@ -228,7 +228,7 @@ onMounted(() => {
 
 <template>
   <div class="w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-8">
+    <div class="rounded-card shadow-card-hover border p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-6">
         <div class="flex items-center gap-6 self-start md:self-center">
             <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">

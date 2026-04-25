@@ -15,6 +15,8 @@ const data = useDataStore()
 const { users } = storeToRefs(data)
 const session = useSessionStore()
 const loading = ref(false)
+const email = ref('')
+const password = ref('')
 const devRole = ref<'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'SALES' | 'CLIENT_HR'>(
   (localStorage.getItem('stratton_dev_role') as 'ADMIN' | 'DIRECTOR' | 'MANAGER' | 'SALES' | 'CLIENT_HR') || 'ADMIN'
 )
@@ -24,7 +26,6 @@ const redirectTarget = computed(() => {
   return typeof redirect === 'string' && redirect.startsWith('/') ? redirect : '/app/dashboard'
 })
 
-
 const goAfterLogin = async () => {
   await router.replace(redirectTarget.value)
 }
@@ -32,25 +33,27 @@ const goAfterLogin = async () => {
 const doLogin = async () => {
   loading.value = true
   try {
-    const redirectUri = `${window.location.origin}${redirectTarget.value}`
-    await auth.login(redirectUri)
     if (!auth.enabled) {
       localStorage.setItem('stratton_dev_role', devRole.value)
+      await auth.login('', '')
       const list = Array.isArray(users.value) ? users.value : []
       const match = list.find((user) => user.role === devRole.value) || list[0]
       if (match) session.setCurrentUser(match.id)
       await goAfterLogin()
+      return
     }
+
+    await auth.login(email.value, password.value)
+    await goAfterLogin()
   } catch (err: any) {
     console.error('Login error:', err)
-    alert('Błąd logowania: ' + (err.message || String(err)))
   } finally {
     loading.value = false
   }
 }
 
 onMounted(async () => {
-  if (auth.enabled && !auth.isAuthenticated && !auth.initializing) {
+  if (auth.enabled) {
     await auth.ensureInitialized()
   }
   if (auth.isAuthenticated) {
@@ -79,7 +82,8 @@ onMounted(async () => {
         {{ auth.error }}
       </div>
 
-      <div class="space-y-4">
+      <form class="space-y-4" @submit.prevent="doLogin">
+        <!-- Dev mode role selector -->
         <div v-if="!auth.enabled" class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           <label class="block text-[11px] font-bold uppercase text-amber-700 mb-2">Tryb deweloperski: wybierz rolę</label>
           <select v-model="devRole" class="w-full border border-amber-300 rounded px-3 py-2 text-sm bg-white">
@@ -89,19 +93,44 @@ onMounted(async () => {
             <option value="SALES">SALES</option>
             <option value="CLIENT_HR">CLIENT_HR</option>
           </select>
-          <p class="mt-2 text-xs text-amber-700/80">Rola zostanie ustawiona po kliknięciu „Zaloguj przez Keycloak”.</p>
         </div>
+
+        <!-- Email + password form -->
+        <template v-if="auth.enabled">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+            <input
+              v-model="email"
+              type="email"
+              autocomplete="email"
+              required
+              placeholder="twoj@email.pl"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold transition"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Hasło</label>
+            <input
+              v-model="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="••••••••"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold transition"
+            />
+          </div>
+        </template>
+
         <button
-          type="button"
+          type="submit"
           class="group relative w-full flex justify-center items-center gap-2 py-3 px-4 border border-stratton-gold/50 text-sm font-bold rounded-lg text-slate-900 bg-stratton-gold hover:bg-[#b6924f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stratton-gold transition-all shadow-md hover:shadow-lg uppercase tracking-wide"
           :disabled="auth.initializing || loading"
-          @click="doLogin"
         >
           <AppIcon v-if="auth.initializing || loading" name="refresh" class="animate-spin h-4 w-4 text-white mr-2" />
-          Zaloguj przez Keycloak
+          Zaloguj się
           <span class="absolute right-4"><AppIcon name="arrow-right" class="w-4 h-4" /></span>
         </button>
-      </div>
+      </form>
     </div>
   </div>
 </template>

@@ -37,7 +37,7 @@ type ApiMeeting = {
   paused_at?: string | null
   created_at?: string
   updated_at?: string
-  user?: { id: number | string; name?: string; keycloak_id?: string | null }
+  user?: { id: number | string; name?: string; supabase_id?: string | null }
 }
 
 export const useClientStore = defineStore('client', () => {
@@ -83,7 +83,7 @@ export const useClientStore = defineStore('client', () => {
       type: 'MEETING',
       description,
       date: resumeAt || meeting.updated_at || meeting.created_at || new Date().toISOString(),
-      authorId: meeting.user?.keycloak_id ? String(meeting.user.keycloak_id) : meeting.user_id ? String(meeting.user_id) : '',
+      authorId: meeting.user?.supabase_id ? String(meeting.user.supabase_id) : meeting.user_id ? String(meeting.user_id) : '',
       resumeAt,
     }
   }
@@ -93,7 +93,7 @@ export const useClientStore = defineStore('client', () => {
     type: activity.type,
     description: activity.description,
     date: activity.occurred_at || activity.created_at || new Date().toISOString(),
-    authorId: activity.user?.keycloak_id ? String(activity.user.keycloak_id) : String(activity.user_id || ''),
+    authorId: activity.user?.supabase_id ? String(activity.user.supabase_id) : String(activity.user_id || ''),
     isCompleted: !!activity.is_completed,
   })
 
@@ -139,7 +139,7 @@ export const useClientStore = defineStore('client', () => {
         new Date().toISOString()
 
       const profile = (client as any).crm_profile || {}
-      const profileOwnerKeycloak = profile.owner?.keycloak_id ? String(profile.owner.keycloak_id) : null
+      const profileOwnerSupabase = profile.owner?.supabase_id ? String(profile.owner.supabase_id) : null
       const ownerName = profile.owner?.name || latestMeeting?.user?.name || ''
 
       const savedOffers = apiSavedOffers.value
@@ -159,12 +159,12 @@ export const useClientStore = defineStore('client', () => {
         name: client.name || '',
         nip: client.nip || '',
         status: profile.status || mapMeetingToStatus(latestMeeting),
-        ownerId: profileOwnerKeycloak
-          ? profileOwnerKeycloak
+        ownerId: profileOwnerSupabase
+          ? profileOwnerSupabase
           : profile.owner_user_id
             ? String(profile.owner_user_id)
-          : latestMeeting?.user?.keycloak_id
-            ? String(latestMeeting.user.keycloak_id)
+          : latestMeeting?.user?.supabase_id
+            ? String(latestMeeting.user.supabase_id)
             : latestMeeting?.user_id
               ? String(latestMeeting.user_id)
               : '',
@@ -503,13 +503,13 @@ export const useClientStore = defineStore('client', () => {
       const dateToUse = customDate || new Date().toISOString()
       try {
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activity.authorId)
-        // const userIdPayload = isUuid ? { user_keycloak_id: activity.authorId } : { user_id: activity.authorId }
+        // const userIdPayload = isUuid ? { user_supabase_id: activity.authorId } : { user_id: activity.authorId }
 
         if (activity.type === 'MEETING') {
              await api.post('/v1/meetings', {
                 client_id: clientId,
                 user_id: isUuid ? undefined : activity.authorId,
-                user_keycloak_id: isUuid ? activity.authorId : undefined,
+                user_supabase_id: isUuid ? activity.authorId : undefined,
                 status: 'open',
                 offer_status: 'preparing',
                 resume_at: dateToUse,
@@ -705,7 +705,7 @@ export const useClientStore = defineStore('client', () => {
             const newArr = [...apiActivities.value]
             newArr[activityIdx] = { ...newArr[activityIdx], occurred_at: activity.date }
             apiActivities.value = newArr
-            console.log('Optimistic update applied:', apiActivities.value[activityIdx])
+
           }
 
           await api.patch(`/v1/crm-client-activities/${id}`, {

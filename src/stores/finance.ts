@@ -78,18 +78,18 @@ export const useFinanceStore = defineStore('finance', () => {
       })()
 
       const profile = (client as any).crm_profile || {}
-      const profileOwnerKeycloak = profile.owner?.keycloak_id ? String(profile.owner.keycloak_id) : null
+      const profileOwnerSupabase = profile.owner?.supabase_id ? String(profile.owner.supabase_id) : null
 
       return {
         id: String(client.id),
         name: client.name || '',
         status: profile.status || status,
-        ownerId: profileOwnerKeycloak
-          ? profileOwnerKeycloak
+        ownerId: profileOwnerSupabase
+          ? profileOwnerSupabase
           : profile.owner_user_id
             ? String(profile.owner_user_id)
-            : latestMeeting?.user?.keycloak_id
-              ? String(latestMeeting.user.keycloak_id)
+            : latestMeeting?.user?.supabase_id
+              ? String(latestMeeting.user.supabase_id)
               : latestMeeting?.user_id
                 ? String(latestMeeting.user_id)
                 : '',

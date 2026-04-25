@@ -252,10 +252,10 @@ onBeforeUnmount(() => {
 
     <aside
       v-if="shouldShowSidebar"
-      class="flex-shrink-0 flex flex-col transition-all duration-300 bg-slate-900 border-r border-slate-800"
+      class="flex-shrink-0 flex flex-col transition-all duration-300 bg-white border-r border-slate-200"
       :class="isSidebarOpen ? 'w-72' : 'w-20'"
     >
-      <div class="h-20 flex items-center justify-center border-b border-slate-800 transition-colors hover:bg-slate-800/50 cursor-pointer px-4" @click="router.push('/app/dashboard')">
+      <div class="h-20 flex items-center justify-center border-b border-slate-200 transition-colors hover:bg-slate-50 cursor-pointer px-4" @click="router.push('/app/dashboard')">
         <div v-if="isSidebarOpen" class="text-center animate-fade-in">
           <span class="text-stratton-gold font-bold text-xl uppercase tracking-wider block leading-tight">
             PRIME CRM
@@ -273,12 +273,12 @@ onBeforeUnmount(() => {
           :key="link.path"
           :to="link.path"
           class="group flex items-center px-3 py-1.5 rounded-xl transition-all duration-200"
-          :class="route.path.startsWith(link.path) ? 'bg-stratton-gold text-slate-900 shadow-md font-bold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
+          :class="route.path.startsWith(link.path) ? 'bg-stratton-gold text-slate-900 shadow-md font-bold' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'"
           :title="link.label"
         >
           <div
             class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-            :class="route.path.startsWith(link.path) ? 'bg-transparent' : 'bg-white/10 group-hover:bg-white/20'"
+            :class="route.path.startsWith(link.path) ? 'bg-transparent' : 'bg-slate-100 group-hover:bg-slate-200'"
           >
             <AppIcon :name="link.icon" class="w-5 h-5" />
           </div>
@@ -288,21 +288,21 @@ onBeforeUnmount(() => {
         </RouterLink>
       </nav>
 
-      <div class="p-4 border-t border-slate-800 bg-slate-900">
+      <div class="p-4 border-t border-slate-200 bg-white">
         <div class="flex items-center" :class="isSidebarOpen ? 'justify-between' : 'justify-center'">
           <div v-if="isSidebarOpen" class="flex items-center min-w-0 mr-2">
-            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-600">
+            <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs ring-2 ring-slate-300">
               {{ sidebarInitials }}
             </div>
             <div class="ml-3 min-w-0">
-              <p class="text-sm font-medium text-white truncate">{{ sidebarUser?.name }}</p>
+              <p class="text-sm font-medium text-slate-900 truncate">{{ sidebarUser?.name }}</p>
               <div class="flex flex-col">
-                <span class="text-[10px] text-slate-400">{{ sidebarUser?.role }}</span>
+                <span class="text-[10px] text-slate-500">{{ sidebarUser?.role }}</span>
                 <span v-if="sidebarUser?.crmNumber" class="text-[10px] text-stratton-gold font-mono">{{ sidebarUser?.crmNumber }}</span>
               </div>
             </div>
           </div>
-          <button type="button" class="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" @click="toggleSidebar">
+          <button type="button" class="p-2 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition" @click="toggleSidebar">
             <AppIcon :name="isSidebarOpen ? 'chevron-left' : 'chevron-right'" class="w-4 h-4" />
           </button>
         </div>

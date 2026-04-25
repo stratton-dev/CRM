@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -369,10 +369,16 @@ const fetchGusData = async () => {
   isFetchingGus.value = true
   try {
     const { data } = await api.get('/v1/gus', { params: { nip: form.value.nip } })
-    if (data) {
-      form.value.companyName = data.name || ''
-      form.value.address = `${data.street || ''} ${data.houseNr || ''}${data.aptNr ? '/' + data.aptNr : ''}, ${data.zipCode || ''} ${data.city || ''}`.trim()
+    console.log('[GUS] response:', JSON.stringify(data))
+    if (data && data.name) {
+      form.value = {
+        ...form.value,
+        companyName: data.name || '',
+        address: data.address || '',
+      }
       toast.success('Dane pobrane pomyślnie')
+    } else {
+      toast.warning('Nie znaleziono danych dla podanego NIP')
     }
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Nie znaleziono danych dla podanego NIP')
@@ -574,8 +580,8 @@ const toggleActivityCompletion = async (client: Client, event: Event) => {
 
         if (newCompleted && client.ownerId) {
             const owner = Array.isArray(structureUsers.value) ? structureUsers.value.find((u) => u.id === client.ownerId) : null
-            if (owner && owner.parentKeycloakId) {
-                const supervisor = Array.isArray(structureUsers.value) ? structureUsers.value.find((u) => u.id === owner.parentKeycloakId) : null
+            if (owner && owner.parentSupabaseId) {
+                const supervisor = Array.isArray(structureUsers.value) ? structureUsers.value.find((u) => u.id === owner.parentSupabaseId) : null
                 if (supervisor) {
                     notifyStore.add({
                         userId: supervisor.id,
@@ -635,7 +641,7 @@ const exportToCsv = () => {
 <template>
   <div class="p-6 max-w-[1600px] mx-auto space-y-8" :class="{ 'p-0! max-w-none! space-y-0!': embedded }">
     <!-- Header -->
-    <div v-if="!embedded" class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 text-white rounded-card p-8 shadow-card-hover border border-slate-800 flex justify-between items-center relative overflow-hidden mb-6">
+    <div v-if="!embedded" class="text-white rounded-card p-8 shadow-card-hover border flex justify-between items-center relative overflow-hidden mb-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       
       <div class="relative z-10 flex items-center gap-6">
           <button 

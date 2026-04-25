@@ -308,7 +308,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
         name: teamLabel(user.teamGroupPath),
         role: 'CLIENT_HR',
         type: 'PRIVATE',
-        parentKeycloakId: null,
+        parentSupabaseId: null,
         hierarchicalId: null,
         hierarchicalCode: null,
         teamGroupPath: user.teamGroupPath,
@@ -324,7 +324,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
   })
 
   const normalizedUsers = allUsers.map((user) => {
-    if (user.role !== 'ADMIN' && !user.parentKeycloakId) {
+    if (user.role !== 'ADMIN' && !user.parentSupabaseId) {
       const teamKey = teamNodeId(user.teamGroupPath)
       if (!teamNodesMap.has(teamKey)) {
         teamNodesMap.set(teamKey, {
@@ -333,7 +333,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
           name: teamLabel(user.teamGroupPath),
           role: 'CLIENT_HR',
           type: 'PRIVATE',
-          parentKeycloakId: null,
+          parentSupabaseId: null,
           hierarchicalId: null,
           hierarchicalCode: null,
           teamGroupPath: user.teamGroupPath || null,
@@ -346,7 +346,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
           isTeamNode: true,
         })
       }
-      return { ...user, parentKeycloakId: teamKey }
+      return { ...user, parentSupabaseId: teamKey }
     }
     return user
   })
@@ -360,7 +360,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
         name: teamLabel(path),
         role: 'CLIENT_HR',
         type: 'PRIVATE',
-        parentKeycloakId: null,
+        parentSupabaseId: null,
         hierarchicalId: null,
         hierarchicalCode: null,
         teamGroupPath: path,
@@ -379,15 +379,15 @@ const visibleNodes = computed<TreeNode[]>(() => {
   const treeIds = new Set(treeUsers.map((user) => user.id))
   const adjustedUsers = treeUsers.map((user) => {
     if (user.isTeamNode) return user
-    if (!user.parentKeycloakId) return user
-    if (treeIds.has(user.parentKeycloakId)) return user
+    if (!user.parentSupabaseId) return user
+    if (treeIds.has(user.parentSupabaseId)) return user
     const fallbackTeamId = teamNodeId(user.teamGroupPath)
-    return { ...user, parentKeycloakId: fallbackTeamId }
+    return { ...user, parentSupabaseId: fallbackTeamId }
   })
   const childrenByParentId = new Map<string | null, User[]>()
 
   adjustedUsers.forEach((user) => {
-    const parentKey = user.parentKeycloakId ?? null
+    const parentKey = user.parentSupabaseId ?? null
     const bucket = childrenByParentId.get(parentKey) || []
     bucket.push(user)
     childrenByParentId.set(parentKey, bucket)
@@ -395,7 +395,7 @@ const visibleNodes = computed<TreeNode[]>(() => {
 
   childrenByParentId.forEach((list) => list.sort((a, b) => a.name.localeCompare(b.name)))
 
-  const roots = adjustedUsers.filter((user) => user.role === 'ADMIN' || !user.parentKeycloakId)
+  const roots = adjustedUsers.filter((user) => user.role === 'ADMIN' || !user.parentSupabaseId)
   roots.sort((a, b) => a.name.localeCompare(b.name))
 
   const nodes: TreeNode[] = []
@@ -576,18 +576,18 @@ const sendMsg = () => {
   closeMsgModal()
 }
 
-const syncKeycloak = async () => {
+const syncUsers = async () => {
   if (isSyncing.value) return
   isSyncing.value = true
   isLoadingStructure.value = true
   try {
-    const report = await structure.syncKeycloak()
+    const report = await structure.syncUsers()
     await structure.fetchStructure({ sync: true })
     await structure.fetchTeams({ refresh: true })
     if (report?.status === 'locked') {
       toast.info('Synchronizacja już trwa. Spróbuj ponownie za chwilę.')
     } else {
-      toast.success('Zsynchronizowano użytkowników z Keycloak.')
+      toast.success('Zsynchronizowano użytkowników.')
     }
   } catch (error) {
     toast.error('Nie udało się zsynchronizować użytkowników.')
@@ -618,7 +618,7 @@ const createTeam = async () => {
   try {
     await structure.createTeam(code, newTeamBase.value.trim() || undefined)
     await structure.fetchTeams()
-    toast.success('Utworzono zespół w Keycloak.')
+    toast.success('Utworzono zespół.')
     showTeamModal.value = false
   } catch (error: any) {
     const status = error?.response?.status
@@ -807,7 +807,7 @@ const addUser = async () => {
         email: newUserData.email,
         role: newUserData.role,
         phone: newUserData.phone || undefined,
-        parentKeycloakId: newUserData.role === 'ADMIN' ? undefined : isTeamNode(targetParent.value) ? undefined : targetParent.value?.id,
+        parentSupabaseId: newUserData.role === 'ADMIN' ? undefined : isTeamNode(targetParent.value) ? undefined : targetParent.value?.id,
         hierarchicalId: generatedId.value || undefined,
         teamGroupPath: newUserData.role === 'ADMIN' ? undefined : teamPath,
         type: newUserData.type,
@@ -930,7 +930,7 @@ const addUser = async () => {
           type="button"
           class="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 bg-white text-primary hover:bg-slate-50 transition shadow-sm disabled:opacity-60"
           :disabled="isSyncing"
-          @click="syncKeycloak"
+          @click="syncUsers"
         >
           {{ isSyncing ? 'Synchronizuję...' : 'Synchronizuj' }}
         </button>
@@ -1466,7 +1466,7 @@ const addUser = async () => {
       <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="showTeamModal = false"></div>
       <div class="bg-surface rounded-card shadow-xl p-6 w-full max-w-sm z-10 relative border-l-4 border-emerald-500">
         <h3 class="text-lg font-bold mb-2 text-emerald-700">Dodaj nowy zespół</h3>
-        <p class="text-xs text-slate-500 mb-4">Zespół zostanie utworzony w Keycloak jako grupa w `/teams/`.</p>
+        <p class="text-xs text-slate-500 mb-4">Zostanie utworzony nowy zespół w strukturze CRM.</p>
         <div class="space-y-3">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nazwa zespołu</label>
@@ -1524,7 +1524,7 @@ const addUser = async () => {
         <h3 class="text-lg font-bold mb-2 text-rose-600">Usuń zespół</h3>
         <p class="text-sm text-slate-600 mb-4">
           Czy na pewno chcesz usunąć zespół <strong>{{ teamToDelete?.name }}</strong>?
-          <span class="text-xs text-slate-500 block">Operacja usuwa grupę z Keycloak. Zespół musi być pusty.</span>
+          <span class="text-xs text-slate-500 block">Operacja usuwa zespół. Zespół musi być pusty.</span>
         </p>
         <div class="flex justify-end space-x-2">
           <button type="button" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium" @click="showDeleteTeamModal = false">

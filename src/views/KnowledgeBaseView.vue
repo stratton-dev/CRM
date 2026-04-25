@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
@@ -182,7 +182,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card p-8 mb-4 shadow-card-hover border border-slate-800 relative overflow-hidden group">
+    <div class="rounded-card p-8 mb-4 shadow-card-hover border relative overflow-hidden group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       <!-- Decor -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
