@@ -10,7 +10,6 @@ use App\Models\CrmMailMessage;
 use App\Services\Crm\CrmMailboxService;
 use Dompdf\Dompdf;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 class CrmMailboxController extends Controller
@@ -142,13 +141,8 @@ class CrmMailboxController extends Controller
         }
 
         try {
-            $payload = [
-                'user_id' => $user->id,
-                'config' => $this->nodeConfig($config),
-                'diagnostics' => $request->boolean('diagnostics'),
-            ];
-            $response = $this->nodeRequest('/test', $payload);
-            return response()->json(['data' => $response['data'] ?? $response]);
+            $this->mailbox->testConnection($config);
+            return response()->json(['data' => ['ok' => true, 'imap_host' => $config->imap_host]]);
         } catch (RuntimeException $exception) {
             \Log::channel('mail')->warning('Mailbox test failed', [
                 'user_id' => $user->id,
@@ -156,7 +150,6 @@ class CrmMailboxController extends Controller
             ]);
             return response()->json(['message' => $exception->getMessage()], 422);
         }
-
     }
     public function send(Request $request)
     {
@@ -272,55 +265,5 @@ class CrmMailboxController extends Controller
         return response()->json(['data' => ['job_id' => $job->id, 'status' => $job->status]], 202);
     }
 
-    private function nodeConfig(CrmMailConfig $config): array
-    {
-        return [
-            'imap' => [
-                'host' => $config->imap_host,
-                'port' => $config->imap_port,
-                'secure' => (bool) $config->imap_secure,
-                'auth' => [
-                    'user' => $config->imap_username,
-                    'pass' => $config->imap_password,
-                ],
-                'folders' => [
-                    'INBOX' => $config->imap_inbox_folder,
-                    'SENT' => $config->imap_sent_folder,
-                    'TRASH' => $config->imap_trash_folder,
-                ],
-            ],
-            'smtp' => [
-                'host' => $config->smtp_host,
-                'port' => $config->smtp_port,
-                'secure' => (bool) $config->smtp_secure,
-                'auth' => [
-                    'user' => $config->smtp_username,
-                    'pass' => $config->smtp_password,
-                ],
-                'from' => [
-                    'name' => $config->from_name,
-                    'email' => $config->from_email,
-                ],
-            ],
-        ];
-    }
-
-    private function nodeRequest(string $path, array $payload): array
-    {
-        $baseUrl = rtrim((string) env('IMAP_NODE_URL', ''), '/');
-        if ($baseUrl === '') {
-            throw new RuntimeException('IMAP node URL is not configured.');
-        }
-        $token = (string) env('IMAP_SERVICE_TOKEN', '');
-        $response = Http::withHeaders([
-            'X-IMAP-SERVICE-TOKEN' => $token,
-        ])->timeout(20)->post($baseUrl.$path, $payload);
-
-        if (!$response->successful()) {
-            $message = $response->json('message') ?: $response->body();
-            throw new RuntimeException(is_string($message) && $message !== '' ? $message : 'IMAP node request failed.');
-        }
-
-        return is_array($response->json()) ? $response->json() : ['data' => $response->body()];
-    }
 }
+
