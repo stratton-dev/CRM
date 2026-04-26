@@ -114,7 +114,7 @@ class SupabaseAuthenticate
             return null;
         }
 
-        $role = Role::firstOrCreate(['code' => $selected], ['description' => $selected]);
+        $role = Role::firstOrCreate(['code' => $selected], ['name' => $selected]);
 
         if ($user->role_id !== $role->id) {
             $user->role()->associate($role)->save();
