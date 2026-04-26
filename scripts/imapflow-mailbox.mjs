@@ -347,7 +347,9 @@ const main = async () => {
     process.stdout.write(JSON.stringify({ error: 'Unknown action' }))
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    process.stdout.write(JSON.stringify({ error: message }))
+    const responseText = error?.responseText ?? error?.response ?? undefined
+    const extra = responseText ? ` | server: ${responseText}` : ''
+    process.stdout.write(JSON.stringify({ error: message + extra }))
   }
 }
 
