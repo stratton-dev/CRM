@@ -175,7 +175,7 @@ class CrmMailboxService
 
         $process = new Process(['node', '--no-warnings', $script]);
         $process->setInput(json_encode($payload, JSON_UNESCAPED_UNICODE));
-        $timeoutSeconds = (int) env('IMAP_PROCESS_TIMEOUT', 20);
+        $timeoutSeconds = (int) env('IMAP_PROCESS_TIMEOUT', 60);
         $process->setTimeout($timeoutSeconds > 0 ? $timeoutSeconds : null);
         $process->run();
 
