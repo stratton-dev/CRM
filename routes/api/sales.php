@@ -42,8 +42,10 @@ Route::apiResource('offers.verifications', OfferVerificationsController::class)
     ->only(['destroy'])->middleware('can:offer-verifications.delete')
     ->shallow()->parameters(['verifications' => 'verification']);
 
-Route::post('payroll-spreadsheets', [PayrollSpreadsheetController::class, 'store']);
-Route::apiResource('payroll-spreadsheets', PayrollSpreadsheetController::class)->except(['store']);
+Route::post('payroll-spreadsheets', [PayrollSpreadsheetController::class, 'store'])->middleware('can:payrolls.create');
+Route::apiResource('payroll-spreadsheets', PayrollSpreadsheetController::class)->only(['index', 'show'])->middleware('can:payrolls.view');
+Route::apiResource('payroll-spreadsheets', PayrollSpreadsheetController::class)->only(['update'])->middleware('can:payrolls.update');
+Route::apiResource('payroll-spreadsheets', PayrollSpreadsheetController::class)->only(['destroy'])->middleware('can:payrolls.delete');
 
 Route::apiResource('payrolls', PayrollsController::class)->only(['index', 'show'])->middleware('can:payrolls.view');
 Route::apiResource('payrolls', PayrollsController::class)->only(['store'])->middleware('can:payrolls.create');

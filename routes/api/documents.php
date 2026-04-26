@@ -26,7 +26,7 @@ Route::apiResource('autenti-documents', AutentiDocumentsController::class)->only
 Route::post('autenti-documents/{autentiDocument}/sync', [AutentiDocumentsController::class, 'sync'])->middleware('can:documents.update');
 
 Route::get('announcements', [\App\Http\Controllers\AnnouncementController::class, 'index']);
-Route::get('announcements/manage', [\App\Http\Controllers\AnnouncementController::class, 'manage']);
-Route::post('announcements', [\App\Http\Controllers\AnnouncementController::class, 'store']);
-Route::match(['put', 'patch'], 'announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'update']);
-Route::delete('announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'destroy']);
+Route::get('announcements/manage', [\App\Http\Controllers\AnnouncementController::class, 'manage'])->middleware('can:crm-dashboard-news.view');
+Route::post('announcements', [\App\Http\Controllers\AnnouncementController::class, 'store'])->middleware('can:crm-dashboard-news.create');
+Route::match(['put', 'patch'], 'announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'update'])->middleware('can:crm-dashboard-news.update');
+Route::delete('announcements/{announcement}', [\App\Http\Controllers\AnnouncementController::class, 'destroy'])->middleware('can:crm-dashboard-news.delete');

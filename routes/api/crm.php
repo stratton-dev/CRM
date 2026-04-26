@@ -25,17 +25,23 @@ use App\Http\Controllers\Api\CrmBroadcastsController;
 use App\Http\Controllers\Api\MetricsController;
 
 Route::get('crm-dashboard', CrmDashboardController::class);
-Route::apiResource('crm-dashboard-events', CrmDashboardEventsController::class)->only(['index', 'store', 'update', 'destroy']);
-Route::apiResource('crm-dashboard-news', CrmDashboardNewsController::class)->only(['index', 'store', 'update', 'destroy']);
+Route::apiResource('crm-dashboard-events', CrmDashboardEventsController::class)->only(['index'])->middleware('can:crm-dashboard-events.view');
+Route::apiResource('crm-dashboard-events', CrmDashboardEventsController::class)->only(['store'])->middleware('can:crm-dashboard-events.create');
+Route::apiResource('crm-dashboard-events', CrmDashboardEventsController::class)->only(['update'])->middleware('can:crm-dashboard-events.update');
+Route::apiResource('crm-dashboard-events', CrmDashboardEventsController::class)->only(['destroy'])->middleware('can:crm-dashboard-events.delete');
+Route::apiResource('crm-dashboard-news', CrmDashboardNewsController::class)->only(['index'])->middleware('can:crm-dashboard-news.view');
+Route::apiResource('crm-dashboard-news', CrmDashboardNewsController::class)->only(['store'])->middleware('can:crm-dashboard-news.create');
+Route::apiResource('crm-dashboard-news', CrmDashboardNewsController::class)->only(['update'])->middleware('can:crm-dashboard-news.update');
+Route::apiResource('crm-dashboard-news', CrmDashboardNewsController::class)->only(['destroy'])->middleware('can:crm-dashboard-news.delete');
 Route::apiResource('crm-dashboard-kpis', CrmDashboardKpisController::class)->only(['index', 'store', 'update', 'destroy']);
 Route::apiResource('crm-dashboard-calculations', CrmDashboardCalculationsController::class)->only(['index', 'store', 'update', 'destroy']);
 
 Route::apiResource('crm-audit-logs', CrmAuditLogsController::class)->only(['index', 'store']);
 Route::apiResource('crm-invoices', CrmInvoicesController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
-Route::get('crm-commission-config', [CrmCommissionConfigsController::class, 'show']);
-Route::put('crm-commission-config', [CrmCommissionConfigsController::class, 'update']);
-Route::get('crm-team-commission-thresholds', [CrmTeamCommissionThresholdsController::class, 'index']);
-Route::put('crm-team-commission-thresholds', [CrmTeamCommissionThresholdsController::class, 'upsert']);
+Route::get('crm-commission-config', [CrmCommissionConfigsController::class, 'show'])->middleware('can:crm-commission-config.view');
+Route::put('crm-commission-config', [CrmCommissionConfigsController::class, 'update'])->middleware('can:crm-commission-config.update');
+Route::get('crm-team-commission-thresholds', [CrmTeamCommissionThresholdsController::class, 'index'])->middleware('can:crm-team-commission-thresholds.view');
+Route::put('crm-team-commission-thresholds', [CrmTeamCommissionThresholdsController::class, 'upsert'])->middleware('can:crm-team-commission-thresholds.update');
 Route::apiResource('crm-employees', CrmEmployeesController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
 Route::apiResource('crm-client-activities', CrmClientActivitiesController::class)->only(['index', 'store', 'update', 'destroy']);
 Route::apiResource('crm-client-profiles', CrmClientProfilesController::class)->only(['index', 'show', 'store', 'update']);
@@ -46,13 +52,13 @@ Route::apiResource('crm-event-logs', CrmEventLogsController::class)->only(['inde
 Route::apiResource('crm-broadcasts', CrmBroadcastsController::class)->only(['index', 'store', 'update', 'destroy']);
 
 Route::apiResource('crm-emails', CrmEmailsController::class)->only(['index', 'store', 'update', 'destroy']);
-Route::get('crm-mail-settings', [CrmMailSettingsController::class, 'show']);
-Route::put('crm-mail-settings', [CrmMailSettingsController::class, 'update']);
-Route::get('crm-mailbox/messages', [CrmMailboxController::class, 'index']);
-Route::get('crm-mailbox/folders', [CrmMailboxController::class, 'folders']);
-Route::get('crm-mailbox/test', [CrmMailboxController::class, 'test']);
-Route::post('crm-mailbox/send', [CrmMailboxController::class, 'send']);
-Route::patch('crm-mailbox/messages/{messageId}', [CrmMailboxController::class, 'mark']);
+Route::get('crm-mail-settings', [CrmMailSettingsController::class, 'show'])->middleware('can:crm-mail-settings.view');
+Route::put('crm-mail-settings', [CrmMailSettingsController::class, 'update'])->middleware('can:crm-mail-settings.update');
+Route::get('crm-mailbox/messages', [CrmMailboxController::class, 'index'])->middleware('can:crm-mailbox.view');
+Route::get('crm-mailbox/folders', [CrmMailboxController::class, 'folders'])->middleware('can:crm-mailbox.view');
+Route::get('crm-mailbox/test', [CrmMailboxController::class, 'test'])->middleware('can:crm-mailbox.view');
+Route::post('crm-mailbox/send', [CrmMailboxController::class, 'send'])->middleware('can:crm-mailbox.send');
+Route::patch('crm-mailbox/messages/{messageId}', [CrmMailboxController::class, 'mark'])->middleware('can:crm-mailbox.update');
 Route::apiResource('crm-knowledge-files', CrmKnowledgeFilesController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
 Route::get('crm-knowledge-files/{crmKnowledgeFile}/download', [CrmKnowledgeFilesController::class, 'download']);
 

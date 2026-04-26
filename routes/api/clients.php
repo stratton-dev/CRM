@@ -52,7 +52,13 @@ Route::apiResource('employees', EmployeesController::class)->only(['store'])->mi
 Route::apiResource('employees', EmployeesController::class)->only(['update'])->middleware('can:employees.update');
 Route::apiResource('employees', EmployeesController::class)->only(['destroy'])->middleware('can:employees.delete');
 
-Route::apiResource('leads', LeadsController::class);
-Route::post('leads/{lead}/convert', [LeadsController::class, 'convert']);
+Route::apiResource('leads', LeadsController::class)->only(['index', 'show'])->middleware('can:leads.view');
+Route::apiResource('leads', LeadsController::class)->only(['store'])->middleware('can:leads.create');
+Route::apiResource('leads', LeadsController::class)->only(['update'])->middleware('can:leads.update');
+Route::apiResource('leads', LeadsController::class)->only(['destroy'])->middleware('can:leads.delete');
+Route::post('leads/{lead}/convert', [LeadsController::class, 'convert'])->middleware('can:leads.convert');
 
-Route::apiResource('candidates', CandidatesController::class);
+Route::apiResource('candidates', CandidatesController::class)->only(['index', 'show'])->middleware('can:candidates.view');
+Route::apiResource('candidates', CandidatesController::class)->only(['store'])->middleware('can:candidates.create');
+Route::apiResource('candidates', CandidatesController::class)->only(['update'])->middleware('can:candidates.update');
+Route::apiResource('candidates', CandidatesController::class)->only(['destroy'])->middleware('can:candidates.delete');

@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MeetingsController;
 use App\Http\Controllers\Api\MeetingAnalysesController;
 
-Route::apiResource('meetings', MeetingsController::class)->only(['index', 'show']);
+Route::apiResource('meetings', MeetingsController::class)->only(['index', 'show'])->middleware('can:meetings.view');
 Route::apiResource('meetings', MeetingsController::class)->only(['store'])->middleware('can:meetings.create');
 Route::apiResource('meetings', MeetingsController::class)->only(['update'])->middleware('can:update,meeting');
 Route::apiResource('meetings', MeetingsController::class)->only(['destroy'])->middleware('can:meetings.delete');
