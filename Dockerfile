@@ -1,6 +1,6 @@
 FROM php:8.4-fpm
 
-# System deps
+# System deps + Node.js 20 LTS
 RUN apt-get update && apt-get install -y \
     nginx \
     libxml2-dev \
@@ -9,7 +9,11 @@ RUN apt-get update && apt-get install -y \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
     libzip-dev \
-    zip unzip git curl supervisor gettext-base \
+    zip unzip git curl supervisor gettext-base ca-certificates gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install -y nodejs \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd soap pdo pdo_pgsql pcntl opcache zip \
     && rm -rf /var/lib/apt/lists/*
@@ -24,8 +28,11 @@ COPY . .
 # Remove autenti path dependency from lock file (local path, not available on Railway)
 RUN php -r "\$l=json_decode(file_get_contents('composer.lock'),true);\$l['packages']=array_values(array_filter(\$l['packages'],fn(\$p)=>\$p['name']!=='autenti/autenti-php-sdk'));\$l['packages-dev']=array_values(array_filter(\$l['packages-dev']??[],fn(\$p)=>\$p['name']!=='autenti/autenti-php-sdk'));file_put_contents('composer.lock',json_encode(\$l,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));"
 
-# Install dependencies
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Install Node.js dependencies for IMAP scripts
+RUN cd scripts && npm install --omit=dev
 
 # Storage permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
