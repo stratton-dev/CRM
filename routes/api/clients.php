@@ -12,7 +12,7 @@ use App\Http\Controllers\Api\CandidatesController;
 
 Route::get('clients/check-nip', [ClientsController::class, 'checkNip'])
     ->middleware('can:clients.view');
-Route::apiResource('clients', ClientsController::class)->only(['index', 'show']);
+Route::apiResource('clients', ClientsController::class)->only(['index', 'show'])->middleware('can:clients.view');
 Route::apiResource('clients', ClientsController::class)->only(['store'])->middleware('can:clients.create');
 Route::apiResource('clients', ClientsController::class)->only(['update'])->middleware('can:clients.update');
 Route::apiResource('clients', ClientsController::class)->only(['destroy'])->middleware('can:clients.delete');
