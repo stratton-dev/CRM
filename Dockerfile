@@ -45,9 +45,6 @@ RUN echo 'server { \n\
     server_name _; \n\
     root /var/www/html/public; \n\
     index index.php; \n\
-    add_header Access-Control-Allow-Origin * always; \n\
-    add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always; \n\
-    add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With" always; \n\
     location /app/ { \n\
         proxy_pass http://127.0.0.1:8088; \n\
         proxy_http_version 1.1; \n\

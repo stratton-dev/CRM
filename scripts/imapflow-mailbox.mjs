@@ -142,35 +142,20 @@ const listMessages = async ({ config, params }) => {
       const messages = []
       const fetchTimeoutMs = Number(process.env.IMAP_FETCH_TIMEOUT_MS || 20000)
       const fetchStart = Date.now()
-      const fetchIterator = client.fetch(recent, { uid: true, envelope: true, flags: true, internalDate: true, source: true })
+      const fetchIterator = client.fetch(recent, { uid: true, envelope: true, flags: true, internalDate: true })
       for await (const msg of fetchIterator) {
         checkElapsedTimeout(fetchStart, fetchTimeoutMs, 'fetch')
-        const parsed = await simpleParser(msg.source)
-        const from = parsed.from?.value?.[0]
-        const to = parsed.to?.value?.[0]
-        const fromName = from?.name || msg.envelope?.from?.[0]?.name || from?.address || ''
-        const fromEmail = from?.address || msg.envelope?.from?.[0]?.address || ''
-        const toEmail = to?.address || msg.envelope?.to?.[0]?.address || ''
-        const body = parsed.html || parsed.textAsHtml || (parsed.text ? `<pre>${escapeHtml(parsed.text)}</pre>` : '')
-        const attachments = Array.isArray(parsed.attachments)
-          ? parsed.attachments.map((attachment) => ({
-              filename: attachment.filename || '',
-              contentType: attachment.contentType || '',
-              size: Number(attachment.size || 0),
-              cid: attachment.cid || '',
-              isInline: attachment.contentDisposition === 'inline',
-            }))
-          : []
-        const date = (parsed.date || msg.internalDate || new Date()).toISOString()
+        const from = msg.envelope?.from?.[0]
+        const to = msg.envelope?.to?.[0]
         messages.push({
           id: `${params.folderKey}:${toSafeNumberOrString(msg.uid)}`,
-          fromName,
-          fromEmail,
-          toEmail,
-          subject: parsed.subject || msg.envelope?.subject || '(bez tematu)',
-          body,
-          attachments,
-          date,
+          fromName: from?.name || from?.address || '',
+          fromEmail: from?.address || '',
+          toEmail: to?.address || '',
+          subject: msg.envelope?.subject || '(bez tematu)',
+          body: '',
+          attachments: [],
+          date: (msg.internalDate || new Date()).toISOString(),
           read: (msg.flags || []).includes('\\Seen'),
           folder: params.folderKey,
         })
@@ -309,6 +294,56 @@ const sendMessage = async ({ config, params }) => {
   return { messageId: info.messageId, response: info.response }
 }
 
+const getMessageBody = async ({ config, params }) => {
+  const client = await connectImap(config)
+  try {
+    await ensureConnected(client)
+    const lock = await client.getMailboxLock(params.folderName)
+    try {
+      await client.mailboxOpen(params.folderName, { readOnly: true })
+      const uid = params.uid
+      const fetchIterator = client.fetch([uid], { uid: true, envelope: true, flags: true, internalDate: true, source: true }, { uid: true })
+      for await (const msg of fetchIterator) {
+        const parsed = await simpleParser(msg.source)
+        const from = parsed.from?.value?.[0]
+        const to = parsed.to?.value?.[0]
+        const fromName = from?.name || msg.envelope?.from?.[0]?.name || from?.address || ''
+        const fromEmail = from?.address || msg.envelope?.from?.[0]?.address || ''
+        const toEmail = to?.address || msg.envelope?.to?.[0]?.address || ''
+        const body = parsed.html || parsed.textAsHtml || (parsed.text ? `<pre>${escapeHtml(parsed.text)}</pre>` : '')
+        const attachments = Array.isArray(parsed.attachments)
+          ? parsed.attachments.map((attachment) => ({
+              filename: attachment.filename || '',
+              contentType: attachment.contentType || '',
+              size: Number(attachment.size || 0),
+              cid: attachment.cid || '',
+              isInline: attachment.contentDisposition === 'inline',
+            }))
+          : []
+        return {
+          id: `${params.folderKey}:${toSafeNumberOrString(msg.uid)}`,
+          fromName,
+          fromEmail,
+          toEmail,
+          subject: parsed.subject || msg.envelope?.subject || '(bez tematu)',
+          body,
+          attachments,
+          date: (parsed.date || msg.internalDate || new Date()).toISOString(),
+          read: (msg.flags || []).includes('\\Seen'),
+          folder: params.folderKey,
+        }
+      }
+      throw new Error('Message not found: ' + uid)
+    } finally {
+      lock.release()
+    }
+  } finally {
+    if (client.connected) {
+      await client.logout().catch(() => {})
+    }
+  }
+}
+
 const main = async () => {
   try {
     const input = await readStdin()
@@ -334,6 +369,12 @@ const main = async () => {
 
     if (payload.action === 'test') {
       const data = await testConnection(payload)
+      process.stdout.write(JSON.stringify({ data }))
+      return
+    }
+
+    if (payload.action === 'getBody') {
+      const data = await getMessageBody(payload)
       process.stdout.write(JSON.stringify({ data }))
       return
     }

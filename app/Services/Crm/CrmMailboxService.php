@@ -95,6 +95,22 @@ class CrmMailboxService
         $this->runNode($payload);
     }
 
+    public function getMessageBody(CrmMailConfig $config, string $folderKey, int|string $uid): array
+    {
+        $payload = [
+            'action' => 'getBody',
+            'config' => $this->imapConfig($config),
+            'params' => [
+                'folderKey' => $folderKey,
+                'folderName' => $this->folderName($config, $folderKey),
+                'uid' => $uid,
+            ],
+        ];
+
+        $result = $this->runNode($payload);
+        return $result['data'] ?? [];
+    }
+
     public function sendMessage(CrmMailConfig $config, array $message): array
     {
         $payload = [

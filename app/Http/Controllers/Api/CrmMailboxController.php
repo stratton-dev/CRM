@@ -265,5 +265,35 @@ class CrmMailboxController extends Controller
         return response()->json(['data' => ['job_id' => $job->id, 'status' => $job->status]], 202);
     }
 
+    public function showBody(Request $request, string $messageId)
+    {
+        $user = $request->user();
+        $config = CrmMailConfig::query()->where('user_id', $user->id)->first();
+        if (!$config) {
+            return response()->json(['message' => 'Brak konfiguracji poczty.'], 422);
+        }
+
+        if (!str_contains($messageId, ':')) {
+            return response()->json(['message' => 'Invalid message id.'], 422);
+        }
+        [$folderKey, $uid] = explode(':', $messageId, 2);
+        if (!ctype_digit($uid)) {
+            return response()->json(['message' => 'Invalid message id.'], 422);
+        }
+
+        try {
+            $data = $this->mailbox->getMessageBody($config, $folderKey, (int) $uid);
+        } catch (RuntimeException $exception) {
+            \Log::channel('mail')->warning('Mailbox getBody failed', [
+                'user_id' => $user->id,
+                'message_id' => $messageId,
+                'message' => $exception->getMessage(),
+            ]);
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        return response()->json(['data' => $data]);
+    }
+
 }
 
