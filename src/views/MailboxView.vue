@@ -90,7 +90,9 @@ const attachKbFile = async (file: any) => {
   }
 }
 
-const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM'>('INBOX')
+const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM' | 'STARRED'>('INBOX')
+const starredIds = ref<Set<string>>(new Set(JSON.parse(localStorage.getItem('mailbox_starred') || '[]')))
+const saveStarred = () => localStorage.setItem('mailbox_starred', JSON.stringify([...starredIds.value]))
 const selectedEmail = ref<Email | null>(null)
 const bodyLoading = ref(false)
 const currentPage = ref(1)
@@ -250,7 +252,12 @@ const allEmailsInCurrentFolder = computed(() => {
   const folder = currentFolder.value
   const list = Array.isArray(emails.value) ? emails.value : []
   let result: typeof list
-  if (mailMode.value === 'imap') {
+
+  if (folder === 'STARRED') {
+    result = list
+      .filter((email) => starredIds.value.has(email.id))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  } else if (mailMode.value === 'imap') {
     result = list
       .filter((email) => email.folder === folder)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -356,11 +363,11 @@ const selectContact = (email: string) => {
   showAddressBook.value = false
 }
 
-const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM') => {
+const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM' | 'STARRED') => {
   currentFolder.value = folder
   selectedEmail.value = null
   currentPage.value = 1
-  mailboxStore.fetchEmailsForFolder(folder, 1)
+  if (folder !== 'STARRED') mailboxStore.fetchEmailsForFolder(folder as any, 1)
 }
 
 const selectEmail = async (email: Email) => {
@@ -471,6 +478,29 @@ const moveToInbox = async () => {
     await mailboxStore.moveMessage(emailId, 'INBOX')
     toast.success('Wiadomość przywrócona do skrzynki odbiorczej.')
   } catch {}
+}
+
+const moveToTrash = async () => {
+  if (!selectedEmail.value) return
+  if (currentFolder.value === 'TRASH') return
+  const emailId = selectedEmail.value.id
+  selectedEmail.value = null
+  try {
+    await mailboxStore.moveMessage(emailId, 'TRASH')
+    toast.success('Wiadomość przeniesiona do kosza.')
+  } catch {}
+}
+
+const toggleStarred = () => {
+  if (!selectedEmail.value) return
+  const id = selectedEmail.value.id
+  if (starredIds.value.has(id)) {
+    starredIds.value.delete(id)
+  } else {
+    starredIds.value.add(id)
+  }
+  starredIds.value = new Set(starredIds.value)
+  saveStarred()
 }
 
 const editDraft = () => {
@@ -629,6 +659,34 @@ watch(searchQuery, () => {
                 </div>
                 <span class="font-bold text-[13px]">Spam</span>
               </a>
+
+              <a class="group flex justify-between items-center px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-300"
+                :class="currentFolder === 'STARRED' ? 'bg-[#D4AF37]/10 text-[#D4AF37] shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900'"
+                @click="selectFolder('STARRED')">
+                <div class="flex items-center gap-3.5">
+                  <div class="p-1.5 rounded-lg transition-colors" :class="currentFolder === 'STARRED' ? 'bg-[#D4AF37]/20' : 'bg-slate-100 group-hover:bg-slate-200'">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>
+                  </div>
+                  <span class="font-bold text-[13px]">Oznaczone</span>
+                </div>
+                <div v-if="starredIds.size > 0" class="flex items-center justify-center min-w-5 h-5 px-1.5 bg-amber-400 text-white text-[10px] font-black rounded-lg">
+                  {{ starredIds.size }}
+                </div>
+              </a>
+
+              <a class="group flex justify-between items-center px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-300"
+                :class="currentFolder === 'STARRED' ? 'bg-[#D4AF37]/10 text-[#D4AF37] shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900'"
+                @click="selectFolder('STARRED')">
+                <div class="flex items-center gap-3.5">
+                  <div class="p-1.5 rounded-lg transition-colors" :class="currentFolder === 'STARRED' ? 'bg-[#D4AF37]/20' : 'bg-slate-100 group-hover:bg-slate-200'">
+                    <AppIcon name="star" class="w-4.5 h-4.5" />
+                  </div>
+                  <span class="font-bold text-[13px]">Oznaczone</span>
+                </div>
+                <div v-if="starredIds.size > 0" class="flex items-center justify-center min-w-5 h-5 px-1.5 bg-amber-400 text-white text-[10px] font-black rounded-lg">
+                  {{ starredIds.size }}
+                </div>
+              </a>
             </nav>
           </div>
           
@@ -722,6 +780,10 @@ watch(searchQuery, () => {
           >
             <!-- Unread Status Dot -->
             <div v-if="!email.read" class="absolute right-3 top-4 w-1.5 h-1.5 bg-sky-500 rounded-full shadow-[0_0_6px_rgba(14,165,233,0.5)]"></div>
+            <!-- Starred indicator -->
+            <div v-if="starredIds.has(email.id)" class="absolute right-3 top-7 w-2 h-2 text-amber-400">
+              <svg fill="#FBBF24" viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+            </div>
              
             <div class="flex gap-3 items-center">
               <div class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center font-black text-[11px] transition-transform group-hover:scale-105"
@@ -831,10 +893,20 @@ watch(searchQuery, () => {
                 {{ new Date(selectedEmail.date).toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
               </span>
               <div class="flex items-center gap-0.5 shrink-0">
-                <button class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-sky-500 transition-all" title="Oznacz gwiazdką">
-                  <AppIcon name="star" class="w-4 h-4" />
+                <button
+                  class="p-1.5 rounded-lg hover:bg-amber-50 transition-all"
+                  :class="starredIds.has(selectedEmail.id) ? 'text-amber-400' : 'text-slate-400 hover:text-amber-400'"
+                  title="Oznacz gwiazdką"
+                  @click="toggleStarred"
+                >
+                  <svg class="w-4 h-4" :fill="starredIds.has(selectedEmail.id) ? '#FBBF24' : 'none'" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>
                 </button>
-                <button class="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all" title="Usuń">
+                <button
+                  v-if="currentFolder !== 'TRASH'"
+                  class="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all"
+                  title="Przenieś do kosza"
+                  @click="moveToTrash"
+                >
                   <AppIcon name="trash" class="w-4 h-4" />
                 </button>
                 <button class="ml-1 px-3 py-1.5 text-[11px] font-black bg-white border border-slate-200 rounded-lg text-slate-600 hover:border-sky-500 hover:text-sky-600 transition-all shadow-sm active:scale-95">
