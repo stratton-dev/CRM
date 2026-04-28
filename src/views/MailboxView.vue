@@ -96,6 +96,26 @@ const bodyLoading = ref(false)
 const currentPage = ref(1)
 const PAGE_SIZE = mailboxStore.PAGE_SIZE
 
+// Search & filter
+const searchQuery = ref('')
+const showFilterPanel = ref(false)
+const filterUnread = ref(false)
+const filterHasAttachment = ref(false)
+const filterDateFrom = ref('')
+const filterDateTo = ref('')
+
+const clearFilters = () => {
+  filterUnread.value = false
+  filterHasAttachment.value = false
+  filterDateFrom.value = ''
+  filterDateTo.value = ''
+  searchQuery.value = ''
+}
+
+const hasActiveFilters = computed(() =>
+  !!searchQuery.value || filterUnread.value || filterHasAttachment.value || !!filterDateFrom.value || !!filterDateTo.value
+)
+
 const formatEmailDate = (dateStr: string) => {
   const d = new Date(dateStr)
   const now = new Date()
@@ -229,18 +249,45 @@ const allEmailsInCurrentFolder = computed(() => {
   const userEmail = currentUser.value?.email
   const folder = currentFolder.value
   const list = Array.isArray(emails.value) ? emails.value : []
+  let result: typeof list
   if (mailMode.value === 'imap') {
-    return list
+    result = list
       .filter((email) => email.folder === folder)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  } else {
+    result = list
+      .filter((email) => {
+        if (folder === 'INBOX' || folder === 'TRASH') return email.toEmail === userEmail && email.folder === folder
+        if (folder === 'SENT') return email.fromEmail === userEmail && email.folder === folder
+        return false
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
-  return list
-    .filter((email) => {
-      if (folder === 'INBOX' || folder === 'TRASH') return email.toEmail === userEmail && email.folder === folder
-      if (folder === 'SENT') return email.fromEmail === userEmail && email.folder === folder
-      return false
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  // Apply search query
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    result = result.filter((e) =>
+      e.subject.toLowerCase().includes(q) ||
+      e.fromName.toLowerCase().includes(q) ||
+      e.fromEmail.toLowerCase().includes(q) ||
+      (e.body || '').toLowerCase().includes(q)
+    )
+  }
+
+  // Apply filters
+  if (filterUnread.value) result = result.filter((e) => !e.read)
+  if (filterHasAttachment.value) result = result.filter((e) => Array.isArray(e.attachments) && e.attachments.length > 0)
+  if (filterDateFrom.value) {
+    const from = new Date(filterDateFrom.value).getTime()
+    result = result.filter((e) => new Date(e.date).getTime() >= from)
+  }
+  if (filterDateTo.value) {
+    const to = new Date(filterDateTo.value + 'T23:59:59').getTime()
+    result = result.filter((e) => new Date(e.date).getTime() <= to)
+  }
+
+  return result
 })
 
 // For IMAP: total pages from server; for non-IMAP: local count
@@ -453,6 +500,11 @@ watch(
     mailboxStore.fetchEmailsForFolder(currentFolder.value, 1)
   }
 )
+
+watch(searchQuery, () => {
+  currentPage.value = 1
+  selectedEmail.value = null
+})
 </script>
 
 <template>
@@ -480,9 +532,21 @@ watch(
       
       <div class="relative z-10 w-full md:w-auto md:min-w-60 lg:w-[450px]">
          <div class="relative group/search">
-            <input type="text" placeholder="Wyszukaj w Twojej korespondencji..." 
-              class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 text-slate-800 placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-300 shadow-sm text-right font-bold" />
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Wyszukaj w Twojej korespondencji..."
+              class="w-full pl-12 pr-10 py-3 bg-white border border-slate-200 text-slate-800 placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-300 shadow-sm font-bold"
+            />
             <AppIcon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/search:text-sky-500 transition-colors pointer-events-none" />
+            <button
+              v-if="searchQuery"
+              type="button"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+              @click="searchQuery = ''"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
          </div>
       </div>
     </div>
@@ -601,16 +665,50 @@ watch(
            <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
              <div class="w-1.5 h-4 bg-stratton-gold rounded-full"></div>
              Wiadomości
+             <span v-if="hasActiveFilters" class="ml-1 px-2 py-0.5 bg-sky-100 text-sky-600 text-[10px] font-black rounded-full uppercase tracking-wide">filtr</span>
            </h2>
            <div class="flex items-center gap-2">
              <button class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors" :class="{'animate-spin': emailsLoading}" @click="mailboxStore.fetchEmailsForFolder(currentFolder, currentPage)">
                <AppIcon name="refresh" class="w-4 h-4" />
              </button>
-             <button class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors">
+             <button
+               class="p-2 rounded-xl hover:bg-slate-100 transition-colors relative"
+               :class="hasActiveFilters ? 'text-sky-500 bg-sky-50' : 'text-slate-400'"
+               @click="showFilterPanel = !showFilterPanel"
+             >
                <AppIcon name="filter" class="w-4 h-4" />
+               <span v-if="hasActiveFilters" class="absolute top-1 right-1 w-2 h-2 bg-sky-500 rounded-full"></span>
              </button>
            </div>
         </div>
+
+        <!-- Filter Panel -->
+        <transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 -translate-y-2" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
+          <div v-if="showFilterPanel" class="border-b border-slate-100 px-4 py-3 bg-slate-50/80 space-y-3">
+            <div class="flex items-center justify-between mb-1">
+              <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Filtruj wiadomości</p>
+              <button v-if="hasActiveFilters" class="text-[10px] font-black text-sky-500 hover:text-sky-700 uppercase tracking-wider" @click="clearFilters">Wyczyść</button>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <input type="checkbox" v-model="filterUnread" class="w-4 h-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400 cursor-pointer" />
+              <span class="text-[12px] font-bold text-slate-600 group-hover:text-slate-900">Tylko nieprzeczytane</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <input type="checkbox" v-model="filterHasAttachment" class="w-4 h-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400 cursor-pointer" />
+              <span class="text-[12px] font-bold text-slate-600 group-hover:text-slate-900">Z załącznikami</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <div class="flex-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Od daty</label>
+                <input type="date" v-model="filterDateFrom" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-bold text-slate-700 bg-white focus:ring-2 focus:ring-sky-400/20 focus:border-sky-400" />
+              </div>
+              <div class="flex-1">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Do daty</label>
+                <input type="date" v-model="filterDateTo" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-[12px] font-bold text-slate-700 bg-white focus:ring-2 focus:ring-sky-400/20 focus:border-sky-400" />
+              </div>
+            </div>
+          </div>
+        </transition>
 
         <div class="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-slate-50">
           <div
@@ -668,8 +766,13 @@ watch(
              <div class="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6">
                 <AppIcon name="inbox" class="w-10 h-10 text-slate-200" />
              </div>
-             <p class="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Pusto tutaj</p>
-             <p class="text-xs text-slate-300 mt-2 max-w-[180px]">Twoja skrzynka odbiorcza jest na ten moment czysta.</p>
+             <p class="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">
+               {{ hasActiveFilters ? 'Brak wyników' : 'Pusto tutaj' }}
+             </p>
+             <p class="text-xs text-slate-300 mt-2 max-w-[180px]">
+               {{ hasActiveFilters ? 'Zmień kryteria wyszukiwania lub wyczyść filtry.' : 'Twoja skrzynka odbiorcza jest na ten moment czysta.' }}
+             </p>
+             <button v-if="hasActiveFilters" class="mt-4 text-xs font-black text-sky-500 hover:text-sky-700 uppercase tracking-wider" @click="clearFilters">Wyczyść filtry</button>
           </div>
 
         </div>
