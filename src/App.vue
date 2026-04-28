@@ -392,7 +392,8 @@ onBeforeUnmount(() => {
       </div>
 
       <main 
-        class="flex-1 overflow-y-auto scroll-smooth crm-form transition-all duration-300 p-2 sm:p-4 lg:p-4"
+        class="flex-1 scroll-smooth crm-form transition-all duration-300 min-h-0"
+        :class="route.meta.fullHeight ? 'overflow-hidden p-0' : 'overflow-y-auto p-2 sm:p-4 lg:p-4'"
       >
         <RouterView v-slot="{ Component }">
           <Transition name="route" mode="out-in" appear>

@@ -120,7 +120,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
         const list: any[] = []
         for (const folder of targetFolders) {
           const response = await api.get('/v1/crm-mailbox/messages', {
-            params: { folder, limit: 50 },
+            params: { folder, limit: 100 },
           })
           const payload = response?.data?.data ?? response?.data ?? []
           if (Array.isArray(payload)) list.push(...payload)
