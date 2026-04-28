@@ -343,7 +343,7 @@ const generateQuickOffer = async () => {
 
 <template>
   <div class="animate-fade-in">
-    <div class="max-w-screen-2xl mx-auto space-y-8">
+    <div class="max-w-screen-2xl mx-auto space-y-8" style="zoom: 0.8; transform-origin: top center;">
       
       <!-- Top Header Area: Results & Controls (Full Width) -->
       <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-6">
@@ -572,29 +572,6 @@ const generateQuickOffer = async () => {
             </div>
           </div>
 
-          <div class="p-6 space-y-3">
-            <!-- Wyślij ofertę szacunkową / Drukuj PDF -->
-            <button
-              type="button"
-              class="w-full h-12 bg-slate-800 border border-stratton-gold/40 text-stratton-gold font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stratton-gold hover:text-white active:scale-95"
-              :disabled="!isCountValid || isSendingOffer"
-              @click="generateQuickOffer"
-            >
-              <AppIcon v-if="isSendingOffer" name="arrow-path" class="w-4 h-4 animate-spin" />
-              <AppIcon v-else name="envelope" class="w-4 h-4" />
-              <span class="text-[12px]">{{ hasClientContext ? 'Wyślij ofertę szacunkową' : 'Drukuj / PDF' }}</span>
-            </button>
-            <!-- Przejdź do szczegółów (Kalkulator z listy płac) -->
-            <button
-              type="button"
-              class="w-full h-14 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-extrabold uppercase tracking-widest rounded-xl shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none border border-white/20 hover:brightness-110 active:scale-95"
-              :disabled="!isCountValid"
-              @click="handleTransfer"
-            >
-              <span>Przejdź do szczegółów</span>
-              <AppIcon name="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
         </div>
 
         <!-- Right Panel: Comparisons & Tables -->
@@ -696,6 +673,29 @@ const generateQuickOffer = async () => {
               </tbody>
               </table>
             </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              class="flex-1 h-12 bg-white border border-stratton-gold/40 text-stratton-gold font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stratton-gold hover:text-white active:scale-95"
+              :disabled="!isCountValid || isSendingOffer"
+              @click="generateQuickOffer"
+            >
+              <AppIcon v-if="isSendingOffer" name="arrow-path" class="w-4 h-4 animate-spin" />
+              <AppIcon v-else name="envelope" class="w-4 h-4" />
+              <span class="text-[12px]">{{ hasClientContext ? 'Wyślij ofertę szacunkową' : 'Drukuj / PDF' }}</span>
+            </button>
+            <button
+              type="button"
+              class="flex-1 h-12 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-extrabold uppercase tracking-widest rounded-xl shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none border border-white/20 hover:brightness-110 active:scale-95"
+              :disabled="!isCountValid"
+              @click="handleTransfer"
+            >
+              <span>Przejdź do szczegółów</span>
+              <AppIcon name="arrow-right" class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       </div>

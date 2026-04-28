@@ -400,7 +400,7 @@ onBeforeUnmount(() => {
             <component :is="Component" v-if="Component" />
           </Transition>
         </RouterView>
-        <footer class="mt-12 border-t border-slate-200 py-8 text-center">
+        <footer class="mt-4 border-t border-slate-200 py-3 text-center">
           <p class="text-xs text-slate-400 font-medium">&copy; 2026 CRM - System Zarządzania Zasobami Klienta. System Version 2.8</p>
         </footer>
       </main>
