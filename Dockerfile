@@ -124,6 +124,7 @@ EXPOSE 80
 CMD export PORT="${PORT:-80}" && \
     envsubst '${PORT}' < /etc/nginx/default.template > /etc/nginx/sites-enabled/default && \
     php artisan migrate --force && \
+    if [ -n "$MAIL_SETUP_CONFIGS" ]; then php artisan mail:setup-configs --force; fi && \
     php artisan config:cache && \
     php artisan route:cache && \
     php artisan view:cache && \
