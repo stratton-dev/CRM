@@ -472,11 +472,11 @@ onBeforeUnmount(() => {
     <!-- Overlay for closing month picker -->
     <div v-if="showMonthPicker" class="fixed inset-0 z-40 bg-transparent" @click="closeMonthPicker"></div>
 
-    <!-- Header Section (Navy Blue Container) -->
-    <header class="bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 relative group isolate z-50">
-      <!-- Decor Container (clipping background effects) -->
-      <div class="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none z-0">
-         <div class="absolute top-0 right-0 w-64 h-64 bg-slate-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
+    <!-- Header Section -->
+    <header class="rounded-card p-8 mb-6 shadow-card-hover border relative overflow-hidden group flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 isolate z-50" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+      <!-- Decor Container -->
+      <div class="absolute inset-0 overflow-hidden rounded-card pointer-events-none z-0">
+         <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
       </div>
 
       <div class="relative z-10 flex items-center gap-6">

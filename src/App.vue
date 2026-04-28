@@ -234,11 +234,14 @@ watch(showCommandPalette, async (isOpen) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('keydown', handleGlobalKeyDown)
   clientStore.checkSla()
   clientStore.checkReservations()
   viewPermissions.ensureLoaded()
+  if (auth.enabled && auth.isAuthenticated) {
+    await session.resolveUserFromAuth()
+  }
 })
 
 onBeforeUnmount(() => {

@@ -219,29 +219,24 @@ onMounted(() => {
       <div 
         v-for="tile in presentationTypes" 
         :key="tile.id"
-        class="crm-tile-alt group relative overflow-hidden text-white bg-slate-900 border border-slate-700 hover:border-slate-600 transition-colors"
+        class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
         :class="[
            searchQuery ? 'opacity-50 hover:opacity-100' : ''
         ]"
         @click="activeCategory = tile.id as FileCategory"
       >
-         <div class="absolute inset-0 z-0">
-             <img :src="(tile as any).image" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" :alt="tile.title" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-slate-900/20"></div>
-         </div>
-
          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
             <div class="flex items-start justify-between w-full mb-2">
-                <div class="text-stratton-gold">
-                   <AppIcon :name="(tile as any).icon" class="w-8 h-8" />
+                <div class="[color:var(--stratton-gold)]">
+                   <AppIcon :name="(tile as any).icon" class="w-10 h-10" />
                 </div>
-                <div class="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                   <AppIcon name="arrow-right" class="w-4 h-4 text-white" />
+                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                   <AppIcon name="arrow-right" class="w-4 h-4 text-slate-600" />
                 </div>
              </div>
              <div>
-                 <h3 class="crm-tile-title text-xl text-white mb-1">{{ (tile as any).title }}</h3>
-                 <p class="crm-tile-desc text-xs text-slate-300 font-medium">{{ (tile as any).desc }}</p>
+                 <h3 class="crm-tile-title text-xl text-slate-800 mb-1">{{ (tile as any).title }}</h3>
+                 <p class="crm-tile-desc text-xs text-slate-500 font-medium">{{ (tile as any).desc }}</p>
              </div>
          </div>
       </div>

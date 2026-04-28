@@ -19,17 +19,23 @@ type UserProfile = {
   username?: string
   firstName?: string
   lastName?: string
+  role?: string
+  roles?: string[]
 }
 
 function mapSupabaseUser(u: SupabaseUser): UserProfile {
   const meta = u.user_metadata || {}
+  const appMeta = (u as any).app_metadata || {}
   const fullName: string = meta.full_name || meta.name || ''
+  const role: string | undefined = appMeta.role || meta.role || undefined
   return {
     id: u.id,
     email: u.email,
     username: u.email,
     firstName: meta.first_name || meta.firstName || fullName.split(' ')[0] || undefined,
     lastName: meta.last_name || meta.lastName || fullName.split(' ').slice(1).join(' ') || undefined,
+    role,
+    roles: role ? [role] : [],
   }
 }
 

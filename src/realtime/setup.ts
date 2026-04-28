@@ -51,7 +51,6 @@ export const setupRealtime = () => {
           disconnectEcho()
           return
         }
-        initEcho()
       },
       { immediate: true }
     )

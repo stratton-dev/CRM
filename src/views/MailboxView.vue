@@ -22,7 +22,7 @@ const structure = useStructureStore()
 const auth = useAuthStore()
 const toast = useToastStore()
 
-const { composeState, emails, mailMode } = storeToRefs(mailboxStore)
+const { composeState, emails, mailMode, mailSettingsLoaded } = storeToRefs(mailboxStore)
 const { files: knowledgeFiles } = storeToRefs(knowledgeBaseStore)
 const { clients } = storeToRefs(clientStore)
 const editor = ref<HTMLDivElement | null>(null)
@@ -92,6 +92,7 @@ const attachKbFile = async (file: any) => {
 
 const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH'>('INBOX')
 const selectedEmail = ref<Email | null>(null)
+const bodyLoading = ref(false)
 const composeData = ref<{
   to: string
   subject: string
@@ -277,10 +278,29 @@ const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH') => {
   mailboxStore.fetchEmailsForFolder(folder)
 }
 
-const selectEmail = (email: Email) => {
+const selectEmail = async (email: Email) => {
   selectedEmail.value = email
   if (!email.read && email.folder === 'INBOX') {
     mailboxStore.markAsRead(email.id)
+  }
+  if (mailMode.value === 'imap' && !email.body) {
+    bodyLoading.value = true
+    try {
+      const { data } = await api.get(`/v1/crm-mailbox/messages/${encodeURIComponent(email.id)}/body`, { timeout: 60000 })
+      const msg = data?.data
+      if (msg && selectedEmail.value?.id === email.id) {
+        selectedEmail.value = { ...selectedEmail.value, body: msg.body || '', attachments: msg.attachments || [] }
+        const storeEmail = mailboxStore.emails.find((e) => e.id === email.id)
+        if (storeEmail) {
+          storeEmail.body = msg.body || ''
+          storeEmail.attachments = msg.attachments || []
+        }
+      }
+    } catch {
+      // body stays empty — non-fatal
+    } finally {
+      bodyLoading.value = false
+    }
   }
 }
 
@@ -336,7 +356,7 @@ watch(
 </script>
 
 <template>
-  <div class="p-4 md:p-6 lg:p-8 max-w-[1920px] mx-auto space-y-6 h-full flex flex-col bg-[#F8FAFC]">
+  <div class="p-4 md:p-6 lg:p-8 max-w-[1920px] mx-auto space-y-6 h-full flex flex-col bg-surface-subtle">
     
     <!-- Header: Reimagined with more depth and professional feel -->
     <div class="rounded-card shadow-card-hover border p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden shrink-0 group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
@@ -358,7 +378,7 @@ watch(
         </div>
       </div>
       
-      <div class="relative z-10 w-full md:w-auto md:min-w-[240px] lg:w-[450px]">
+      <div class="relative z-10 w-full md:w-auto md:min-w-60 lg:w-[450px]">
          <div class="relative group/search">
             <input type="text" placeholder="Wyszukaj w Twojej korespondencji..." 
               class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 text-slate-800 placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-300 shadow-sm text-right font-bold" />
@@ -386,9 +406,9 @@ watch(
         </div>
 
         <button type="button" 
-          class="w-full group relative overflow-hidden bg-gradient-to-r from-[#D4AF37] to-[#C5A059] text-white font-black py-4 px-6 rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all duration-300 shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-3 mb-8 uppercase tracking-widest text-xs" 
+          class="w-full group relative overflow-hidden bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-black py-4 px-6 rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all duration-300 shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-3 mb-8 uppercase tracking-widest text-xs" 
           @click="openCompose">
-          <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-shimmer"></div>
+          <div class="absolute inset-0 bg-linear-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-shimmer"></div>
           <AppIcon name="pencil" class="w-4 h-4 shadow-sm" />
           <span class="tracking-tight text-sm">Nowa Wiadomość</span>
         </button>
@@ -406,7 +426,7 @@ watch(
                   </div>
                   <span class="font-bold text-[13px]">Odebrane</span>
                 </div>
-                <div v-if="unreadCount > 0" class="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-[#D4AF37] text-white text-[10px] font-black rounded-lg shadow-md shadow-[#D4AF37]/20">
+                <div v-if="unreadCount > 0" class="flex items-center justify-center min-w-5 h-5 px-1.5 bg-[#D4AF37] text-white text-[10px] font-black rounded-lg shadow-md shadow-[#D4AF37]/20">
                   {{ unreadCount }}
                 </div>
               </a>
@@ -489,14 +509,14 @@ watch(
             <div v-if="!email.read" class="absolute right-5 top-7 w-2 h-2 bg-sky-500 rounded-full shadow-[0_0_8px_rgba(14,165,233,0.5)]"></div>
              
             <div class="flex gap-4 items-start">
-              <div class="w-11 h-11 rounded-2xl flex-shrink-0 flex items-center justify-center font-black text-xs shadow-sm shadow-slate-200 transition-transform group-hover:scale-105"
+              <div class="w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center font-black text-xs shadow-sm shadow-slate-200 transition-transform group-hover:scale-105"
                 :class="selectedEmail?.id === email.id ? 'bg-white text-sky-600 border border-sky-100' : 'bg-slate-100 text-slate-500 border border-slate-200/50'">
                 {{ email.fromName.substring(0, 2).toUpperCase() }}
               </div>
               
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-baseline mb-1">
-                  <p class="text-[13px] font-black text-slate-900 group-hover:text-stratton-gold transition-colors truncate pr-12" :class="!email.read ? 'font-black' : 'font-bold font-medium opacity-80'">
+                  <p class="text-[13px] font-black text-slate-900 group-hover:text-stratton-gold transition-colors truncate pr-12" :class="!email.read ? 'font-black' : 'font-bold opacity-80'">
                     {{ email.fromName }}
                   </p>
                   <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter whitespace-nowrap">
@@ -506,7 +526,7 @@ watch(
                 <p class="text-[14px] text-slate-800 leading-tight truncate mb-1.5" :class="!email.read ? 'font-extrabold' : 'font-semibold opacity-90'">
                   {{ email.subject }}
                 </p>
-                <p class="text-[12px] text-slate-500 leading-relaxed truncate line-clamp-2 max-h-[3rem] opacity-70">
+                <p class="text-[12px] text-slate-500 leading-relaxed truncate line-clamp-2 max-h-12 opacity-70">
                   {{ email.body.replace(/<[^>]*>?/gm, '').substring(0, 120) }}...
                 </p>
               </div>
@@ -548,7 +568,7 @@ watch(
                 </div>
                 
                 <div class="flex items-center gap-5 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 backdrop-blur-sm">
-                  <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-300 border border-white shadow-sm flex items-center justify-center font-black text-slate-600 text-xl overflow-hidden shadow-inner">
+                  <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-slate-200 to-slate-300 border border-white flex items-center justify-center font-black text-slate-600 text-xl overflow-hidden shadow-inner">
                      <span class="drop-shadow-sm">{{ selectedEmail.fromName.charAt(0).toUpperCase() }}</span>
                   </div>
                   <div class="flex-1">
@@ -577,8 +597,12 @@ watch(
             
             <!-- Email Body Content -->
             <div class="flex-1 overflow-y-auto custom-scrollbar bg-white">
-              <div class="max-w-4xl mx-auto p-12 pr-12 prose prose-slate prose-lg max-w-none prose-p:leading-relaxed prose-p:text-slate-700 prose-headings:font-serif prose-headings:font-black prose-a:text-sky-600 hover:prose-a:text-sky-700 prose-img:rounded-3xl prose-img:shadow-2xl">
-                <div v-html="selectedEmail.body"></div>
+              <div class="mx-auto p-12 pr-12 prose prose-slate prose-lg max-w-none prose-p:leading-relaxed prose-p:text-slate-700 prose-headings:font-serif prose-headings:font-black prose-a:text-sky-600 hover:prose-a:text-sky-700 prose-img:rounded-3xl prose-img:shadow-2xl">
+                <div v-if="bodyLoading" class="flex items-center justify-center py-16 text-slate-400 text-sm gap-2">
+                  <svg class="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                  Ładowanie treści...
+                </div>
+                <div v-else v-html="selectedEmail.body"></div>
               </div>
             </div>
             
@@ -610,7 +634,7 @@ watch(
                 <div class="absolute inset-0 bg-stratton-gold/20 rounded-[3rem] blur-2xl animate-pulse group-hover:scale-125 transition-transform duration-700"></div>
                 <div class="relative h-full flex items-center justify-center bg-white rounded-[3rem] border border-slate-100 shadow-xl overflow-hidden p-10">
                    <AppIcon name="mail" class="w-20 h-20 text-slate-100 transform -rotate-12 transition-transform group-hover:rotate-0 duration-500" />
-                   <div class="absolute inset-0 bg-gradient-to-tr from-sky-400/5 to-transparent"></div>
+                   <div class="absolute inset-0 bg-linear-to-tr from-sky-400/5 to-transparent"></div>
                 </div>
             </div>
             <h3 class="text-xl font-serif font-black text-slate-800 tracking-tight">Wybierz korespondencję</h3>
@@ -635,7 +659,7 @@ watch(
       leave-to-class="opacity-0 scale-95"
     >
       <div v-if="safeCompose.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-slate-950/80 backdrop-blur-xl">
-        <div class="bg-white rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.5)] w-full max-w-4xl h-full max-h-[90vh] flex flex-col border border-slate-200/50 overflow-hidden relative">
+        <div class="bg-white rounded-4xl shadow-[0_30px_100px_rgba(0,0,0,0.5)] w-full max-w-4xl h-full max-h-[90vh] flex flex-col border border-slate-200/50 overflow-hidden relative">
           
           <div class="px-8 py-5 bg-slate-900 text-white flex justify-between items-center shrink-0">
             <div class="flex items-center gap-3">
@@ -652,7 +676,7 @@ watch(
               <div class="group flex items-center border-b border-slate-100 focus-within:border-[#D4AF37] transition-colors">
                 <button type="button" class="pr-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400 group-focus-within:text-[#D4AF37] transition-colors whitespace-nowrap" @click="showAddressBook = true">Adresat —</button>
                 <input v-model="composeData.to" type="text" name="to" placeholder="Wpisz adres e-mail lub wybierz z listy..." 
-                  class="flex-1 bg-transparent border-0 p-3 text-sm font-bold text-slate-800 placeholder-slate-300 focus:ring-0 !shadow-none" />
+                  class="flex-1 bg-transparent border-0 p-3 text-sm font-bold text-slate-800 placeholder-slate-300 focus:ring-0 shadow-none!" />
                 <button type="button" @click="showAddressBook = true" class="p-2 text-slate-400 hover:text-[#D4AF37]">
                   <AppIcon name="users" class="w-4 h-4" />
                 </button>
@@ -661,7 +685,7 @@ watch(
               <div class="group flex items-center border-b border-slate-100 focus-within:border-[#D4AF37] transition-colors">
                 <span class="pr-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-400 group-focus-within:text-[#D4AF37] transition-colors whitespace-nowrap">Temat —</span>
                 <input v-model="composeData.subject" type="text" name="subject" placeholder="O czym chcesz napisać?" 
-                  class="flex-1 bg-transparent border-0 p-3 text-sm font-black text-slate-800 placeholder-slate-300 focus:ring-0 !shadow-none" />
+                  class="flex-1 bg-transparent border-0 p-3 text-sm font-black text-slate-800 placeholder-slate-300 focus:ring-0 shadow-none!" />
               </div>
             </div>
 
@@ -779,7 +803,7 @@ watch(
             <div class="flex items-center gap-3">
               <button type="button" class="px-6 py-2.5 text-xs font-black text-slate-500 hover:text-slate-700" @click="closeCompose">Anuluj</button>
               <button type="button" 
-                class="group relative overflow-hidden bg-gradient-to-r from-[#D4AF37] to-[#C5A059] text-white font-black py-3.5 px-10 rounded-2xl hover:brightness-110 hover:shadow-xl hover:shadow-[#D4AF37]/20 active:scale-[0.98] transition-all duration-300 flex items-center gap-2" 
+                class="group relative overflow-hidden bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-black py-3.5 px-10 rounded-2xl hover:brightness-110 hover:shadow-xl hover:shadow-[#D4AF37]/20 active:scale-[0.98] transition-all duration-300 flex items-center gap-2" 
                 @click="sendEmail">
                 <AppIcon name="paper-airplane" class="w-4 h-4 rotate-12 group-hover:rotate-0 transition-transform" />
                 Wyślij teraz
@@ -799,8 +823,8 @@ watch(
       leave-from-class="opacity-100 translate-y-0 backdrop-blur-md"
       leave-to-class="opacity-0 translate-y-12 backdrop-blur-0"
     >
-      <div v-if="showAddressBook" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] shadow-[0_30px_100px_rgba(0,0,0,0.3)] w-full max-w-xl h-full max-h-[70vh] flex flex-col border border-slate-200/50 overflow-hidden">
+      <div v-if="showAddressBook" class="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+        <div class="bg-white rounded-4xl shadow-[0_30px_100px_rgba(0,0,0,0.3)] w-full max-w-xl h-full max-h-[70vh] flex flex-col border border-slate-200/50 overflow-hidden">
           <div class="px-8 py-5 bg-white border-b border-slate-100 flex justify-between items-center shrink-0">
             <h3 class="font-black text-slate-800 text-sm uppercase tracking-widest flex items-center gap-3">
               <AppIcon name="users" class="w-4 h-4 text-sky-500" />

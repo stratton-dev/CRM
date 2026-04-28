@@ -1159,6 +1159,17 @@ watch(
   }
 )
 
+// Re-fetch mail settings once the user role resolves (avoids race condition on page refresh)
+watch(
+  () => currentRole.value,
+  (role, oldRole) => {
+    if (!role || oldRole) return
+    if (activeTab.value === 'mail' && !mailSettingsLoaded.value) {
+      fetchMailSettings()
+    }
+  }
+)
+
 watch(
   () => apiBaseInput.value,
   () => {

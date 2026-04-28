@@ -38,6 +38,7 @@ const getAuthHeaders = (): Record<string, string> => {
 export const initEcho = (): Echo<any> => {
   if (echo) return echo
   const config = resolveConfig()
+  const transports = config.forceTLS ? ['wss'] : ['ws']
   ;(window as any).Pusher = Pusher
   echo = new Echo({
     broadcaster: 'reverb',
@@ -46,7 +47,8 @@ export const initEcho = (): Echo<any> => {
     wsPort: config.wsPort,
     wssPort: config.wssPort,
     forceTLS: config.forceTLS,
-    enabledTransports: ['ws', 'wss'],
+    enabledTransports: transports,
+    disableStats: true,
     authEndpoint: `${apiBaseUrl}/broadcasting/auth`,
     auth: {
       headers: getAuthHeaders(),
