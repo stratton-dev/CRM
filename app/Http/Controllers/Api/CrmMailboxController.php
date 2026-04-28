@@ -30,6 +30,7 @@ class CrmMailboxController extends Controller
             return response()->json(['message' => 'Unsupported folder.'], 422);
         }
         $limit = $request->integer('limit', 50);
+        $offset = $request->integer('offset', 0);
 
         if (env('IMAP_READ_FROM_DB', false)) {
             $messages = CrmMailMessage::query()
@@ -66,7 +67,7 @@ class CrmMailboxController extends Controller
         }
 
         try {
-            $payload = $this->mailbox->listMessages($config, $folder, $limit);
+            $payload = $this->mailbox->listMessages($config, $folder, $limit, $offset);
         } catch (RuntimeException $exception) {
             \Log::channel('mail')->warning('Mailbox list failed', [
                 'user_id' => $user->id,

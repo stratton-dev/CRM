@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 
 class CrmMailboxService
 {
-    public function listMessages(CrmMailConfig $config, string $folderKey, int $limit = 50): array
+    public function listMessages(CrmMailConfig $config, string $folderKey, int $limit = 50, int $offset = 0): array
     {
         $payload = [
             'action' => 'list',
@@ -19,6 +19,7 @@ class CrmMailboxService
                 'folderKey' => $folderKey,
                 'folderName' => $this->folderName($config, $folderKey),
                 'limit' => $limit,
+                'offset' => $offset,
             ],
         ];
 

@@ -117,13 +117,18 @@ const listMessages = async ({ config, params }) => {
       if (timings) timings.search_ms = Date.now() - searchStart
       const uids = Array.isArray(searchResult) ? searchResult.map(toSafeNumberOrString) : []
       const limit = Number(params.limit) || 50
-      const recent = uids.slice(-limit)
+      const offset = Number(params.offset) || 0
+      const total = uids.length
+      // UIDs are sorted oldest→newest; slice from the end to get most recent, with offset
+      const endIdx = total - offset
+      const startIdx = Math.max(0, endIdx - limit)
+      const recent = endIdx > 0 ? uids.slice(startIdx, endIdx) : []
       if (recent.length === 0) {
         return {
           messages: [],
           meta: {
             folderName: params.folderName,
-            total: toSafeNumberOrString(mailbox.exists || 0),
+            total: total,
             uidCount: uids.length,
             uidNext: toSafeNumberOrString(mailbox.uidNext || null),
             uidValidity: toSafeNumberOrString(mailbox.uidValidity || null),
@@ -157,7 +162,7 @@ const listMessages = async ({ config, params }) => {
         messages,
         meta: {
           folderName: params.folderName,
-          total: toSafeNumberOrString(mailbox.exists || messages.length),
+          total: total,
           uidCount: uids.length,
           uidNext: toSafeNumberOrString(mailbox.uidNext || null),
           uidValidity: toSafeNumberOrString(mailbox.uidValidity || null),
