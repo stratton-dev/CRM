@@ -56,7 +56,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   const notifyError = (message: string) => {
     const userId = session.currentUser?.id || 'system'
-    notify.add({ userId, type: 'CRITICAL', message })
+    Promise.resolve(notify.add({ userId, type: 'CRITICAL', message })).catch(() => {})
   }
 
   const hasMailConfig = computed(() => !!mailSettings.value?.imap_host && !!mailSettings.value?.imap_username && !!mailSettings.value?.smtp_host)
@@ -248,6 +248,9 @@ export const useMailboxStore = defineStore('mailbox', () => {
   const markAsRead = (emailId: string) => {
     if (auth.enabled) {
       if (hasMailConfig.value) {
+        // optimistic local update
+        const email = emails.value.find((e) => e.id === emailId)
+        if (email) email.read = true
         return api.patch(`/v1/crm-mailbox/messages/${emailId}`, { read: true }).then(() => fetchEmails()).catch((error) => {
           const message = error?.response?.data?.message || error?.message || 'Nie udało się oznaczyć wiadomości.'
           notifyError(message)

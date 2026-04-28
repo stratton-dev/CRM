@@ -41,14 +41,19 @@ export const useNotificationStore = defineStore('notification', () => {
       return
     }
     const userId = session.currentUser?.id
-    const { data: resp } = await api.get('/v1/notifications', {
-      params: {
-        per_page: 200,
-        user_supabase_id: userId || undefined,
-      },
-    })
-    const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
-    notifications.value = list.map(mapApiNotification)
+    try {
+      const { data: resp } = await api.get('/v1/notifications', {
+        timeout: 30000,
+        params: {
+          per_page: 25,
+          user_supabase_id: userId || undefined,
+        },
+      })
+      const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
+      notifications.value = list.map(mapApiNotification)
+    } catch {
+      // Silent fail — will retry on next polling cycle
+    }
   }
 
   const fetchSentNotifications = async () => {

@@ -28,7 +28,7 @@ const { clients } = storeToRefs(clientStore)
 const editor = ref<HTMLDivElement | null>(null)
 const showKbDropdown = ref(false)
 
-const sidebarWidth = ref(450)
+const sidebarWidth = ref(300)
 const isResizing = ref(false)
 
 const startResize = () => {
@@ -42,7 +42,7 @@ const startResize = () => {
 const handleResize = (e: MouseEvent) => {
   if (!isResizing.value) return
   // Min width 300px, max width 800px
-  const newWidth = Math.max(300, Math.min(800, e.clientX - 320)) // approximate offset for left sidebar
+  const newWidth = Math.max(200, Math.min(700, e.clientX - 260)) // approximate offset for left sidebar
   sidebarWidth.value = newWidth
 }
 
@@ -93,6 +93,18 @@ const attachKbFile = async (file: any) => {
 const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH'>('INBOX')
 const selectedEmail = ref<Email | null>(null)
 const bodyLoading = ref(false)
+
+const formatEmailDate = (dateStr: string) => {
+  const d = new Date(dateStr)
+  const now = new Date()
+  const isToday = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  if (isToday) return time
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  return `${dd}.${mm}.${yyyy}, ${time}`
+}
 const composeData = ref<{
   to: string
   subject: string
@@ -308,6 +320,24 @@ const openCompose = () => {
   composeState.value = { open: true }
 }
 
+const replyEmail = () => {
+  if (!selectedEmail.value) return
+  const e = selectedEmail.value
+  const dateStr = new Date(e.date).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const subject = e.subject.startsWith('Re:') ? e.subject : `Re: ${e.subject}`
+  const quotedBody = `<p><br></p><p><br></p><blockquote style="margin:0 0 0 0.8em;padding-left:1em;border-left:3px solid #cbd5e1;color:#64748b">W dniu ${dateStr}, ${e.fromName} &lt;${e.fromEmail}&gt; napisał(a):<br><br>${e.body || ''}</blockquote>`
+  composeState.value = { open: true, to: e.fromEmail, subject, body: quotedBody }
+}
+
+const forwardEmail = () => {
+  if (!selectedEmail.value) return
+  const e = selectedEmail.value
+  const dateStr = new Date(e.date).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  const subject = e.subject.startsWith('Fwd:') ? e.subject : `Fwd: ${e.subject}`
+  const forwardedBody = `<p><br></p><p><br></p><p style="color:#64748b">---------- Wiadomość przekazana dalej ----------<br>Od: ${e.fromName} &lt;${e.fromEmail}&gt;<br>Data: ${dateStr}<br>Temat: ${e.subject}</p><br>${e.body || ''}`
+  composeState.value = { open: true, to: '', subject, body: forwardedBody }
+}
+
 const closeCompose = () => {
   composeState.value = { open: false }
 }
@@ -324,9 +354,9 @@ const sendEmail = async () => {
   }
 
   try {
+    closeCompose()
     await mailboxStore.sendEmail(user, to, subject, body, attachments)
     toast.success(`Wiadomość do ${to} została wysłana.`)
-    closeCompose()
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
     toast.error(message)
@@ -391,7 +421,7 @@ watch(
     <div class="flex-1 bg-white rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border border-slate-200/60 flex overflow-hidden min-h-0 relative">
       
       <!-- Folders Sidebar -->
-      <div class="w-72 bg-slate-50/80 border-r border-slate-200/60 p-6 flex flex-col shrink-0">
+      <div class="w-52 bg-slate-50/80 border-r border-slate-200/60 p-4 flex flex-col shrink-0">
         
         <div
           v-if="auth.enabled && mailSettingsLoaded && mailMode !== 'imap'"
@@ -498,7 +528,7 @@ watch(
           <div
             v-for="email in emailsInCurrentFolder"
             :key="email.id"
-            class="group p-5 cursor-pointer transition-all duration-300 relative border-l-4"
+            class="group px-3 py-2 cursor-pointer transition-all duration-300 relative border-l-4"
             :class="[
               selectedEmail?.id === email.id ? 'bg-sky-50/70 border-sky-500' : 'hover:bg-slate-50 border-transparent',
               !email.read && selectedEmail?.id !== email.id ? 'bg-slate-50/30' : ''
@@ -506,28 +536,41 @@ watch(
             @click="selectEmail(email)"
           >
             <!-- Unread Status Dot -->
-            <div v-if="!email.read" class="absolute right-5 top-7 w-2 h-2 bg-sky-500 rounded-full shadow-[0_0_8px_rgba(14,165,233,0.5)]"></div>
+            <div v-if="!email.read" class="absolute right-3 top-4 w-1.5 h-1.5 bg-sky-500 rounded-full shadow-[0_0_6px_rgba(14,165,233,0.5)]"></div>
              
-            <div class="flex gap-4 items-start">
-              <div class="w-11 h-11 rounded-2xl shrink-0 flex items-center justify-center font-black text-xs shadow-sm shadow-slate-200 transition-transform group-hover:scale-105"
+            <div class="flex gap-3 items-center">
+              <div class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center font-black text-[11px] transition-transform group-hover:scale-105"
                 :class="selectedEmail?.id === email.id ? 'bg-white text-sky-600 border border-sky-100' : 'bg-slate-100 text-slate-500 border border-slate-200/50'">
                 {{ email.fromName.substring(0, 2).toUpperCase() }}
               </div>
               
               <div class="flex-1 min-w-0">
-                <div class="flex justify-between items-baseline mb-1">
-                  <p class="text-[13px] font-black text-slate-900 group-hover:text-stratton-gold transition-colors truncate pr-12" :class="!email.read ? 'font-black' : 'font-bold opacity-80'">
+                <div class="flex justify-between items-center mb-0.5">
+                  <p class="text-[12px] font-black text-slate-900 group-hover:text-stratton-gold transition-colors truncate pr-1" :class="!email.read ? 'font-black' : 'font-bold opacity-80'">
                     {{ email.fromName }}
                   </p>
-                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter whitespace-nowrap">
-                    {{ new Date(email.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
-                  </p>
+                  <div class="flex items-center gap-0.5 shrink-0">
+                    <button
+                      class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-slate-200 text-slate-400 hover:text-sky-500 transition-all"
+                      title="Oznacz gwiazdką"
+                      @click.stop
+                    >
+                      <AppIcon name="star" class="w-3 h-3" />
+                    </button>
+                    <button
+                      class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all"
+                      title="Usuń"
+                      @click.stop
+                    >
+                      <AppIcon name="trash" class="w-3 h-3" />
+                    </button>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter whitespace-nowrap ml-0.5">
+                      {{ formatEmailDate(email.date) }}
+                    </p>
+                  </div>
                 </div>
-                <p class="text-[14px] text-slate-800 leading-tight truncate mb-1.5" :class="!email.read ? 'font-extrabold' : 'font-semibold opacity-90'">
+                <p class="text-[12px] text-slate-800 leading-tight truncate" :class="!email.read ? 'font-extrabold' : 'font-semibold opacity-90'">
                   {{ email.subject }}
-                </p>
-                <p class="text-[12px] text-slate-500 leading-relaxed truncate line-clamp-2 max-h-12 opacity-70">
-                  {{ email.body.replace(/<[^>]*>?/gm, '').substring(0, 120) }}...
                 </p>
               </div>
             </div>
@@ -552,46 +595,30 @@ watch(
           mode="out-in"
         >
           <div v-if="selectedEmail" :key="selectedEmail.id" class="flex flex-col h-full">
-            <!-- Email Header -->
-            <div class="p-8 border-b border-slate-100 bg-white sticky top-0 z-20">
-              <div class="max-w-4xl mx-auto">
-                <div class="flex justify-between items-start gap-4 mb-6">
-                  <h3 class="text-base font-black text-slate-900 leading-tight tracking-tight">{{ selectedEmail.subject }}</h3>
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <button class="p-2.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-sky-600 transition-all group/btn">
-                      <AppIcon name="star" class="w-5 h-5 transition-transform group-hover/btn:scale-110" />
-                    </button>
-                    <button class="p-2.5 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all group/btn">
-                      <AppIcon name="trash" class="w-5 h-5 transition-transform group-hover/btn:rotate-12" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div class="flex items-center gap-5 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 backdrop-blur-sm">
-                  <div class="w-14 h-14 rounded-2xl bg-linear-to-br from-slate-200 to-slate-300 border border-white flex items-center justify-center font-black text-slate-600 text-xl overflow-hidden shadow-inner">
-                     <span class="drop-shadow-sm">{{ selectedEmail.fromName.charAt(0).toUpperCase() }}</span>
-                  </div>
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2">
-                      <p class="font-black text-slate-900">{{ selectedEmail.fromName }}</p>
-                      <span class="px-2 py-0.5 bg-slate-200/50 rounded-md text-[10px] text-slate-500 font-bold tracking-tighter">&lt;{{ selectedEmail.fromEmail }}&gt;</span>
-                    </div>
-                    <div class="flex items-center gap-3 mt-1.5">
-                      <p class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
-                        <AppIcon name="calendar" class="w-3.5 h-3.5 text-slate-300" />
-                        {{ new Date(selectedEmail.date).toLocaleString([], { day: '2-digit', month: 'long', year: 'numeric' }) }}
-                      </p>
-                      <div class="w-1 h-1 bg-slate-200 rounded-full"></div>
-                      <p class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
-                        <AppIcon name="clock" class="w-3.5 h-3.5 text-slate-300" />
-                        {{ new Date(selectedEmail.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
-                      </p>
-                    </div>
-                  </div>
-                  <button class="px-4 py-2 text-xs font-black bg-white border border-slate-200 rounded-xl text-slate-600 hover:border-sky-500 hover:text-sky-600 transition-all shadow-sm active:scale-95">
-                    Szczegóły
-                  </button>
-                </div>
+            <!-- Email Header — compact single-line bar -->
+            <div class="px-5 py-2.5 border-b border-slate-100 bg-white sticky top-0 z-20 flex items-center gap-3 min-w-0">
+              <div class="w-8 h-8 rounded-xl shrink-0 bg-slate-100 border border-slate-200/60 flex items-center justify-center font-black text-slate-500 text-[11px]">
+                {{ selectedEmail.fromName.charAt(0).toUpperCase() }}
+              </div>
+              <div class="flex-1 min-w-0 flex items-baseline gap-2">
+                <span class="font-black text-slate-900 text-[13px] truncate max-w-[180px] shrink-0">{{ selectedEmail.fromName }}</span>
+                <span class="text-slate-400 text-[11px] truncate max-w-[160px] shrink-0 hidden sm:inline">&lt;{{ selectedEmail.fromEmail }}&gt;</span>
+                <span class="text-slate-200 mx-0.5 shrink-0">·</span>
+                <span class="font-semibold text-slate-700 text-[13px] truncate">{{ selectedEmail.subject }}</span>
+              </div>
+              <span class="text-[11px] font-bold text-slate-400 whitespace-nowrap shrink-0">
+                {{ new Date(selectedEmail.date).toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
+              </span>
+              <div class="flex items-center gap-0.5 shrink-0">
+                <button class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-sky-500 transition-all" title="Oznacz gwiazdką">
+                  <AppIcon name="star" class="w-4 h-4" />
+                </button>
+                <button class="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all" title="Usuń">
+                  <AppIcon name="trash" class="w-4 h-4" />
+                </button>
+                <button class="ml-1 px-3 py-1.5 text-[11px] font-black bg-white border border-slate-200 rounded-lg text-slate-600 hover:border-sky-500 hover:text-sky-600 transition-all shadow-sm active:scale-95">
+                  Szczegóły
+                </button>
               </div>
             </div>
             
@@ -607,24 +634,22 @@ watch(
             </div>
             
             <!-- Action Bar -->
-            <div class="p-6 border-t border-slate-100 bg-white/80 backdrop-blur-xl sticky bottom-0 z-20">
-              <div class="max-w-4xl mx-auto flex gap-4">
-                <button type="button" 
-                  class="flex-1 md:flex-none px-8 py-3.5 text-sm font-black text-white bg-slate-900 border border-slate-800 rounded-2xl hover:bg-black hover:shadow-xl hover:shadow-slate-200 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95">
-                  <AppIcon name="reply" class="w-4 h-5" />
-                  Odpowiedz
-                </button>
-                <button type="button" 
-                  class="flex-1 md:flex-none px-8 py-3.5 text-sm font-black text-slate-700 bg-white border border-slate-200 rounded-2xl hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 active:scale-95">
-                  <AppIcon name="forward" class="w-4 h-5" />
-                  Prześlij dalej
-                </button>
-                <div class="ml-auto hidden sm:flex items-center gap-2">
-                   <button class="p-3.5 rounded-2xl border border-slate-100 hover:bg-slate-50 text-slate-400 transition-colors">
-                     <AppIcon name="dots-horizontal" class="w-5 h-5" />
-                   </button>
-                </div>
-              </div>
+            <div class="px-4 py-2 border-t border-slate-100 bg-white/90 backdrop-blur-xl sticky bottom-0 z-20 flex items-center gap-2">
+              <button type="button"
+                @click="replyEmail"
+                class="px-4 py-2 text-xs font-black text-white bg-slate-900 border border-slate-800 rounded-xl hover:bg-black transition-all flex items-center gap-2 active:scale-95">
+                <AppIcon name="reply" class="w-3.5 h-3.5" />
+                Odpowiedz
+              </button>
+              <button type="button"
+                @click="forwardEmail"
+                class="px-4 py-2 text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-2 active:scale-95">
+                <AppIcon name="forward" class="w-3.5 h-3.5" />
+                Prześlij dalej
+              </button>
+              <button class="ml-auto p-2 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-400 transition-colors">
+                <AppIcon name="dots-horizontal" class="w-4 h-4" />
+              </button>
             </div>
           </div>
           
