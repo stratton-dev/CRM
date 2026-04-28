@@ -22,7 +22,7 @@ const structure = useStructureStore()
 const auth = useAuthStore()
 const toast = useToastStore()
 
-const { composeState, emails, mailMode, mailSettingsLoaded } = storeToRefs(mailboxStore)
+const { composeState, emails, emailsTotal, emailsLoading, mailMode, mailSettingsLoaded } = storeToRefs(mailboxStore)
 const { files: knowledgeFiles } = storeToRefs(knowledgeBaseStore)
 const { clients } = storeToRefs(clientStore)
 const editor = ref<HTMLDivElement | null>(null)
@@ -94,7 +94,7 @@ const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH'>('INBOX')
 const selectedEmail = ref<Email | null>(null)
 const bodyLoading = ref(false)
 const currentPage = ref(1)
-const PAGE_SIZE = 50
+const PAGE_SIZE = mailboxStore.PAGE_SIZE
 
 const formatEmailDate = (dateStr: string) => {
   const d = new Date(dateStr)
@@ -243,7 +243,11 @@ const allEmailsInCurrentFolder = computed(() => {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(allEmailsInCurrentFolder.value.length / PAGE_SIZE)))
+// For IMAP: total pages from server; for non-IMAP: local count
+const totalPages = computed(() => {
+  if (mailMode.value === 'imap') return Math.max(1, Math.ceil(emailsTotal.value / PAGE_SIZE))
+  return Math.max(1, Math.ceil(allEmailsInCurrentFolder.value.length / PAGE_SIZE))
+})
 const visiblePages = computed(() => {
   const total = totalPages.value
   const cur = currentPage.value
@@ -255,7 +259,9 @@ const visiblePages = computed(() => {
   pages.push(total)
   return pages
 })
+// For IMAP: already one page from server; for non-IMAP: local slice
 const emailsInCurrentFolder = computed(() => {
+  if (mailMode.value === 'imap') return allEmailsInCurrentFolder.value
   const start = (currentPage.value - 1) * PAGE_SIZE
   return allEmailsInCurrentFolder.value.slice(start, start + PAGE_SIZE)
 })
@@ -307,7 +313,7 @@ const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH') => {
   currentFolder.value = folder
   selectedEmail.value = null
   currentPage.value = 1
-  mailboxStore.fetchEmailsForFolder(folder)
+  mailboxStore.fetchEmailsForFolder(folder, 1)
 }
 
 const selectEmail = async (email: Email) => {
@@ -389,7 +395,7 @@ const formatDoc = (command: string, value?: string) => {
 }
 
 onMounted(() => {
-  mailboxStore.fetchEmailsForFolder(currentFolder.value)
+  mailboxStore.fetchEmailsForFolder(currentFolder.value, 1)
   mailboxStore.startPolling?.()
 })
 
@@ -400,7 +406,7 @@ onBeforeUnmount(() => {
 watch(
   () => currentUser.value?.id,
   () => {
-    mailboxStore.fetchEmailsForFolder(currentFolder.value)
+    mailboxStore.fetchEmailsForFolder(currentFolder.value, 1)
   }
 )
 </script>
@@ -535,7 +541,7 @@ watch(
              Wiadomości
            </h2>
            <div class="flex items-center gap-2">
-             <button class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors">
+             <button class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors" :class="{'animate-spin': emailsLoading}" @click="mailboxStore.fetchEmailsForFolder(currentFolder, currentPage)">
                <AppIcon name="refresh" class="w-4 h-4" />
              </button>
              <button class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors">
@@ -608,8 +614,8 @@ watch(
           <div v-if="totalPages > 1" class="shrink-0 border-t border-slate-100 px-3 py-2 flex items-center justify-between gap-1 bg-white">
             <button
               class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
-              :disabled="currentPage === 1"
-              @click="currentPage--; selectedEmail = null"
+              :disabled="currentPage === 1 || emailsLoading"
+              @click="currentPage--; selectedEmail = null; mailboxStore.fetchEmailsForFolder(currentFolder, currentPage)"
             >
               <AppIcon name="chevron-left" class="w-3.5 h-3.5" />
             </button>
@@ -620,14 +626,15 @@ watch(
                   v-else
                   class="min-w-[24px] h-6 px-1.5 rounded-lg text-[11px] font-black transition"
                   :class="p === currentPage ? 'bg-stratton-gold text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'"
-                  @click="currentPage = p; selectedEmail = null"
+                  :disabled="emailsLoading"
+                  @click="currentPage = p; selectedEmail = null; mailboxStore.fetchEmailsForFolder(currentFolder, p)"
                 >{{ p }}</button>
               </template>
             </div>
             <button
               class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
-              :disabled="currentPage === totalPages"
-              @click="currentPage++; selectedEmail = null"
+              :disabled="currentPage === totalPages || emailsLoading"
+              @click="currentPage++; selectedEmail = null; mailboxStore.fetchEmailsForFolder(currentFolder, currentPage)"
             >
               <AppIcon name="chevron-right" class="w-3.5 h-3.5" />
             </button>

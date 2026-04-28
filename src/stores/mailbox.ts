@@ -34,6 +34,8 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   const { emails: localEmails, users } = storeToRefs(data)
   const emails = ref<Email[]>([])
+  const emailsTotal = ref(0)
+  const emailsLoading = ref(false)
   const composeState = ref<{
     open: boolean
     to?: string
@@ -107,7 +109,9 @@ export const useMailboxStore = defineStore('mailbox', () => {
     }
   }
 
-  const fetchEmails = async (folders?: Array<'INBOX' | 'SENT' | 'TRASH'>) => {
+  const PAGE_SIZE = 50
+
+  const fetchEmails = async (folders?: Array<'INBOX' | 'SENT' | 'TRASH'>, page = 1) => {
     if (!auth.enabled) {
       emails.value = Array.isArray(localEmails.value) ? localEmails.value : []
       return
@@ -115,22 +119,30 @@ export const useMailboxStore = defineStore('mailbox', () => {
     if (!mailSettingsLoaded.value) await fetchMailSettings()
 
     if (hasMailConfig.value) {
+      emailsLoading.value = true
       try {
         const targetFolders = folders && folders.length ? folders : ['INBOX']
         const list: any[] = []
+        let total = 0
         for (const folder of targetFolders) {
+          const offset = (page - 1) * PAGE_SIZE
           const response = await api.get('/v1/crm-mailbox/messages', {
-            params: { folder, limit: 100 },
+            params: { folder, limit: PAGE_SIZE, offset },
           })
           const payload = response?.data?.data ?? response?.data ?? []
           if (Array.isArray(payload)) list.push(...payload)
+          const meta = response?.data?.meta
+          if (meta?.total) total = Math.max(total, Number(meta.total))
         }
         emails.value = list.map(mapMailboxEmail)
+        if (total > 0) emailsTotal.value = total
         return
       } catch (error: any) {
         const message = error?.response?.data?.message || error?.message || 'Nie udało się połączyć z pocztą.'
         notifyError(message)
         return
+      } finally {
+        emailsLoading.value = false
       }
     }
 
@@ -251,7 +263,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
         // optimistic local update
         const email = emails.value.find((e) => e.id === emailId)
         if (email) email.read = true
-        return api.patch(`/v1/crm-mailbox/messages/${emailId}`, { read: true }).then(() => fetchEmails()).catch((error) => {
+        return api.patch(`/v1/crm-mailbox/messages/${emailId}`, { read: true }).catch((error) => {
           const message = error?.response?.data?.message || error?.message || 'Nie udało się oznaczyć wiadomości.'
           notifyError(message)
           return
@@ -294,6 +306,9 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   return {
     emails,
+    emailsTotal,
+    emailsLoading,
+    PAGE_SIZE,
     composeState,
     mailMode,
     mailSettings,
@@ -302,7 +317,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
     sendEmail,
     markAsRead,
     fetchEmails,
-    fetchEmailsForFolder: (folder: 'INBOX' | 'SENT' | 'TRASH') => fetchEmails([folder]),
+    fetchEmailsForFolder: (folder: 'INBOX' | 'SENT' | 'TRASH', page = 1) => fetchEmails([folder], page),
     fetchMailSettings,
     startPolling,
     stopPolling,
