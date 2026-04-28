@@ -536,9 +536,8 @@ watch(searchQuery, () => {
               v-model="searchQuery"
               type="text"
               placeholder="Wyszukaj w Twojej korespondencji..."
-              class="w-full pl-12 pr-10 py-3 bg-white border border-slate-200 text-slate-800 placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-300 shadow-sm font-bold"
+              class="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 text-slate-800 placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-300 shadow-sm font-bold"
             />
-            <AppIcon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/search:text-sky-500 transition-colors pointer-events-none" />
             <button
               v-if="searchQuery"
               type="button"
