@@ -261,13 +261,13 @@ onBeforeUnmount(() => {
       <div class="h-20 flex items-center justify-center border-b border-slate-200 transition-colors hover:bg-slate-50 cursor-pointer px-4" @click="router.push('/app/dashboard')">
         <div v-if="isSidebarOpen" class="text-center animate-fade-in">
           <span class="text-stratton-gold font-bold text-xl uppercase tracking-wider block leading-tight">
-            PRIME CRM
+            TAURI CRM
           </span>
           <span class="text-stratton-gold font-medium text-[10px] uppercase tracking-widest block leading-tight mt-0.5">
             System Zarządzania Zasobami Klienta
           </span>
         </div>
-        <span v-else class="text-stratton-gold font-bold text-xl">P</span>
+        <span v-else class="text-stratton-gold font-bold text-xl">T</span>
       </div>
 
       <nav class="flex-1 overflow-y-auto py-2 space-y-0.5 px-3">

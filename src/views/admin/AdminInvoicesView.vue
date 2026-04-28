@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import AppIcon from '@/components/AppIcon.vue'
 import { useFinanceStore } from '@/stores/finance'
 import { useClientStore } from '@/stores/client'
 import { useToastStore } from '@/stores/toast'

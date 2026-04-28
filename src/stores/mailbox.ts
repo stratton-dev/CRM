@@ -3,6 +3,7 @@ import { computed, onScopeDispose, ref, watch } from 'vue'
 import router from '@/router'
 import { useDataStore } from '@/stores/data'
 import { useNotificationStore } from '@/stores/notification'
+import { useToastStore } from '@/stores/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { api } from '@/api/client'
@@ -31,6 +32,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
   const session = useSessionStore()
   const data = useDataStore()
   const notify = useNotificationStore()
+  const toast = useToastStore()
 
   const { emails: localEmails, users } = storeToRefs(data)
   const emails = ref<Email[]>([])
@@ -57,8 +59,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
   let refreshTimer: number | null = null
 
   const notifyError = (message: string) => {
-    const userId = session.currentUser?.id || 'system'
-    Promise.resolve(notify.add({ userId, type: 'CRITICAL', message })).catch(() => {})
+    toast.error(message)
   }
 
   const hasMailConfig = computed(() => !!mailSettings.value?.imap_host && !!mailSettings.value?.imap_username && !!mailSettings.value?.smtp_host)
@@ -140,9 +141,8 @@ export const useMailboxStore = defineStore('mailbox', () => {
           localStorage.setItem('mailbox_emails_total', String(total))
         }
         return
-      } catch (error: any) {
-        const message = error?.response?.data?.message || error?.message || 'Nie udało się połączyć z pocztą.'
-        notifyError(message)
+      } catch {
+        // Silent fail — polling error, do not spam toast
         return
       } finally {
         emailsLoading.value = false
@@ -156,9 +156,8 @@ export const useMailboxStore = defineStore('mailbox', () => {
       })
       const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
       emails.value = list.map(mapApiEmail)
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać wiadomości.'
-      notifyError(message)
+    } catch {
+      // Silent fail
       return
     }
   }

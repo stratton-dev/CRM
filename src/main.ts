@@ -11,9 +11,18 @@ import './assets/tailwind.css'
 // Suppress unhandled rejections from pusher-js TabsManager inter-tab coordination.
 // These are benign internal events that fire when the "master" tab listener isn't ready yet.
 window.addEventListener('unhandledrejection', (event) => {
-  const msg = event?.reason?.message ?? ''
-  if (typeof msg === 'string' && (msg.includes('No Listener: tabs:') || msg.includes('tabs:outgoing'))) {
+  const reason = event?.reason
+  const msg: string = (reason instanceof Error ? reason.message : String(reason ?? ''))
+  if (msg.includes('No Listener: tabs:') || msg.includes('tabs:outgoing')) {
     event.preventDefault()
+    return
+  }
+})
+window.addEventListener('error', (event) => {
+  const msg = event?.message ?? ''
+  if (msg.includes('No Listener: tabs:') || msg.includes('tabs:outgoing')) {
+    event.preventDefault()
+    return
   }
 })
 
