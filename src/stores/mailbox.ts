@@ -194,8 +194,8 @@ export const useMailboxStore = defineStore('mailbox', () => {
     attachments?: Array<{ filename: string; content?: string; content_type?: string; encoding?: string; html?: string; convert_to_pdf?: boolean }>
   ) => {
     if (auth.enabled) {
+      if (!mailSettingsLoaded.value) await fetchMailSettings()
       if (hasMailConfig.value) {
-        if (!mailSettingsLoaded.value) await fetchMailSettings()
         const senderName = mailSettings.value?.from_name?.trim() || undefined
         const senderEmail = mailSettings.value?.from_email?.trim() || undefined
         return api.post('/v1/crm-mailbox/send', {

@@ -59,6 +59,11 @@ router.beforeEach(async (to) => {
   if (!auth.isAuthenticated) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
+
+  if (!session.currentUser) {
+    await session.resolveUserFromAuth()
+  }
+
   await viewPermissions.ensureLoaded()
   const role = session.currentUser?.role || auth.user?.roles?.find((r) => typeof r === 'string')
 
