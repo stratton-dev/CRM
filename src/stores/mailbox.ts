@@ -111,7 +111,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   const PAGE_SIZE = 50
 
-  const fetchEmails = async (folders?: Array<'INBOX' | 'SENT' | 'TRASH'>, page = 1) => {
+  const fetchEmails = async (folders?: Array<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM'>, page = 1) => {
     if (!auth.enabled) {
       emails.value = Array.isArray(localEmails.value) ? localEmails.value : []
       return
@@ -281,6 +281,28 @@ export const useMailboxStore = defineStore('mailbox', () => {
     data.rawUpdateEmails((items) => items.map((email) => (email.id === emailId ? { ...email, read: true } : email)))
   }
 
+  const saveDraft = async (to: string, subject: string, body: string) => {
+    if (!auth.enabled || !hasMailConfig.value) return
+    if (!mailSettingsLoaded.value) await fetchMailSettings()
+    const fromName = mailSettings.value?.from_name?.trim() || undefined
+    const fromEmail = mailSettings.value?.from_email?.trim() || undefined
+    return api.post('/v1/crm-mailbox/draft', { to, subject, body, from_name: fromName, from_email: fromEmail })
+  }
+
+  const moveMessage = async (emailId: string, toFolder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM') => {
+    // optimistic remove from current list
+    const idx = emails.value.findIndex((e) => e.id === emailId)
+    if (idx !== -1) emails.value.splice(idx, 1)
+    if (emailsTotal.value > 0) {
+      emailsTotal.value -= 1
+      localStorage.setItem('mailbox_emails_total', String(emailsTotal.value))
+    }
+    return api.post(`/v1/crm-mailbox/messages/${encodeURIComponent(emailId)}/move`, { to_folder: toFolder }).catch((error) => {
+      const message = error?.response?.data?.message || error?.message || 'Nie udało się przenieść wiadomości.'
+      notifyError(message)
+    })
+  }
+
   watch(
     () => auth.isAuthenticated,
     (isAuthed) => {
@@ -318,9 +340,11 @@ export const useMailboxStore = defineStore('mailbox', () => {
     mailSettingsLoaded,
     initiateEmailTo,
     sendEmail,
+    saveDraft,
+    moveMessage,
     markAsRead,
     fetchEmails,
-    fetchEmailsForFolder: (folder: 'INBOX' | 'SENT' | 'TRASH', page = 1) => fetchEmails([folder], page),
+    fetchEmailsForFolder: (folder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM', page = 1) => fetchEmails([folder], page),
     fetchMailSettings,
     startPolling,
     stopPolling,

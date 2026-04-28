@@ -90,7 +90,7 @@ const attachKbFile = async (file: any) => {
   }
 }
 
-const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH'>('INBOX')
+const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM'>('INBOX')
 const selectedEmail = ref<Email | null>(null)
 const bodyLoading = ref(false)
 const currentPage = ref(1)
@@ -309,7 +309,7 @@ const selectContact = (email: string) => {
   showAddressBook.value = false
 }
 
-const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH') => {
+const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM') => {
   currentFolder.value = folder
   selectedEmail.value = null
   currentPage.value = 1
@@ -387,6 +387,50 @@ const sendEmail = async () => {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
     toast.error(message)
   }
+}
+
+const saveAsDraft = async () => {
+  const { to, subject } = composeData.value
+  const body = editor.value?.innerHTML || ''
+  try {
+    await mailboxStore.saveDraft(to, subject, body)
+    toast.success('Zapisano jako roboczy.')
+    closeCompose()
+    // refresh drafts if we're on that folder
+    if (currentFolder.value === 'DRAFTS') {
+      mailboxStore.fetchEmailsForFolder('DRAFTS', 1)
+    }
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || 'Nie udało się zapisać roboczego.'
+    toast.error(message)
+  }
+}
+
+const moveToSpam = async () => {
+  if (!selectedEmail.value) return
+  const emailId = selectedEmail.value.id
+  selectedEmail.value = null
+  try {
+    await mailboxStore.moveMessage(emailId, 'SPAM')
+    toast.success('Wiadomość przeniesiona do spamu.')
+  } catch {}
+}
+
+const moveToInbox = async () => {
+  if (!selectedEmail.value) return
+  const emailId = selectedEmail.value.id
+  selectedEmail.value = null
+  try {
+    await mailboxStore.moveMessage(emailId, 'INBOX')
+    toast.success('Wiadomość przywrócona do skrzynki odbiorczej.')
+  } catch {}
+}
+
+const editDraft = () => {
+  if (!selectedEmail.value) return
+  const e = selectedEmail.value
+  composeState.value = { open: true, to: e.toEmail || '', subject: e.subject, body: e.body || '' }
+  selectedEmail.value = null
 }
 
 const formatDoc = (command: string, value?: string) => {
@@ -503,6 +547,24 @@ watch(
                   <AppIcon name="trash" class="w-4.5 h-4.5" />
                 </div>
                 <span class="font-bold text-[13px]">Kosz</span>
+              </a>
+
+              <a class="group flex items-center gap-3.5 px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-300"
+                :class="currentFolder === 'DRAFTS' ? 'bg-[#D4AF37]/10 text-[#D4AF37] shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900'"
+                @click="selectFolder('DRAFTS')">
+                <div class="p-1.5 rounded-lg transition-colors" :class="currentFolder === 'DRAFTS' ? 'bg-[#D4AF37]/20' : 'bg-slate-100 group-hover:bg-slate-200'">
+                  <AppIcon name="document-text" class="w-4.5 h-4.5" />
+                </div>
+                <span class="font-bold text-[13px]">Robocze</span>
+              </a>
+
+              <a class="group flex items-center gap-3.5 px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-300"
+                :class="currentFolder === 'SPAM' ? 'bg-[#D4AF37]/10 text-[#D4AF37] shadow-sm' : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900'"
+                @click="selectFolder('SPAM')">
+                <div class="p-1.5 rounded-lg transition-colors" :class="currentFolder === 'SPAM' ? 'bg-[#D4AF37]/20' : 'bg-slate-100 group-hover:bg-slate-200'">
+                  <AppIcon name="exclamation-circle" class="w-4.5 h-4.5" />
+                </div>
+                <span class="font-bold text-[13px]">Spam</span>
               </a>
             </nav>
           </div>
@@ -692,18 +754,45 @@ watch(
             
             <!-- Action Bar -->
             <div class="px-4 py-2 border-t border-slate-100 bg-white/90 backdrop-blur-xl sticky bottom-0 z-20 flex items-center gap-2">
-              <button type="button"
-                @click="replyEmail"
-                class="px-4 py-2 text-xs font-black text-white bg-slate-900 border border-slate-800 rounded-xl hover:bg-black transition-all flex items-center gap-2 active:scale-95">
-                <AppIcon name="reply" class="w-3.5 h-3.5" />
-                Odpowiedz
-              </button>
-              <button type="button"
-                @click="forwardEmail"
-                class="px-4 py-2 text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-2 active:scale-95">
-                <AppIcon name="forward" class="w-3.5 h-3.5" />
-                Prześlij dalej
-              </button>
+              <!-- DRAFTS folder: Edit button -->
+              <template v-if="currentFolder === 'DRAFTS'">
+                <button type="button"
+                  @click="editDraft"
+                  class="px-4 py-2 text-xs font-black text-white bg-slate-900 border border-slate-800 rounded-xl hover:bg-black transition-all flex items-center gap-2 active:scale-95">
+                  <AppIcon name="pencil" class="w-3.5 h-3.5" />
+                  Edytuj roboczą
+                </button>
+              </template>
+              <!-- SPAM folder: Not Spam button -->
+              <template v-else-if="currentFolder === 'SPAM'">
+                <button type="button"
+                  @click="moveToInbox"
+                  class="px-4 py-2 text-xs font-black text-white bg-emerald-600 border border-emerald-700 rounded-xl hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95">
+                  <AppIcon name="check-circle" class="w-3.5 h-3.5" />
+                  To nie spam
+                </button>
+              </template>
+              <!-- Normal folders: Reply, Forward, Spam -->
+              <template v-else>
+                <button type="button"
+                  @click="replyEmail"
+                  class="px-4 py-2 text-xs font-black text-white bg-slate-900 border border-slate-800 rounded-xl hover:bg-black transition-all flex items-center gap-2 active:scale-95">
+                  <AppIcon name="reply" class="w-3.5 h-3.5" />
+                  Odpowiedz
+                </button>
+                <button type="button"
+                  @click="forwardEmail"
+                  class="px-4 py-2 text-xs font-black text-slate-700 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center gap-2 active:scale-95">
+                  <AppIcon name="forward" class="w-3.5 h-3.5" />
+                  Prześlij dalej
+                </button>
+                <button type="button"
+                  @click="moveToSpam"
+                  class="px-4 py-2 text-xs font-black text-slate-500 bg-white border border-slate-200 rounded-xl hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center gap-2 active:scale-95">
+                  <AppIcon name="exclamation-circle" class="w-3.5 h-3.5" />
+                  Spam
+                </button>
+              </template>
               <button class="ml-auto p-2 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-400 transition-colors">
                 <AppIcon name="dots-horizontal" class="w-4 h-4" />
               </button>
@@ -884,6 +973,12 @@ watch(
             </p>
             <div class="flex items-center gap-3">
               <button type="button" class="px-6 py-2.5 text-xs font-black text-slate-500 hover:text-slate-700" @click="closeCompose">Anuluj</button>
+              <button type="button"
+                class="px-4 py-2.5 text-xs font-black text-slate-600 bg-white border border-slate-200 rounded-2xl hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2 active:scale-95"
+                @click="saveAsDraft">
+                <AppIcon name="document-text" class="w-3.5 h-3.5" />
+                Zapisz jako roboczy
+              </button>
               <button type="button" 
                 class="group relative overflow-hidden bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-black py-3.5 px-10 rounded-2xl hover:brightness-110 hover:shadow-xl hover:shadow-[#D4AF37]/20 active:scale-[0.98] transition-all duration-300 flex items-center gap-2" 
                 @click="sendEmail">
