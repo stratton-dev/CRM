@@ -633,11 +633,11 @@ watch(
         </RouterLink>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <div class="relative bg-white rounded-card shadow-card border border-slate-100 p-6 group transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:-translate-y-0.5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <div class="relative flex flex-col bg-white rounded-card shadow-card border border-slate-100 p-6 group transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:-translate-y-0.5">
           <div class="absolute inset-0 bg-linear-to-br from-slate-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-          <div class="relative z-10">
+          <div class="relative z-10 flex flex-col flex-1">
             <div class="flex justify-between items-center mb-4">
               <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Najbliższe Wydarzenia</h3>
             </div>
@@ -670,7 +670,7 @@ watch(
           </div>
         </div>
 
-        <div class="relative bg-white rounded-card shadow-card border border-slate-100 p-6 group transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:-translate-y-0.5">
+        <div class="relative flex flex-col bg-white rounded-card shadow-card border border-slate-100 p-6 group transition-all duration-300 overflow-hidden hover:shadow-card-hover hover:-translate-y-0.5">
           <!-- News Background Image -->
           <Transition name="fade">
              <div 
@@ -683,13 +683,13 @@ watch(
 
           <div class="absolute inset-0 bg-linear-to-br from-amber-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-          <div class="relative z-10">
+          <div class="relative z-10 flex flex-col flex-1">
             <div class="flex justify-between items-center mb-4">
               <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Aktualności</h3>
             </div>
             
             <div class="relative flex flex-col" @mouseenter="newsHovered = true" @mouseleave="newsHovered = false">
-              <div class="relative overflow-hidden h-36" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">
+              <div class="relative overflow-hidden flex-1" style="min-height:60px" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">
                 <TransitionGroup name="news-slide" tag="div" class="h-full w-full relative">
                   <div 
                     v-if="newsItems.length > 0"
@@ -713,7 +713,7 @@ watch(
                 </TransitionGroup>
               </div>
               
-              <div class="mt-3 text-center pt-2 flex flex-col items-center gap-1.5">
+              <div v-if="newsItems.length > 0" class="mt-3 text-center pt-2 flex flex-col items-center gap-1.5">
                 <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-primary transition-colors cursor-pointer" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">Kliknij aby czytać więcej</span>
                 <div class="flex gap-1.5 mt-0.5 z-20">
                   <div 
