@@ -287,10 +287,12 @@ const getMessageBody = async ({ config, params }) => {
     await ensureConnected(client)
     const lock = await client.getMailboxLock(params.folderName)
     try {
-      await client.mailboxOpen(params.folderName, { readOnly: true })
       const uid = params.uid
+      const fetchTimeoutMs = Number(process.env.IMAP_BODY_TIMEOUT_MS || 45000)
+      const fetchStart = Date.now()
       const fetchIterator = client.fetch([uid], { uid: true, envelope: true, flags: true, internalDate: true, source: true }, { uid: true })
       for await (const msg of fetchIterator) {
+        checkElapsedTimeout(fetchStart, fetchTimeoutMs, 'body fetch')
         const parsed = await simpleParser(msg.source)
         const from = parsed.from?.value?.[0]
         const to = parsed.to?.value?.[0]

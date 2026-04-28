@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CrmMailConfig;
-use App\Models\CrmMailJob;
 use App\Models\CrmMailFolder;
 use App\Models\CrmMailMessage;
 use App\Services\Crm\CrmMailboxService;
@@ -212,18 +211,24 @@ class CrmMailboxController extends Controller
             unset($data['attachments']);
         }
 
-        $job = CrmMailJob::create([
+        try {
+            $this->mailbox->sendMessage($config, $data);
+        } catch (\RuntimeException $exception) {
+            \Log::channel('mail')->warning('Mailbox send failed', [
+                'user_id' => $user->id,
+                'to' => $data['to'] ?? null,
+                'message' => $exception->getMessage(),
+            ]);
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        \Log::channel('mail')->info('Mailbox send ok', [
             'user_id' => $user->id,
-            'type' => 'send',
-            'payload' => [
-                'config' => $this->nodeConfig($config),
-                'message' => $data,
-            ],
-            'status' => 'pending',
-            'scheduled_at' => now(),
+            'to' => $data['to'] ?? null,
+            'subject' => $data['subject'] ?? null,
         ]);
 
-        return response()->json(['data' => ['job_id' => $job->id, 'status' => $job->status]], 202);
+        return response()->json(['data' => ['ok' => true]]);
     }
 
     public function mark(Request $request, string $messageId)
@@ -250,19 +255,18 @@ class CrmMailboxController extends Controller
             return response()->json(['message' => 'Invalid message id.'], 422);
         }
 
-        $job = CrmMailJob::create([
-            'user_id' => $user->id,
-            'type' => 'mark',
-            'payload' => [
-                'config' => $this->nodeConfig($config),
-                'folder_key' => $folderKey,
-                'uid' => (int) $uid,
-            ],
-            'status' => 'pending',
-            'scheduled_at' => now(),
-        ]);
+        try {
+            $this->mailbox->markRead($config, $folderKey, (int) $uid);
+        } catch (\RuntimeException $exception) {
+            \Log::channel('mail')->warning('Mailbox markRead failed', [
+                'user_id' => $user->id,
+                'message_id' => $messageId,
+                'message' => $exception->getMessage(),
+            ]);
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
 
-        return response()->json(['data' => ['job_id' => $job->id, 'status' => $job->status]], 202);
+        return response()->json(['data' => ['ok' => true]]);
     }
 
     public function showBody(Request $request, string $messageId)
@@ -292,6 +296,11 @@ class CrmMailboxController extends Controller
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 
+        \Log::channel('mail')->info('Mailbox getBody ok', [
+            'user_id' => $user->id,
+            'message_id' => $messageId,
+            'body_len' => strlen($data['body'] ?? ''),
+        ]);
         return response()->json(['data' => $data]);
     }
 
