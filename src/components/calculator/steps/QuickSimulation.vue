@@ -40,6 +40,16 @@ const mailboxStore = useMailboxStore();
 const router = useRouter();
 const route = useRoute();
 
+const openEmailModal = () => {
+  mailboxStore.composeState = {
+    open: true,
+    to: props.contactEmail || store.firma?.email || '',
+    subject: `Oferta szacunkowa — ${store.firma?.nazwa || 'Twoja firma'}`,
+    body: `<p>Dzień dobry${props.contactName ? `, ${props.contactName}` : ''},</p><p><br></p><p>W załączeniu przesyłam wstępną ofertę szacunkową przygotowaną na podstawie przekazanych informacji.</p><p><br></p><p>Z wyrazami szacunku</p>`,
+    attachments: [{ filename: `oferta-szacunkowa-${store.firma?.nip || 'firma'}.pdf`, html: buildQuickSimHtml(), content_type: 'application/pdf', convert_to_pdf: true }],
+  };
+};
+
 const empCount = ref(props.initialEmployees);
 // Initialize two separate salary refs
 const avgSalaryUop = ref(props.initialAvgWage);
@@ -319,9 +329,10 @@ const generateQuickOffer = async () => {
         body: `Dzień dobry${props.contactName ? `, ${props.contactName}` : ''},\n\nW załączeniu przesyłam wstępną ofertę szacunkową przygotowaną na podstawie przekazanych informacji.\n\nZ wyrazami szacunku`,
         attachments: [
           {
-            filename: `oferta-szacunkowa-${store.firma.nip || 'firma'}.html`,
+            filename: `oferta-szacunkowa-${store.firma.nip || 'firma'}.pdf`,
             html: htmlContent,
-            content_type: 'text/html',
+            content_type: 'application/pdf',
+            convert_to_pdf: true,
           },
         ],
       };
@@ -342,8 +353,8 @@ const generateQuickOffer = async () => {
 };</script>
 
 <template>
-  <div class="animate-fade-in">
-    <div class="max-w-screen-2xl mx-auto space-y-8" style="zoom: 0.8; transform-origin: top center;">
+  <div class="animate-fade-in" style="zoom: 0.8; transform-origin: top center;">
+    <div class="space-y-8">
       
       <!-- Top Header Area: Results & Controls (Full Width) -->
       <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-6">
@@ -361,27 +372,6 @@ const generateQuickOffer = async () => {
 
             <!-- Right: Action Buttons -->
             <div class="flex flex-col sm:flex-row items-end sm:items-center gap-3 self-end md:self-center">
-              <!-- Generuj ofertę szacunkową -->
-              <button
-                type="button"
-                class="h-12 bg-slate-700 border border-stratton-gold/40 text-stratton-gold px-6 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 group disabled:opacity-50 disabled:grayscale hover:bg-stratton-gold hover:text-white active:scale-95"
-                :disabled="!isCountValid || isSendingOffer"
-                @click="generateQuickOffer"
-              >
-                <AppIcon v-if="isSendingOffer" name="arrow-path" class="w-4 h-4 animate-spin" />
-                <AppIcon v-else name="envelope" class="w-4 h-4" />
-                <span class="text-[12px]">{{ hasClientContext ? 'Wyślij ofertę' : 'Drukuj PDF' }}</span>
-              </button>
-              <!-- Przejdź do szczegółów -->
-              <button
-                type="button"
-                class="h-12 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white px-8 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale border border-white/20 hover:brightness-110 active:scale-95"
-                :disabled="!isCountValid"
-                @click="handleTransfer"
-              >
-                <span class="text-[13px]">Dalej</span>
-                <AppIcon name="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
             </div>
         </div>
 
@@ -432,8 +422,10 @@ const generateQuickOffer = async () => {
         </div>
       </div>
 
-      <!-- Main Content Grid: Structure (Left) vs Comparison (Right) side-by-side -->
-      <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+      <!-- Bottom Module: Structure + Comparison -->
+      <div class="max-w-screen-2xl mx-auto">
+      <div class="bg-white rounded-card shadow-card border border-slate-200 p-6">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         
         <!-- Left Panel: Structure -->
         <div class="xl:col-span-4 bg-slate-900 text-white flex flex-col shrink-0 border border-slate-800 rounded-2xl shadow-xl">
@@ -675,6 +667,19 @@ const generateQuickOffer = async () => {
             </div>
           </div>
 
+          <!-- Email Send Button -->
+          <div class="mt-2">
+            <button
+              type="button"
+              class="w-full h-11 bg-slate-50 border border-slate-200 text-slate-600 font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="!isCountValid"
+              @click="openEmailModal"
+            >
+              <AppIcon name="envelope" class="w-4 h-4" />
+              <span class="text-[12px]">Wyślij email</span>
+            </button>
+          </div>
+
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row gap-3">
             <button
@@ -699,6 +704,9 @@ const generateQuickOffer = async () => {
           </div>
         </div>
       </div>
+      </div>
+      </div>
     </div>
   </div>
+
 </template>
