@@ -26,7 +26,7 @@ class CrmMailboxController extends Controller
         }
 
         $folder = strtoupper($request->string('folder')->toString() ?: 'INBOX');
-        if (!in_array($folder, ['INBOX', 'SENT', 'TRASH'], true)) {
+        if (!in_array($folder, ['INBOX', 'SENT', 'TRASH', 'DRAFTS', 'SPAM'], true)) {
             return response()->json(['message' => 'Unsupported folder.'], 422);
         }
         $limit = $request->integer('limit', 50);
@@ -228,6 +228,63 @@ class CrmMailboxController extends Controller
             'to' => $data['to'] ?? null,
             'subject' => $data['subject'] ?? null,
         ]);
+
+        return response()->json(['data' => ['ok' => true]]);
+    }
+
+    public function saveDraft(Request $request)
+    {
+        $user = $request->user();
+        $config = CrmMailConfig::query()->where('user_id', $user->id)->first();
+        if (!$config) {
+            return response()->json(['message' => 'Brak konfiguracji poczty.'], 422);
+        }
+
+        $data = $request->validate([
+            'to'           => 'nullable|string|max:255',
+            'subject'      => 'nullable|string|max:255',
+            'body'         => 'nullable|string',
+            'from_name'    => 'nullable|string|max:255',
+            'from_email'   => 'nullable|email|max:255',
+        ]);
+
+        try {
+            $this->mailbox->saveDraft($config, $data);
+        } catch (\RuntimeException $e) {
+            \Log::channel('mail')->warning('Mailbox saveDraft failed', ['user_id' => $user->id, 'message' => $e->getMessage()]);
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['data' => ['ok' => true]]);
+    }
+
+    public function moveMessage(Request $request, string $messageId)
+    {
+        $user = $request->user();
+        $config = CrmMailConfig::query()->where('user_id', $user->id)->first();
+        if (!$config) {
+            return response()->json(['message' => 'Brak konfiguracji poczty.'], 422);
+        }
+
+        if (!str_contains($messageId, ':')) {
+            return response()->json(['message' => 'Invalid message id.'], 422);
+        }
+        [$folderKey, $uid] = explode(':', $messageId, 2);
+        if (!ctype_digit($uid)) {
+            return response()->json(['message' => 'Invalid message id.'], 422);
+        }
+
+        $toFolder = strtoupper($request->string('to_folder')->toString());
+        if (!in_array($toFolder, ['INBOX', 'SENT', 'TRASH', 'DRAFTS', 'SPAM'], true)) {
+            return response()->json(['message' => 'Unsupported target folder.'], 422);
+        }
+
+        try {
+            $this->mailbox->moveMessage($config, $folderKey, (int) $uid, $toFolder);
+        } catch (\RuntimeException $e) {
+            \Log::channel('mail')->warning('Mailbox moveMessage failed', ['user_id' => $user->id, 'message_id' => $messageId, 'message' => $e->getMessage()]);
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['data' => ['ok' => true]]);
     }

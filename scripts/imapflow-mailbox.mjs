@@ -338,6 +338,48 @@ const getMessageBody = async ({ config, params }) => {
   }
 }
 
+const saveDraft = async ({ config, params }) => {
+  const imapCfg = config.imap || config
+  const fromName = params.from_name || config.smtp?.from?.name || undefined
+  const fromEmail = params.from_email || config.smtp?.from?.email || config.smtp?.auth?.user || imapCfg?.auth?.user
+
+  const mailOptions = {
+    from: fromName ? `${fromName} <${fromEmail}>` : (fromEmail || ''),
+    to: params.to || '',
+    subject: params.subject || '(Robocze)',
+    html: params.body || '',
+  }
+
+  const composer = new MailComposer(mailOptions)
+  const raw = await composer.compile().build()
+
+  const client = await connectImap(imapCfg)
+  try {
+    await client.append(params.folderName, raw, ['\\Draft', '\\Seen'], new Date())
+    return { ok: true }
+  } finally {
+    await client.logout().catch(() => {})
+  }
+}
+
+const moveMessage = async ({ config, params }) => {
+  const client = await connectImap(config)
+  try {
+    await ensureConnected(client)
+    const lock = await client.getMailboxLock(params.fromFolder)
+    try {
+      await client.messageMove(params.uid, params.toFolder, { uid: true })
+    } finally {
+      lock.release()
+    }
+    return { ok: true }
+  } finally {
+    if (client.usable) {
+      await client.logout().catch(() => {})
+    }
+  }
+}
+
 const main = async () => {
   try {
     const input = await readStdin()
@@ -375,6 +417,18 @@ const main = async () => {
 
     if (payload.action === 'send') {
       const data = await sendMessage(payload)
+      process.stdout.write(JSON.stringify({ data }))
+      return
+    }
+
+    if (payload.action === 'saveDraft') {
+      const data = await saveDraft(payload)
+      process.stdout.write(JSON.stringify({ data }))
+      return
+    }
+
+    if (payload.action === 'moveMessage') {
+      const data = await moveMessage(payload)
       process.stdout.write(JSON.stringify({ data }))
       return
     }

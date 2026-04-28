@@ -59,7 +59,9 @@ Route::get('crm-mailbox/messages/{messageId}/body', [CrmMailboxController::class
 Route::get('crm-mailbox/folders', [CrmMailboxController::class, 'folders'])->middleware('can:crm-mailbox.view');
 Route::get('crm-mailbox/test', [CrmMailboxController::class, 'test'])->middleware('can:crm-mailbox.view');
 Route::post('crm-mailbox/send', [CrmMailboxController::class, 'send'])->middleware('can:crm-mailbox.send');
+Route::post('crm-mailbox/draft', [CrmMailboxController::class, 'saveDraft'])->middleware('can:crm-mailbox.send');
 Route::patch('crm-mailbox/messages/{messageId}', [CrmMailboxController::class, 'mark'])->middleware('can:crm-mailbox.update');
+Route::post('crm-mailbox/messages/{messageId}/move', [CrmMailboxController::class, 'moveMessage'])->middleware('can:crm-mailbox.update');
 Route::apiResource('crm-knowledge-files', CrmKnowledgeFilesController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
 Route::get('crm-knowledge-files/{crmKnowledgeFile}/download', [CrmKnowledgeFilesController::class, 'download']);
 

@@ -128,12 +128,47 @@ class CrmMailboxService
         return $result['data'] ?? [];
     }
 
+    public function saveDraft(CrmMailConfig $config, array $message): array
+    {
+        $payload = [
+            'action' => 'saveDraft',
+            'config' => [
+                'imap' => $this->imapConfig($config),
+                'smtp' => $this->smtpConfig($config),
+            ],
+            'params' => array_merge($message, [
+                'folderName' => $this->folderName($config, 'DRAFTS'),
+            ]),
+        ];
+
+        $result = $this->runNode($payload);
+        return $result['data'] ?? [];
+    }
+
+    public function moveMessage(CrmMailConfig $config, string $fromFolderKey, int $uid, string $toFolderKey): array
+    {
+        $payload = [
+            'action' => 'moveMessage',
+            'config' => $this->imapConfig($config),
+            'params' => [
+                'fromFolder' => $this->folderName($config, $fromFolderKey),
+                'toFolder'   => $this->folderName($config, $toFolderKey),
+                'uid'        => $uid,
+            ],
+        ];
+
+        $result = $this->runNode($payload);
+        return $result['data'] ?? [];
+    }
+
     private function folderName(CrmMailConfig $config, string $folderKey): string
     {
         return match (strtoupper($folderKey)) {
-            'SENT' => $config->imap_sent_folder,
-            'TRASH' => $config->imap_trash_folder,
-            default => $config->imap_inbox_folder,
+            'SENT'   => $config->imap_sent_folder,
+            'TRASH'  => $config->imap_trash_folder,
+            'DRAFTS' => $config->imap_drafts_folder ?? 'Drafts',
+            'SPAM'   => $config->imap_spam_folder ?? 'Junk',
+            default  => $config->imap_inbox_folder,
         };
     }
 
