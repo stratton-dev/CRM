@@ -94,6 +94,8 @@ export interface Client {
   id: string
   name: string
   nip: string
+  regon?: string | null
+  krs?: string | null
   status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED' | 'IN_TALKS' | 'OFFER_GENERATED' | 'SPECIAL_OFFER'
   ownerId: string
   ownerName?: string

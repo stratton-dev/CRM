@@ -45,6 +45,8 @@ const sessionId = ref('')
 const companyData = ref({
   nip: '',
   name: '',
+  regon: '' as string | null,
+  krs: '' as string | null,
   street: '',
   zip: '',
   city: '',
@@ -75,6 +77,8 @@ const filteredProspects = computed(() => {
 const handleSelectMeeting = (prospect: any) => {
   companyData.value.nip = prospect.nip || ''
   companyData.value.name = prospect.name || ''
+  companyData.value.regon = (prospect as any).regon || null
+  companyData.value.krs = (prospect as any).krs || null
   companyData.value.street = prospect.street || ''
   companyData.value.zip = prospect.zip || ''
   companyData.value.city = prospect.city || ''
@@ -564,6 +568,8 @@ const fetchCompanyByNip = async () => {
       ...companyData.value,
       nip,
       name: data.name || companyData.value.name,
+      regon: data.regon || companyData.value.regon || null,
+      krs: data.krs || companyData.value.krs || null,
       street: `${data.street || ''} ${data.houseNr || ''}${data.aptNr ? `/${data.aptNr}` : ''}`.trim(),
       zip: data.zipCode || companyData.value.zip,
       city: data.city || companyData.value.city,
@@ -781,6 +787,8 @@ const saveClientAndMeeting = async () => {
         const payload = {
           nip,
           name: companyData.value.name,
+          regon: companyData.value.regon || null,
+          krs: companyData.value.krs || null,
           address_line1: companyData.value.street,
           address_line2: null,
           postal_code: companyData.value.zip,
@@ -1223,6 +1231,8 @@ const startNewMeeting = () => {
   companyData.value = {
     nip: '',
     name: '',
+    regon: null,
+    krs: null,
     street: '',
     zip: '',
     city: '',
@@ -1699,6 +1709,8 @@ onMounted(() => {
             <div>
               <p class="font-bold text-slate-800">{{ companyData.name || 'Nowa Firma' }}</p>
               <p class="text-xs text-slate-500 font-mono">{{ companyData.nip || 'NIP: ---' }}</p>
+              <p v-if="companyData.regon" class="text-xs text-slate-400 font-mono">REGON: {{ companyData.regon }}</p>
+              <p v-if="companyData.krs" class="text-xs text-slate-400 font-mono">KRS: {{ companyData.krs }}</p>
             </div>
           </div>
         </div>
@@ -1730,6 +1742,16 @@ onMounted(() => {
                 <div>
                   <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Pełna Nazwa Firmy</label>
                   <input v-model="companyData.name" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 font-bold focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold outline-none transition-all" />
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Nr REGON</label>
+                    <input v-model="companyData.regon" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 font-mono focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold outline-none transition-all" placeholder="—" />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Nr KRS</label>
+                    <input v-model="companyData.krs" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 font-mono focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold outline-none transition-all" placeholder="—" />
+                  </div>
                 </div>
               </div>
               <div class="space-y-6">

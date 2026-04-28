@@ -158,6 +158,8 @@ export const useClientStore = defineStore('client', () => {
         id: String(client.id),
         name: client.name || '',
         nip: client.nip || '',
+        regon: (client as any).regon || null,
+        krs: (client as any).krs || null,
         status: profile.status || mapMeetingToStatus(latestMeeting),
         ownerId: profileOwnerSupabase
           ? profileOwnerSupabase
@@ -311,6 +313,8 @@ export const useClientStore = defineStore('client', () => {
       return api.post('/v1/clients', {
         nip: clientData.nip,
         name: clientData.name,
+        regon: clientData.regon || null,
+        krs: clientData.krs || null,
         address_line1: clientData.street,
         address_line2: clientData.buildingNr,
         postal_code: clientData.zip,

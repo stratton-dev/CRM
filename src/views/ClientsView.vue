@@ -1524,6 +1524,14 @@ if (route.query.expand) {
                   <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">NIP</dt>
                   <dd class="text-slate-900 font-medium font-mono text-base">{{ selectedClient.nip }}</dd>
                 </div>
+                <div v-if="selectedClient.regon" class="col-span-1">
+                  <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">REGON</dt>
+                  <dd class="text-slate-900 font-medium font-mono">{{ selectedClient.regon }}</dd>
+                </div>
+                <div v-if="selectedClient.krs" class="col-span-1">
+                  <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">KRS</dt>
+                  <dd class="text-slate-900 font-medium font-mono">{{ selectedClient.krs }}</dd>
+                </div>
                 <div class="col-span-2">
                   <dt class="text-slate-500 text-xs uppercase font-semibold mb-1">Adres</dt>
                   <dd class="text-slate-900 font-medium">
