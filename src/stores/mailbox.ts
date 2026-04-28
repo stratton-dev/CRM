@@ -34,7 +34,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   const { emails: localEmails, users } = storeToRefs(data)
   const emails = ref<Email[]>([])
-  const emailsTotal = ref(0)
+  const emailsTotal = ref(parseInt(localStorage.getItem('mailbox_emails_total') || '0', 10))
   const emailsLoading = ref(false)
   const composeState = ref<{
     open: boolean
@@ -135,7 +135,10 @@ export const useMailboxStore = defineStore('mailbox', () => {
           if (meta?.total) total = Math.max(total, Number(meta.total))
         }
         emails.value = list.map(mapMailboxEmail)
-        if (total > 0) emailsTotal.value = total
+        if (total > 0) {
+          emailsTotal.value = total
+          localStorage.setItem('mailbox_emails_total', String(total))
+        }
         return
       } catch (error: any) {
         const message = error?.response?.data?.message || error?.message || 'Nie udało się połączyć z pocztą.'

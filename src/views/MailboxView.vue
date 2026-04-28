@@ -611,7 +611,7 @@ watch(
           </div>
 
           <!-- Pagination bar -->
-          <div v-if="totalPages > 1" class="shrink-0 border-t border-slate-100 px-3 py-2 flex items-center justify-between gap-1 bg-white">
+          <div v-if="totalPages > 1 || (mailMode === 'imap' && emailsLoading)" class="shrink-0 border-t border-slate-100 px-3 py-2 flex items-center justify-between gap-1 bg-white">
             <button
               class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
               :disabled="currentPage === 1 || emailsLoading"
