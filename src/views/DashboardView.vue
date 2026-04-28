@@ -688,8 +688,8 @@ watch(
               <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Aktualności</h3>
             </div>
             
-            <div class="relative h-80 flex flex-col" @mouseenter="newsHovered = true" @mouseleave="newsHovered = false">
-              <div class="flex-1 relative overflow-hidden" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">
+            <div class="relative flex flex-col" @mouseenter="newsHovered = true" @mouseleave="newsHovered = false">
+              <div class="relative overflow-hidden h-36" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">
                 <TransitionGroup name="news-slide" tag="div" class="h-full w-full relative">
                   <div 
                     v-if="newsItems.length > 0"
@@ -706,14 +706,14 @@ watch(
                       <span v-if="newsItems[currentNewsIndex]?.date" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.date }}</span>
                     </div>
                     <h4 class="font-bold text-slate-900 text-lg mb-2 uppercase tracking-tight hover:text-primary transition-colors line-clamp-2" :class="{'text-white hover:text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.title }}</h4>
-                    <div class="news-content-area text-slate-700 leading-relaxed text-base line-clamp-5" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}" v-html="newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej treści</i>'"></div>
+                    <div class="news-content-area text-slate-700 leading-relaxed text-sm line-clamp-3" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}" v-html="newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej treści</i>'"></div>
                     </div>
                   </div>
                   <div v-else key="empty" class="flex items-center justify-center h-full text-slate-400 italic">Brak aktualności</div>
                 </TransitionGroup>
               </div>
               
-              <div class="mt-auto text-center pt-2 flex flex-col items-center gap-1.5">
+              <div class="mt-3 text-center pt-2 flex flex-col items-center gap-1.5">
                 <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-primary transition-colors cursor-pointer" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">Kliknij aby czytać więcej</span>
                 <div class="flex gap-1.5 mt-0.5 z-20">
                   <div 
