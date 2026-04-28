@@ -888,11 +888,16 @@ const saveConsents = async () => {
     for (const consent of consentList.value) {
       if (!consentAccepted.value[consent.id]) continue
       if (existingIds.has(consent.id)) continue
-      await api.post(`/v1/clients/${clientId.value}/consents`, {
-        consent_id: consent.id,
-        accepted_at: now,
-        source: 'crm',
-      })
+      try {
+        await api.post(`/v1/clients/${clientId.value}/consents`, {
+          consent_id: consent.id,
+          accepted_at: now,
+          source: 'crm',
+        })
+      } catch (consentError: any) {
+        // Nieudany zapis pojedynczej zgody nie blokuje przejścia – zgody są już zweryfikowane po stronie klienta
+        console.warn('Consent save skipped:', consent.code, consentError?.response?.data?.message || consentError?.message)
+      }
     }
 
     await updateCrmReservationAndStatus()
