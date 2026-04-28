@@ -40,6 +40,8 @@ const imapLogger = isDebug ? {
   error: (msg, meta) => logDebug('error', msg, meta),
 } : false
 
+const hasFlag = (flags, flag) => flags instanceof Set ? flags.has(flag) : Array.isArray(flags) && flags.includes(flag)
+
 const toSafeNumberOrString = (value) => {
   if (typeof value === 'bigint') {
     const max = BigInt(Number.MAX_SAFE_INTEGER)
@@ -108,22 +110,12 @@ const listMessages = async ({ config, params }) => {
     await ensureConnected(client)
     const lock = await client.getMailboxLock(params.folderName)
     try {
-      await client.mailboxOpen(params.folderName, { readOnly: true })
       const mailbox = client.mailbox || {}
       const searchTimeoutMs = Number(process.env.IMAP_SEARCH_TIMEOUT_MS || 15000)
       const searchStart = Date.now()
-      const searchResult = await withTimeout(client.search(['ALL']), searchTimeoutMs, 'search')
+      const searchResult = await withTimeout(client.search({ all: true }, { uid: true }), searchTimeoutMs, 'search')
       if (timings) timings.search_ms = Date.now() - searchStart
-      const uids = []
-      if (Array.isArray(searchResult)) {
-        for (const uid of searchResult) {
-          uids.push(toSafeNumberOrString(uid))
-        }
-      } else if (searchResult && typeof searchResult[Symbol.asyncIterator] === 'function') {
-        for await (const uid of searchResult) {
-          uids.push(toSafeNumberOrString(uid))
-        }
-      }
+      const uids = Array.isArray(searchResult) ? searchResult.map(toSafeNumberOrString) : []
       const limit = Number(params.limit) || 50
       const recent = uids.slice(-limit)
       if (recent.length === 0) {
@@ -142,7 +134,7 @@ const listMessages = async ({ config, params }) => {
       const messages = []
       const fetchTimeoutMs = Number(process.env.IMAP_FETCH_TIMEOUT_MS || 20000)
       const fetchStart = Date.now()
-      const fetchIterator = client.fetch(recent, { uid: true, envelope: true, flags: true, internalDate: true })
+      const fetchIterator = client.fetch(recent, { uid: true, envelope: true, flags: true, internalDate: true }, { uid: true })
       for await (const msg of fetchIterator) {
         checkElapsedTimeout(fetchStart, fetchTimeoutMs, 'fetch')
         const from = msg.envelope?.from?.[0]
@@ -156,7 +148,7 @@ const listMessages = async ({ config, params }) => {
           body: '',
           attachments: [],
           date: (msg.internalDate || new Date()).toISOString(),
-          read: (msg.flags || []).includes('\\Seen'),
+          read: hasFlag(msg.flags, '\\Seen'),
           folder: params.folderKey,
         })
       }
@@ -187,14 +179,9 @@ const listFolders = async ({ config, params }) => {
   const client = await connectImap(config, timings)
   try {
     await ensureConnected(client)
-    const mailboxes = []
     const listTimeoutMs = Number(process.env.IMAP_LIST_TIMEOUT_MS || 15000)
     const listStart = Date.now()
-    const listIterator = client.list()
-    for await (const box of listIterator) {
-      checkElapsedTimeout(listStart, listTimeoutMs, 'list')
-      mailboxes.push(box)
-    }
+    const mailboxes = await withTimeout(client.list(), listTimeoutMs, 'list')
     if (timings) timings.list_ms = Date.now() - listStart
     if (mailboxes.length === 0) {
       throw new Error('IMAP: lista folderów pusta (sprawdź dane logowania lub uprawnienia).')
@@ -329,7 +316,7 @@ const getMessageBody = async ({ config, params }) => {
           body,
           attachments,
           date: (parsed.date || msg.internalDate || new Date()).toISOString(),
-          read: (msg.flags || []).includes('\\Seen'),
+          read: hasFlag(msg.flags, '\\Seen'),
           folder: params.folderKey,
         }
       }
