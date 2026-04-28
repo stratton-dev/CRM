@@ -550,7 +550,7 @@ watch(
            </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar divide-y divide-slate-50">
+        <div class="flex-1 overflow-y-auto custom-scrollbar min-h-0 divide-y divide-slate-50">
           <div
             v-for="email in emailsInCurrentFolder"
             :key="email.id"
@@ -610,8 +610,10 @@ watch(
              <p class="text-xs text-slate-300 mt-2 max-w-[180px]">Twoja skrzynka odbiorcza jest na ten moment czysta.</p>
           </div>
 
-          <!-- Pagination bar -->
-          <div v-if="totalPages > 1 || (mailMode === 'imap' && emailsLoading)" class="shrink-0 border-t border-slate-100 px-3 py-2 flex items-center justify-between gap-1 bg-white">
+        </div>
+
+        <!-- Pagination bar — fixed outside scroll, always visible -->
+        <div v-if="totalPages > 1 || (mailMode === 'imap' && emailsLoading)" class="shrink-0 border-t border-slate-100 px-3 py-2 flex items-center justify-between gap-1 bg-white">
             <button
               class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
               :disabled="currentPage === 1 || emailsLoading"
@@ -639,7 +641,6 @@ watch(
               <AppIcon name="chevron-right" class="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
       </div>
 
       <!-- Email Content Area -->
