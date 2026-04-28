@@ -1,4 +1,4 @@
-Ôªø<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSessionStore } from '@/stores/session'
@@ -28,7 +28,7 @@ const { emails: mailboxEmails } = storeToRefs(mailboxStore)
 
 const userRole = ref<UserRole>('SALES')
 const viewMode = ref<'hub' | 'stats'>('hub')
-const firstName = computed(() => session.currentUser?.name?.split(' ')[0] || 'U≈ºytkowniku')
+const firstName = computed(() => session.currentUser?.name?.split(' ')[0] || 'Uøytkowniku')
 
 const roleDisplayName = computed(() => {
   const mapping: Record<string, string> = {
@@ -47,7 +47,7 @@ const handleAddClientClick = (e?: Event) => {
   if (canAddClient.value) {
     router.push({ path: '/app/sales/start' })
   } else {
-    alert(`Brak uprawnie≈Ñ do "Strefa Klienta". Twoja rola: ${session.currentUser?.role || 'Nieznana'}`)
+    alert(`Brak uprawnieÒ do "Strefa Klienta". Twoja rola: ${session.currentUser?.role || 'Nieznana'}`)
   }
 }
 
@@ -188,8 +188,8 @@ const newsItems = computed(() => {
       let color = 'bg-slate-500'
       if (item.category === 'EVENTS') { tag = 'WYDARZENIE'; color = 'bg-purple-500' }
       else if (item.category === 'UPDATE') { tag = 'AKTUALIZACJA'; color = 'bg-blue-500' }
-      else if (item.category === 'SALES') { tag = 'SPRZEDA≈ª'; color = 'bg-green-500' }
-      else if (item.category === 'ANNOUNCEMENT') { tag = 'OG≈ÅOSZENIE'; color = 'bg-primary' }
+      else if (item.category === 'SALES') { tag = 'SPRZEDAØ'; color = 'bg-green-500' }
+      else if (item.category === 'ANNOUNCEMENT') { tag = 'OG£OSZENIE'; color = 'bg-primary' }
 
       const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString() : ''
 
@@ -269,7 +269,7 @@ const kpis = computed(() => dashboard.kpis.map((item) => ({
 const goalScore = computed(() => {
   return 0
 })
-const goalLabel = computed(() => 'OsiƒÖgniƒôty cel miesiƒôczny')
+const goalLabel = computed(() => 'OsiπgniÍty cel miesiÍczny')
 
 const unreadCount = computed(() => {
   const userEmail = session.currentUser?.email
@@ -442,11 +442,11 @@ watch(
 </script>
 
 <template>
-  <div class="view-transition pb-10 space-y-4">
+  <div class="view-transition pb-4 space-y-3">
     <div v-if="viewMode === 'hub'" class="w-full pt-2">
-      <div class="rounded-card shadow-card-hover border p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+      <div class="rounded-card shadow-card-hover border p-6 mb-4 flex flex-col md:flex-row justify-between items-center gap-4" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="flex-1">
-          <h1 class="font-serif font-bold text-3xl text-white mb-2 tracking-tight">Dzie≈Ñ dobry, {{ firstName }}</h1>
+          <h1 class="font-serif font-bold text-3xl text-white mb-2 tracking-tight">DzieÒ dobry, {{ firstName }}</h1>
           <div class="flex flex-col gap-1.5 max-w-md">
             <div class="flex justify-end items-baseline gap-2">
               <span class="text-xs font-bold text-slate-400">{{ goalLabel }}:</span>
@@ -469,8 +469,8 @@ watch(
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 mb-10 px-4">
-        <div @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 mb-4 px-2">
+        <div @click="viewMode = 'stats'" class="crm-tile h-36 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Dashboard" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -486,7 +486,7 @@ watch(
           </div>
         </div>
         
-        <div v-if="canAddClient" @click="handleAddClientClick" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <div v-if="canAddClient" @click="handleAddClientClick" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Strefa Klienta" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -502,7 +502,7 @@ watch(
           </div>
         </div>
         
-        <div v-else @click="handleAddClientClick" class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-100 border border-slate-200">
+        <div v-else @click="handleAddClientClick" class="crm-tile h-36 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-10" alt="Strefa Klienta" />
              <div class="absolute inset-0 bg-slate-100/80"></div>
@@ -513,12 +513,12 @@ watch(
             </div>
             <div>
               <h3 class="crm-tile-title text-xl text-slate-500 mb-1">Strefa Klienta</h3>
-              <p class="crm-tile-desc text-xs text-slate-400 font-medium">Brak uprawnie≈Ñ</p>
+              <p class="crm-tile-desc text-xs text-slate-400 font-medium">Brak uprawnieÒ</p>
             </div>
           </div>
         </div>
 
-        <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/quick-calculator" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Kalkulator" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -536,7 +536,7 @@ watch(
 
         <!-- Removed duplicate Payroll Link -->
 
-        <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/knowledge-base" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -552,7 +552,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/settlements" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/settlements" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1580519542036-c47de6196ba5?q=80&w=2671&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Moje rozliczenia" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -568,7 +568,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/clients" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Klienci" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -578,13 +578,13 @@ watch(
                <AppIcon name="file-contract" class="w-8 h-8" />
             </div>
             <div>
-              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Klienci w obs≈Çudze</h3>
-              <p class="crm-tile-desc text-xs text-slate-500 font-medium">ZarzƒÖdzaj umowami</p>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Klienci w obs≥udze</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Zarzπdzaj umowami</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink v-if="userRole !== 'SALES'" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink v-if="userRole !== 'SALES'" to="/app/recruitment" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Rekrutacja" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -595,12 +595,12 @@ watch(
             </div>
             <div>
               <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Rekrutacja</h3>
-              <p class="crm-tile-desc text-xs text-slate-500 font-medium">ZarzƒÖdzaj kandydatami</p>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Zarzπdzaj kandydatami</p>
             </div>
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/mailbox" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/mailbox" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1596526131083-e8c633c948d2?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Poczta" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -616,7 +616,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/calendar" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/calendar" class="crm-tile h-36 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=2668&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Kalendarz" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -639,11 +639,11 @@ watch(
 
           <div class="relative z-10 flex flex-col flex-1">
             <div class="flex justify-between items-center mb-4">
-              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Najbli≈ºsze Wydarzenia</h3>
+              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Najbliøsze Wydarzenia</h3>
             </div>
             
             <div class="space-y-3">
-              <div v-if="upcomingEvents.length === 0" class="text-center py-6 text-slate-400 italic text-sm">Brak nadchodzƒÖcych wydarze≈Ñ</div>
+              <div v-if="upcomingEvents.length === 0" class="text-center py-6 text-slate-400 italic text-sm">Brak nadchodzπcych wydarzeÒ</div>
               <div v-for="event in upcomingEvents" :key="event.id" class="relative group/item bg-slate-50 rounded-xl p-3 flex items-center gap-3 hover:bg-white hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-slate-100 ring-1 ring-slate-100" @click="goToEvent(event)">
                 <div class="bg-white group-hover/item:bg-primary group-hover/item:text-white transition-colors rounded-lg p-1.5 text-center w-12 shadow-sm shrink-0 ring-1 ring-slate-200 group-hover/item:ring-primary">
                   <div class="text-[9px] text-slate-400 uppercase font-bold group-hover/item:text-white/80">{{ event.month }}</div>
@@ -664,7 +664,7 @@ watch(
 
             <div class="mt-4 text-center">
               <RouterLink to="/app/calendar" class="text-[10px] font-bold text-primary hover:text-slate-800 uppercase tracking-widest transition group/link inline-flex items-center relative z-10">
-                Pe≈Çny Kalendarz <span class="ml-1 group-hover/link:translate-x-1 transition-transform">‚Üí</span>
+                Pe≥ny Kalendarz <span class="ml-1 group-hover/link:translate-x-1 transition-transform">õ</span>
               </RouterLink>
             </div>
           </div>
@@ -685,7 +685,7 @@ watch(
 
           <div class="relative z-10 flex flex-col flex-1">
             <div class="flex justify-between items-center mb-4">
-              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Aktualno≈õci</h3>
+              <h3 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider border-l-4 border-primary pl-3 transition-colors duration-300 group-hover:text-primary">Aktualnoúci</h3>
             </div>
             
             <div class="relative flex flex-col" @mouseenter="newsHovered = true" @mouseleave="newsHovered = false">
@@ -706,15 +706,15 @@ watch(
                       <span v-if="newsItems[currentNewsIndex]?.date" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.date }}</span>
                     </div>
                     <h4 class="font-bold text-slate-900 text-lg mb-2 uppercase tracking-tight hover:text-primary transition-colors line-clamp-2" :class="{'text-white hover:text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.title }}</h4>
-                    <div class="news-content-area text-slate-700 leading-relaxed text-sm line-clamp-3" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}" v-html="newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej tre≈õci</i>'"></div>
+                    <div class="news-content-area text-slate-700 leading-relaxed text-sm line-clamp-3" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}" v-html="newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej treúci</i>'"></div>
                     </div>
                   </div>
-                  <div v-else key="empty" class="flex items-center justify-center h-full text-slate-400 italic">Brak aktualno≈õci</div>
+                  <div v-else key="empty" class="flex items-center justify-center h-full text-slate-400 italic">Brak aktualnoúci</div>
                 </TransitionGroup>
               </div>
               
               <div v-if="newsItems.length > 0" class="mt-3 text-center pt-2 flex flex-col items-center gap-1.5">
-                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-primary transition-colors cursor-pointer" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">Kliknij aby czytaƒá wiƒôcej</span>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-primary transition-colors cursor-pointer" @click="newsItems.length > 0 && openNewsModal(newsItems[currentNewsIndex])">Kliknij aby czytaÊ wiÍcej</span>
                 <div class="flex gap-1.5 mt-0.5 z-20">
                   <div 
                     v-for="(_, index) in newsItems" 
@@ -759,13 +759,13 @@ watch(
               <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Zakres</label>
               <div class="relative">
                 <select v-model="viewScope" class="w-full bg-slate-800 border border-slate-700 text-white py-2 pl-4 pr-10 rounded-lg text-sm font-bold focus:outline-none focus:border-primary cursor-pointer appearance-none transition hover:bg-slate-750">
-                  <option value="all" v-if="userRole === 'ADMIN'">Ca≈Ça firma</option>
+                  <option value="all" v-if="userRole === 'ADMIN'">Ca≥a firma</option>
                   <option value="mine">Widok: Moje</option>
                   <option v-if="userRole === 'ADMIN'" value="role:DIRECTOR">Widok: Dyrektorzy</option>
-                  <option v-if="userRole === 'ADMIN'" value="role:MANAGER">Widok: Menad≈ºerowie</option>
+                  <option v-if="userRole === 'ADMIN'" value="role:MANAGER">Widok: Menadøerowie</option>
                   <option v-if="userRole === 'ADMIN'" value="role:SALES">Widok: Doradcy Biznesowi</option>
                   <option v-if="userRole === 'MANAGER' || userRole === 'DIRECTOR'" value="structure">Widok: Struktura</option>
-                  <option v-if="userRole === 'DIRECTOR'" value="team">Widok: Zesp√≥≈Ç</option>
+                  <option v-if="userRole === 'DIRECTOR'" value="team">Widok: ZespÛ≥</option>
                 </select>
                 <AppIcon name="users" class="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
               </div>
@@ -788,7 +788,7 @@ watch(
           :class="showClientsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="address-book" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showClientsTab ? 'text-white' : 'text-slate-500'" />
-          <span class="leading-tight text-center">Klienci w obs≈Çudze</span>
+          <span class="leading-tight text-center">Klienci w obs≥udze</span>
         </button>
         <button 
           @click="showMeetingsTab = !showMeetingsTab"
@@ -796,7 +796,7 @@ watch(
           :class="showMeetingsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="calendar" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showMeetingsTab ? 'text-white' : 'text-slate-500'" />
-          <span class="leading-tight text-center">Spotkania w obs≈Çudze</span>
+          <span class="leading-tight text-center">Spotkania w obs≥udze</span>
         </button>
         <button 
           @click="showTeamTab = !showTeamTab"
@@ -804,7 +804,7 @@ watch(
           :class="showTeamTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="people-group" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showTeamTab ? 'text-white' : 'text-slate-500'" />
-          <span class="leading-tight text-center">M√≥j Zesp√≥≈Ç</span>
+          <span class="leading-tight text-center">MÛj ZespÛ≥</span>
         </button>
         <button 
           @click="showArrearsTab = !showArrearsTab"
@@ -812,7 +812,7 @@ watch(
           :class="showArrearsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="file-invoice-dollar" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showArrearsTab ? 'text-white' : 'text-slate-500'" />
-          <span class="leading-tight text-center">Zaleg≈Ço≈õci P≈Çatnicze</span>
+          <span class="leading-tight text-center">Zaleg≥oúci P≥atnicze</span>
         </button>
         <button 
           @click="showCalculationsTab = !showCalculationsTab"
@@ -820,7 +820,7 @@ watch(
           :class="showCalculationsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="stopwatch" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showCalculationsTab ? 'text-white' : 'text-slate-500'" />
-          <span class="leading-tight text-center">Wys≈Çane kalkulacje</span>
+          <span class="leading-tight text-center">Wys≥ane kalkulacje</span>
         </button>
 
       </div>
@@ -869,11 +869,11 @@ watch(
           <div class="flex items-center gap-3 ml-4 flex-1">
             <AppIcon name="stopwatch" class="w-5 h-5 text-primary" />
             <div class="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
-              <h3 class="font-bold text-slate-800 text-lg tracking-tight">Wys≈Çane kalkulacje</h3>
+              <h3 class="font-bold text-slate-800 text-lg tracking-tight">Wys≥ane kalkulacje</h3>
               <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Termin do 14 dni dla oferty Eliton Prime+TM</p>
             </div>
           </div>
-          <span class="text-[10px] text-slate-500 font-bold bg-white border border-slate-200 px-4 py-2 rounded-full uppercase tracking-wide shadow-sm mr-4 shrink-0">Sortowanie: Czas do wyga≈õniƒôcia</span>
+          <span class="text-[10px] text-slate-500 font-bold bg-white border border-slate-200 px-4 py-2 rounded-full uppercase tracking-wide shadow-sm mr-4 shrink-0">Sortowanie: Czas do wygaúniÍcia</span>
         </div>
 
         <div class="overflow-x-auto">
@@ -883,8 +883,8 @@ watch(
                 <th class="px-4 py-4">Firma</th>
                 <th class="px-4 py-4 hidden md:table-cell">NIP</th>
                 <th class="px-4 py-4 hidden lg:table-cell">Data</th>
-                <th class="px-4 py-4">Wa≈ºno≈õƒá PLUS</th>
-                <th class="px-4 py-4 text-slate-700">Pozosta≈Ço</th>
+                <th class="px-4 py-4">WaønoúÊ PLUS</th>
+                <th class="px-4 py-4 text-slate-700">Pozosta≥o</th>
                 <th class="px-4 py-4">Status</th>
                 <th class="px-4 py-4 text-right">Akcje</th>
               </tr>
@@ -903,7 +903,7 @@ watch(
                     class="inline-flex items-center px-3 py-1 rounded text-xs font-bold shadow-sm"
                     :class="(calc.daysLeft ?? 0) <= 3 ? 'bg-red-100 text-red-700' : (calc.daysLeft ?? 0) <= 7 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'"
                   >
-                    {{ calc.daysLeft ?? '‚Äî' }}{{ calc.daysLeft != null ? ' dni' : '' }}
+                    {{ calc.daysLeft ?? 'ó' }}{{ calc.daysLeft != null ? ' dni' : '' }}
                     <span v-if="calc.daysLeft != null && calc.daysLeft <= 3" class="ml-2 text-[9px] uppercase opacity-80 border-l border-red-300 pl-2">Alarm</span>
                   </span>
                 </td>
@@ -912,7 +912,7 @@ watch(
                 </td>
                 <td class="px-4 py-4 text-right whitespace-nowrap">
                   <button type="button" class="text-primary hover:text-white font-bold text-xs bg-blue-50 hover:bg-primary px-4 py-2 rounded-lg transition shadow-sm" @click="openCalculation(calc)">
-                    Otw√≥rz
+                    OtwÛrz
                   </button>
                 </td>
               </tr>
@@ -936,7 +936,7 @@ watch(
             :disabled="activeCalculationsPage === totalActiveCalculationsPages"
             class="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
-            Nastƒôpna
+            NastÍpna
           </button>
         </div>
       </div>
@@ -946,7 +946,7 @@ watch(
           <div class="flex items-center gap-3 ml-4">
             <AppIcon name="file-invoice-dollar" class="w-5 h-5 text-red-600" />
             <div class="flex flex-col sm:flex-row sm:items-baseline sm:gap-4">
-              <h3 class="font-bold text-slate-800 text-lg tracking-tight">Zaleg≈Ço≈õci P≈Çatnicze</h3>
+              <h3 class="font-bold text-slate-800 text-lg tracking-tight">Zaleg≥oúci P≥atnicze</h3>
               <p class="text-[10px] text-red-700 font-bold uppercase tracking-widest mt-0.5">Wymagana interwencja doradcy.</p>
             </div>
           </div>
@@ -958,15 +958,15 @@ watch(
                 <th class="px-6 py-4">Firma</th>
                 <th class="px-6 py-4">Nr Faktury</th>
                 <th class="px-6 py-4 font-bold text-slate-700">Kwota</th>
-                <th class="px-6 py-4">Termin P≈Çatno≈õci</th>
-                <th class="px-6 py-4 text-red-600 font-bold">Op√≥≈∫nienie</th>
+                <th class="px-6 py-4">Termin P≥atnoúci</th>
+                <th class="px-6 py-4 text-red-600 font-bold">OpÛünienie</th>
                 <th class="px-6 py-4">Status</th>
                 <th class="px-6 py-4 text-right">Akcja</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-slate-600">
               <tr v-if="overdueInvoices.length === 0" class="bg-white">
-                <td colspan="7" class="px-6 py-6 text-sm text-slate-500">Brak zaleg≈Ço≈õci p≈Çatniczych.</td>
+                <td colspan="7" class="px-6 py-6 text-sm text-slate-500">Brak zaleg≥oúci p≥atniczych.</td>
               </tr>
               <tr v-for="inv in paginatedOverdueInvoices" :key="inv.id" class="hover:bg-red-50/10 transition bg-white group">
                 <td class="px-6 py-4 font-bold text-slate-800 text-sm max-w-[350px] truncate" :title="inv.company">{{ inv.company }}</td>
@@ -975,7 +975,7 @@ watch(
                 <td class="px-6 py-4 text-slate-500 whitespace-nowrap">{{ inv.dueDate }}</td>
                 <td class="px-6 py-4 text-red-600 font-bold bg-red-50 whitespace-nowrap">+{{ inv.daysOverdue ?? 0 }} dni</td>
                 <td class="px-6 py-4 whitespace-nowrap"><span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold border border-red-200">UNPAID</span></td>
-                <td class="px-6 py-4 text-right whitespace-nowrap"><button type="button" class="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition shadow-sm">Szczeg√≥≈Çy</button></td>
+                <td class="px-6 py-4 text-right whitespace-nowrap"><button type="button" class="text-xs font-bold text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition shadow-sm">SzczegÛ≥y</button></td>
               </tr>
             </tbody>
           </table>
@@ -997,7 +997,7 @@ watch(
             :disabled="overdueInvoicesPage === totalOverdueInvoicesPages"
             class="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
-            Nastƒôpna
+            NastÍpna
           </button>
         </div>
   
@@ -1022,14 +1022,14 @@ watch(
           
           <h2 class="font-serif font-bold text-3xl text-slate-900 mb-6 leading-tight">{{ selectedNews.title }}</h2>
           
-          <div class="prose prose-slate max-w-none text-slate-700 leading-relaxed max-h-[60vh] overflow-y-auto mb-6" v-html="selectedNews.content || '<i>Brak tre≈õci</i>'"></div>
+          <div class="prose prose-slate max-w-none text-slate-700 leading-relaxed max-h-[60vh] overflow-y-auto mb-6" v-html="selectedNews.content || '<i>Brak treúci</i>'"></div>
           
           <div class="mt-8 border-t border-slate-100 pt-6 flex justify-between items-end">
             <div v-if="selectedNews.attachment" class="flex flex-col gap-2">
               <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Pliki do pobrania:</span>
               <a :href="selectedNews.attachment" target="_blank" class="inline-flex items-center gap-2 text-stratton-gold font-bold hover:text-amber-700 transition group p-2 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-100">
                 <AppIcon name="paperclip" class="w-4 h-4 bg-amber-200 text-amber-800 rounded p-0.5" />
-                <span class="text-xs uppercase tracking-wide">{{ selectedNews.attachmentName || 'Pobierz za≈ÇƒÖcznik' }}</span>
+                <span class="text-xs uppercase tracking-wide">{{ selectedNews.attachmentName || 'Pobierz za≥πcznik' }}</span>
               </a>
             </div>
             <div v-else></div> <!-- Spacer -->
@@ -1077,3 +1077,4 @@ watch(
   text-decoration: underline;
 }
 </style>
+
