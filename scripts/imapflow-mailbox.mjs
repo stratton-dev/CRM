@@ -96,7 +96,7 @@ const connectImap = async (config, timings = undefined) => {
 }
 
 const ensureConnected = async (client) => {
-  if (client.connected) return
+  if (client.usable) return
   logDebug('info', 'imapflow reconnecting')
   await client.connect()
 }
@@ -176,7 +176,7 @@ const listMessages = async ({ config, params }) => {
       lock.release()
     }
   } finally {
-    if (client.connected) {
+    if (client.usable) {
       await client.logout().catch(() => {})
     }
   }
@@ -211,7 +211,7 @@ const listFolders = async ({ config, params }) => {
     }
     return folders
   } finally {
-    if (client.connected) {
+    if (client.usable) {
       await client.logout().catch(() => {})
     }
   }
@@ -229,7 +229,7 @@ const markRead = async ({ config, params }) => {
       lock.release()
     }
   } finally {
-    if (client.connected) {
+    if (client.usable) {
       await client.logout().catch(() => {})
     }
   }
@@ -242,7 +242,7 @@ const testConnection = async ({ config }) => {
     await client.noop()
     return true
   } finally {
-    if (client.connected) {
+    if (client.usable) {
       await client.logout().catch(() => {})
     }
   }
@@ -338,7 +338,7 @@ const getMessageBody = async ({ config, params }) => {
       lock.release()
     }
   } finally {
-    if (client.connected) {
+    if (client.usable) {
       await client.logout().catch(() => {})
     }
   }
