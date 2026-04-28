@@ -93,6 +93,8 @@ const attachKbFile = async (file: any) => {
 const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH'>('INBOX')
 const selectedEmail = ref<Email | null>(null)
 const bodyLoading = ref(false)
+const currentPage = ref(1)
+const PAGE_SIZE = 50
 
 const formatEmailDate = (dateStr: string) => {
   const d = new Date(dateStr)
@@ -223,7 +225,7 @@ watch(
   { deep: true, immediate: true }
 )
 
-const emailsInCurrentFolder = computed(() => {
+const allEmailsInCurrentFolder = computed(() => {
   const userEmail = currentUser.value?.email
   const folder = currentFolder.value
   const list = Array.isArray(emails.value) ? emails.value : []
@@ -239,6 +241,23 @@ const emailsInCurrentFolder = computed(() => {
       return false
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(allEmailsInCurrentFolder.value.length / PAGE_SIZE)))
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const cur = currentPage.value
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | '...')[] = [1]
+  if (cur > 3) pages.push('...')
+  for (let p = Math.max(2, cur - 1); p <= Math.min(total - 1, cur + 1); p++) pages.push(p)
+  if (cur < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
+const emailsInCurrentFolder = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return allEmailsInCurrentFolder.value.slice(start, start + PAGE_SIZE)
 })
 
 const unreadCount = computed(() => {
@@ -287,6 +306,7 @@ const selectContact = (email: string) => {
 const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH') => {
   currentFolder.value = folder
   selectedEmail.value = null
+  currentPage.value = 1
   mailboxStore.fetchEmailsForFolder(folder)
 }
 
@@ -576,12 +596,41 @@ watch(
             </div>
           </div>
           
-          <div v-if="emailsInCurrentFolder.length === 0" class="flex flex-col items-center justify-center h-full p-12 text-center">
+          <div v-if="allEmailsInCurrentFolder.length === 0" class="flex flex-col items-center justify-center h-full p-12 text-center">
              <div class="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6">
                 <AppIcon name="inbox" class="w-10 h-10 text-slate-200" />
              </div>
              <p class="text-sm font-bold text-slate-400 uppercase tracking-[0.2em]">Pusto tutaj</p>
              <p class="text-xs text-slate-300 mt-2 max-w-[180px]">Twoja skrzynka odbiorcza jest na ten moment czysta.</p>
+          </div>
+
+          <!-- Pagination bar -->
+          <div v-if="totalPages > 1" class="shrink-0 border-t border-slate-100 px-3 py-2 flex items-center justify-between gap-1 bg-white">
+            <button
+              class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              :disabled="currentPage === 1"
+              @click="currentPage--; selectedEmail = null"
+            >
+              <AppIcon name="chevron-left" class="w-3.5 h-3.5" />
+            </button>
+            <div class="flex items-center gap-1">
+              <template v-for="p in visiblePages" :key="p">
+                <span v-if="p === '...'" class="text-[11px] text-slate-400 px-0.5">…</span>
+                <button
+                  v-else
+                  class="min-w-[24px] h-6 px-1.5 rounded-lg text-[11px] font-black transition"
+                  :class="p === currentPage ? 'bg-stratton-gold text-white shadow-sm' : 'hover:bg-slate-100 text-slate-500'"
+                  @click="currentPage = p; selectedEmail = null"
+                >{{ p }}</button>
+              </template>
+            </div>
+            <button
+              class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
+              :disabled="currentPage === totalPages"
+              @click="currentPage++; selectedEmail = null"
+            >
+              <AppIcon name="chevron-right" class="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>
