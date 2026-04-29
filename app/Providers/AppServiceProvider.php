@@ -36,10 +36,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::before(function (User $user, string $ability) {
-            // Admin and Director role bypass for all permissions
-            // Including check for common admin email and cached role
             $roleCode = $user->role_cached ?? $user->role?->code;
+
+            // ADMIN and DIRECTOR: full bypass
             if (in_array($roleCode, ['ADMIN', 'DIRECTOR', 'director', 'admin'], true) || $user->email === 'admin@stratton.pl') {
+                return true;
+            }
+
+            // MANAGER: full bypass
+            if ($roleCode === 'MANAGER') {
+                return true;
+            }
+
+            // SALES: full bypass except crm-commission-config
+            if ($roleCode === 'SALES' && !str_starts_with($ability, 'crm-commission-config')) {
                 return true;
             }
         });
