@@ -5,6 +5,28 @@
     <link rel="icon" type="image/png" href="/favicon.png"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stratton CRM</title>
+    <script>
+      // Suppress pusher-js cross-tab coordination noise (TabsManager)
+      (function () {
+        function isTabsNoise(v) {
+          var s = (v instanceof Error ? v.message : '') + ' ' + String(v == null ? '' : v)
+          return s.indexOf('No Listener: tabs:') !== -1 || s.indexOf('tabs:outgoing') !== -1
+        }
+        var _err = console.error.bind(console)
+        console.error = function () {
+          for (var i = 0; i < arguments.length; i++) {
+            if (isTabsNoise(arguments[i])) return
+          }
+          _err.apply(console, arguments)
+        }
+        window.addEventListener('unhandledrejection', function (e) {
+          if (isTabsNoise(e && e.reason)) e.preventDefault()
+        }, true)
+        window.addEventListener('error', function (e) {
+          if (isTabsNoise(e && (e.error || e.message))) e.preventDefault()
+        }, true)
+      })()
+    </script>
   </head>
 
   <body>

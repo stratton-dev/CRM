@@ -73,7 +73,8 @@ import {
   Bars3BottomLeftIcon,
   Bars3BottomRightIcon,
   Bars3Icon,
-  QueueListIcon
+  QueueListIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/vue/24/outline'
 
 const props = withDefaults(
@@ -178,7 +179,8 @@ const iconMap: Record<string, any> = {
   'align-center': Bars3Icon,
   'align-justify': QueueListIcon,
   'list-bullet': ListBulletIcon,
-  'list-ordered': NumberedListIcon
+  'list-ordered': NumberedListIcon,
+  'chat-bubble': ChatBubbleLeftRightIcon
 }
 
 const icon = computed(() => iconMap[props.name] || QuestionMarkCircleIcon)

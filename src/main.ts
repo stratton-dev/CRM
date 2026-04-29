@@ -8,23 +8,17 @@ import { setupRealtime } from './realtime/setup'
 // Global styles
 import './assets/tailwind.css'
 
-// Suppress unhandled rejections from pusher-js TabsManager inter-tab coordination.
-// These are benign internal events that fire when the "master" tab listener isn't ready yet.
+// Backup suppression for pusher-js TabsManager noise (primary suppressor is in index.html)
+const isTabsNoise = (v: unknown): boolean => {
+  const s = [(v instanceof Error ? v.message : ''), String(v ?? '')].join(' ')
+  return s.includes('No Listener: tabs:') || s.includes('tabs:outgoing')
+}
 window.addEventListener('unhandledrejection', (event) => {
-  const reason = event?.reason
-  const msg: string = (reason instanceof Error ? reason.message : String(reason ?? ''))
-  if (msg.includes('No Listener: tabs:') || msg.includes('tabs:outgoing')) {
-    event.preventDefault()
-    return
-  }
-})
+  if (isTabsNoise(event?.reason)) event.preventDefault()
+}, true)
 window.addEventListener('error', (event) => {
-  const msg = event?.message ?? ''
-  if (msg.includes('No Listener: tabs:') || msg.includes('tabs:outgoing')) {
-    event.preventDefault()
-    return
-  }
-})
+  if (isTabsNoise(event?.error || event?.message)) event.preventDefault()
+}, true)
 
 const app = createApp(App)
 app.use(createPinia())

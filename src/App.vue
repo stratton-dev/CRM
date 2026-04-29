@@ -13,6 +13,8 @@ import { useUiStore } from '@/stores/ui'
 import ToastContainer from '@/components/ToastContainer.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import MailComposeModal from '@/components/MailComposeModal.vue'
+import ChatPanel from '@/components/ChatPanel.vue'
+import { useChatStore } from '@/stores/chat'
 import logoUrl from '@/assets/logo.svg'
 
 const route = useRoute()
@@ -25,6 +27,8 @@ const notifStore = useNotificationStore()
 const structure = useStructureStore()
 const viewPermissions = useViewPermissionsStore()
 const ui = useUiStore()
+const chatStore = useChatStore()
+const { totalUnread: chatUnread } = storeToRefs(chatStore)
 
 const isSidebarOpen = ref(true)
 const { showNotifications, showCommandPalette, commandQuery } = storeToRefs(ui)
@@ -262,6 +266,7 @@ onBeforeUnmount(() => {
   <div v-if="showShell" class="flex h-screen bg-slate-50 transition-all duration-300" :class="session.isImpersonating ? 'border-[6px] border-amber-400' : ''">
     <ToastContainer />
     <MailComposeModal />
+    <ChatPanel />
 
     <aside
       v-if="shouldShowSidebar"
@@ -358,13 +363,21 @@ onBeforeUnmount(() => {
           <div class="flex-1 flex flex-col items-start relative h-full justify-center">
              <!-- Controls -->
              <div class="absolute right-0 bottom-1.5 flex items-center space-x-2 z-30 bg-white/90 backdrop-blur-md px-3 rounded-lg border border-slate-100 shadow-sm h-9">
+               <!-- Chat icon -->
+               <div class="relative cursor-pointer group" @click="chatStore.toggle()">
+                 <div class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition">
+                   <AppIcon name="chat-bubble" class="w-5 h-5 text-slate-400 group-hover:text-stratton-gold transition" />
+                   <span v-if="chatUnread > 0" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-stratton-gold border border-white z-10"></span>
+                 </div>
+               </div>
+               <div class="h-4 w-px bg-slate-200 mx-1"></div>
                <div class="relative cursor-pointer group" @click="toggleNotifications">
-                  <div 
+                  <div
                     class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition"
                     :class="{ 'animate-bell': unreadCount > 0 }"
                   >
-                    <AppIcon 
-                      name="bell" 
+                    <AppIcon
+                      name="bell"
                       class="w-5 h-5 text-slate-400 group-hover:text-stratton-gold transition"
                     />
                     <span v-if="unreadCount > 0" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 border border-white z-10"></span>
