@@ -378,7 +378,7 @@ const generateQuickOffer = async () => {
         <!-- Content: Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Card 1: Monthly Savings (Dark Mode) -->
-            <div class="rounded-2xl p-5 border border-slate-700 shadow-sm relative overflow-hidden group transition-colors" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%);">
+            <div class="rounded-2xl p-5 border border-[#003366] shadow-sm relative overflow-hidden group transition-colors" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
                 <div class="flex justify-between items-start mb-3">
                     <div>
                         <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Oszczędność miesięczna</div>
@@ -400,7 +400,7 @@ const generateQuickOffer = async () => {
             </div>
 
             <!-- Card 2: Yearly Potential (Dark Mode) -->
-            <div class="rounded-2xl p-5 border border-slate-700 shadow-sm text-white relative overflow-hidden group transition-colors" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%);">
+            <div class="rounded-2xl p-5 border border-[#003366] shadow-sm text-white relative overflow-hidden group transition-colors" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
                 <div class="absolute -right-10 -top-10 w-40 h-40 bg-stratton-gold rounded-full blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity"></div>
 
                 <div class="flex justify-between items-start mb-3 relative z-10">
