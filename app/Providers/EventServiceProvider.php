@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Events\ChatMessageSent;
 use App\Events\MeetingCreated;
 use App\Events\Notifications\NotificationCreated;
 use App\Events\Notifications\NotificationDeleted;
@@ -20,6 +21,9 @@ use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvi
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
+        ChatMessageSent::class => [
+            BroadcastReverbEvent::class,
+        ],
         MeetingCreated::class => [
             NotifyManagerAboutMeeting::class,
             BroadcastReverbEvent::class,
