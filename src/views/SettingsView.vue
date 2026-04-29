@@ -59,7 +59,7 @@ const firstAllowedSettingsTab = computed(() => {
 })
 const visibleSettingsTabs = computed(() => settingsTabs.filter((tab) => tab && canAccessSettingsTab(tab.permissionKey)))
 const isSuperAdmin = computed(() => currentRole.value === 'ADMIN')
-const isMailServerAdmin = computed(() => isSuperAdmin.value)
+const isMailServerAdmin = computed(() => auth.isAuthenticated)
 const calculatorStore = useCalculatorStore()
 const calculatorSaving = ref(false)
 const calculatorError = ref<string | null>(null)
@@ -1011,15 +1011,7 @@ const saveMailSettings = async () => {
   mailSettingsSaving.value = true
   mailSettingsError.value = null
   try {
-    const payload = isMailServerAdmin.value
-      ? { ...mailSettings.value }
-      : {
-          imap_username: mailSettings.value.imap_username,
-          imap_password: mailSettings.value.imap_password,
-          smtp_username: mailSettings.value.smtp_username,
-          smtp_password: mailSettings.value.smtp_password,
-        }
-    const { data } = await api.put('/v1/crm-mail-settings', payload)
+    const { data } = await api.put('/v1/crm-mail-settings', { ...mailSettings.value })
     const saved = data?.data ?? null
     if (saved) applyMailSettings(saved)
     toast.success('Zapisano konfigurację poczty.')
@@ -1342,11 +1334,11 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
         <div v-if="!auth.enabled" class="text-sm text-gray-500">Tryb DEV: konfiguracja poczty jest dostępna tylko w trybie API.</div>
         <div v-else class="space-y-5">
           <div v-if="mailSettingsError" class="text-sm text-red-600">{{ mailSettingsError }}</div>
-          <div v-if="isMailServerAdmin" class="space-y-2">
+          <div v-if="isSuperAdmin" class="space-y-2">
             <div v-if="mailTestError" class="text-xs text-red-600">{{ mailTestError }}</div>
             <pre v-if="mailTestResult" class="text-[11px] bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap">{{ JSON.stringify(mailTestResult, null, 2) }}</pre>
           </div>
-          <div v-if="isMailServerAdmin" class="border rounded p-4 space-y-3">
+          <div v-if="isSuperAdmin" class="border rounded p-4 space-y-3">
             <div class="flex items-center justify-between">
               <h4 class="font-semibold text-sm">IMAP Debug (Node)</h4>
               <div class="flex items-center gap-2">
@@ -1397,11 +1389,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
             </div>
           </div>
 
-          <div v-if="!isMailServerAdmin" class="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-            Serwer IMAP/SMTP jest zarządzany centralnie przez administratora. Tutaj ustawiasz tylko własny login i hasło.
-          </div>
-
-          <div v-if="isMailServerAdmin" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="text-xs font-semibold text-gray-500">Nazwa nadawcy</label>
               <input v-model="mailSettings.from_name" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="np. Jan Kowalski" />
@@ -1412,7 +1400,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
             </div>
           </div>
 
-          <div v-if="isMailServerAdmin" class="border rounded p-4 space-y-4">
+          <div class="border rounded p-4 space-y-4">
             <h4 class="font-semibold text-sm">IMAP (pobieranie)</h4>
             <div v-if="mailFoldersError" class="text-xs text-red-600">{{ mailFoldersError }}</div>
             <datalist v-if="mailFolders.length" id="imap-folder-options">
@@ -1450,7 +1438,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
             </div>
           </div>
 
-          <div v-if="isMailServerAdmin" class="border rounded p-4 space-y-4">
+          <div class="border rounded p-4 space-y-4">
             <h4 class="font-semibold text-sm">SMTP (wysyłka)</h4>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
