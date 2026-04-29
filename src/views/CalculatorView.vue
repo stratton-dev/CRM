@@ -256,7 +256,7 @@ onMounted(() => {
         </button>
       </div>
 
-      <div class="relative bg-slate-800 rounded-2xl border border-slate-700 shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 group hover:border-slate-600 transition-colors">
+      <div class="relative rounded-2xl border border-[#003d7a] shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 group hover:border-[#0051a8] transition-colors" style="background: linear-gradient(135deg, #002347 0%, #002f5e 50%, #003875 100%)">
         <div>
           <div class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Firma dla kalkulacji</div>
           <div class="text-xl font-bold text-white tracking-tight">
