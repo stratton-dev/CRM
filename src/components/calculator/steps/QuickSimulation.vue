@@ -357,7 +357,7 @@ const generateQuickOffer = async () => {
     <div class="space-y-8">
       
       <!-- Top Header Area: Results & Controls (Full Width) -->
-      <div class="bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 rounded-card shadow-card-hover border border-slate-800 p-6">
+      <div class="rounded-card shadow-card-hover border border-[#003366] p-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
         <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-6">
             <!-- Left: Back Button + Title -->
             <div class="flex items-center gap-6 self-start md:self-center">
@@ -428,7 +428,7 @@ const generateQuickOffer = async () => {
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         
         <!-- Left Panel: Structure -->
-        <div class="xl:col-span-4 bg-slate-900 text-white flex flex-col shrink-0 border border-slate-800 rounded-2xl shadow-xl">
+        <div class="xl:col-span-4 text-white flex flex-col shrink-0 border border-[#003366] rounded-2xl shadow-xl" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
           <div class="p-6 pb-2">
             <div class="flex items-center gap-2 mb-3 text-stratton-gold">
               <div class="p-2 bg-stratton-gold/10 rounded-xl border border-stratton-gold/20 shadow-[0_0_15px_rgba(197,160,89,0.1)]">
