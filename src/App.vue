@@ -136,9 +136,10 @@ const navLinks = computed(() => {
 })
 
 const NOTIF_CLEARED_KEY = 'crm_notifications_cleared_at'
-const notificationsClearedAt = ref<number | null>(() => {
+const _loadClearedAt = (): number | null => {
   try { const v = localStorage.getItem(NOTIF_CLEARED_KEY); return v ? Number(v) : null } catch { return null }
-}())
+}
+const notificationsClearedAt = ref<number | null>(_loadClearedAt())
 
 const myNotifications = computed(() => {
   const user = currentUser.value
