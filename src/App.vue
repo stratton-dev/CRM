@@ -12,6 +12,7 @@ import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import { useUiStore } from '@/stores/ui'
 import ToastContainer from '@/components/ToastContainer.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import MailComposeModal from '@/components/MailComposeModal.vue'
 import logoUrl from '@/assets/logo.svg'
 
 const route = useRoute()
@@ -134,7 +135,10 @@ const navLinks = computed(() => {
   return dashboardLink ? [dashboardLink, ...otherLinks] : otherLinks
 })
 
-const notificationsClearedAt = ref<number | null>(null)
+const NOTIF_CLEARED_KEY = 'crm_notifications_cleared_at'
+const notificationsClearedAt = ref<number | null>(() => {
+  try { const v = localStorage.getItem(NOTIF_CLEARED_KEY); return v ? Number(v) : null } catch { return null }
+}())
 
 const myNotifications = computed(() => {
   const user = currentUser.value
@@ -148,7 +152,11 @@ const myNotifications = computed(() => {
 const unreadCount = computed(() => myNotifications.value.filter((notif) => !notif.read).length)
 
 const clearAllNotifications = () => {
-    notificationsClearedAt.value = Date.now()
+  const now = Date.now()
+  notificationsClearedAt.value = now
+  try { localStorage.setItem(NOTIF_CLEARED_KEY, String(now)) } catch { /* ignore */ }
+  const user = currentUser.value
+  if (user) notifStore.markAllAsRead(user.id)
 }
 
 
@@ -252,6 +260,7 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="showShell" class="flex h-screen bg-slate-50 transition-all duration-300" :class="session.isImpersonating ? 'border-[6px] border-amber-400' : ''">
     <ToastContainer />
+    <MailComposeModal />
 
     <aside
       v-if="shouldShowSidebar"
