@@ -69,10 +69,19 @@ class CrmMailSettingsController extends Controller
         $payload = $data;
         if ($config) {
             if (!array_key_exists('imap_password', $payload)) {
-                $payload['imap_password'] = $config->imap_password;
+                try {
+                    $payload['imap_password'] = $config->imap_password;
+                } catch (\Throwable) {
+                    // APP_KEY changed — old encrypted value unreadable; user must re-enter
+                    unset($payload['imap_password']);
+                }
             }
             if (!array_key_exists('smtp_password', $payload)) {
-                $payload['smtp_password'] = $config->smtp_password;
+                try {
+                    $payload['smtp_password'] = $config->smtp_password;
+                } catch (\Throwable) {
+                    unset($payload['smtp_password']);
+                }
             }
             $payload['imap_inbox_folder'] = $payload['imap_inbox_folder'] ?: $config->imap_inbox_folder;
             $payload['imap_sent_folder'] = $payload['imap_sent_folder'] ?: $config->imap_sent_folder;
@@ -107,8 +116,8 @@ class CrmMailSettingsController extends Controller
             'smtp_port' => $config->smtp_port,
             'smtp_secure' => $config->smtp_secure,
             'smtp_username' => $config->smtp_username,
-            'imap_password_set' => !empty($config->imap_password),
-            'smtp_password_set' => !empty($config->smtp_password),
+            'imap_password_set' => !empty($config->getRawOriginal('imap_password')),
+            'smtp_password_set' => !empty($config->getRawOriginal('smtp_password')),
         ];
     }
 }
