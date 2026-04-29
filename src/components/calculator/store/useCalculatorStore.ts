@@ -29,6 +29,8 @@ interface CalculatorContext {
 export const DEFAULT_FIRMA_STATE: Firma = {
   nazwa: '',
   nip: '',
+  regon: '',
+  krs: '',
   adres: '',
   kodPocztowy: '',
   miasto: '',

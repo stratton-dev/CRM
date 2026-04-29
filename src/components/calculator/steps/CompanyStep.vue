@@ -143,6 +143,14 @@ watch(
           <div v-if="store.firma.nip" class="text-[9px] text-slate-400 mt-1">{{ nipCheck.message }}</div>
         </div>
         <div>
+          <label class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">REGON</label>
+          <input v-model="store.firma.regon" type="text" class="w-full h-8 border border-slate-200 rounded-md px-3 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold transition-colors" placeholder="np. 123456789" />
+        </div>
+        <div>
+          <label class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">KRS</label>
+          <input v-model="store.firma.krs" type="text" class="w-full h-8 border border-slate-200 rounded-md px-3 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold transition-colors" placeholder="np. 0000123456" />
+        </div>
+        <div>
           <label class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Adres</label>
           <input v-model="store.firma.adres" type="text" class="w-full h-8 border border-slate-200 rounded-md px-3 text-sm focus:outline-none focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold transition-colors" />
         </div>

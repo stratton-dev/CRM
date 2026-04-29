@@ -8,6 +8,8 @@ export interface ContactPerson {
 export interface Firma {
   nazwa: string;
   nip: string;
+  regon?: string | null;
+  krs?: string | null;
   adres?: string;
   kodPocztowy?: string;
   miasto?: string;

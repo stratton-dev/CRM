@@ -185,6 +185,8 @@ onMounted(() => {
           ...store.firma,
           nazwa: data?.name || store.firma.nazwa,
           nip: data?.nip || store.firma.nip,
+          regon: data?.regon || store.firma.regon,
+          krs: data?.krs || store.firma.krs,
           adres: data?.address_line1 || data?.street || store.firma.adres, 
           kodPocztowy: data?.postal_code || data?.zip || store.firma.kodPocztowy, 
           miasto: data?.city || store.firma.miasto,
