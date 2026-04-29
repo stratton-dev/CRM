@@ -1688,7 +1688,7 @@ onMounted(() => {
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       <div class="lg:col-span-4 space-y-6 sticky top-8">
-        <div class="text-white p-8 rounded-2xl shadow-xl relative overflow-hidden" style="background: linear-gradient(135deg, #1a3f6e 0%, #1e5290 50%, #2260a8 100%);">
+        <div class="bg-slate-900 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
           <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full"></div>
           <span class="text-stratton-gold font-bold text-9xl font-serif absolute -bottom-4 right-4 drop-shadow-lg">{{ step }}</span>
           <h2 class="text-2xl font-bold font-serif mb-2 relative z-10">{{ getCurrentStepName }}</h2>
