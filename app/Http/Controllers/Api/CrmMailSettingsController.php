@@ -29,7 +29,6 @@ class CrmMailSettingsController extends Controller
     {
         $user = $request->user();
         $config = CrmMailConfig::query()->where('user_id', $user->id)->first();
-        $isAdmin = in_array($user->role_cached ?? $user->role?->code, ['ADMIN', 'DIRECTOR', 'director', 'admin'], true);
 
         if (env('IMAP_DEBUG', false)) {
             \Log::channel('mail')->info('Mail settings update request', [
@@ -38,33 +37,23 @@ class CrmMailSettingsController extends Controller
             ]);
         }
 
-        if ($isAdmin) {
-            $data = $request->validate([
-                'from_name' => 'nullable|string|max:255',
-                'from_email' => 'nullable|email|max:255',
-                'imap_host' => 'required|string|max:255',
-                'imap_port' => 'required|integer|min:1|max:65535',
-                'imap_secure' => 'required|boolean',
-                'imap_username' => 'required|string|max:255',
-                'imap_password' => ($config ? 'nullable' : 'required') . '|string|max:1024',
-                'imap_inbox_folder' => 'nullable|string|max:255',
-                'imap_sent_folder' => 'nullable|string|max:255',
-                'imap_trash_folder' => 'nullable|string|max:255',
-                'smtp_host' => 'required|string|max:255',
-                'smtp_port' => 'required|integer|min:1|max:65535',
-                'smtp_secure' => 'required|boolean',
-                'smtp_username' => 'required|string|max:255',
-                'smtp_password' => ($config ? 'nullable' : 'required') . '|string|max:1024',
-            ]);
-        } else {
-            // Non-admin users can only update their own login credentials
-            $data = $request->validate([
-                'imap_username' => 'nullable|string|max:255',
-                'imap_password' => 'nullable|string|max:1024',
-                'smtp_username' => 'nullable|string|max:255',
-                'smtp_password' => 'nullable|string|max:1024',
-            ]);
-        }
+        $data = $request->validate([
+            'from_name' => 'nullable|string|max:255',
+            'from_email' => 'nullable|email|max:255',
+            'imap_host' => 'required|string|max:255',
+            'imap_port' => 'required|integer|min:1|max:65535',
+            'imap_secure' => 'required|boolean',
+            'imap_username' => 'required|string|max:255',
+            'imap_password' => ($config ? 'nullable' : 'required') . '|string|max:1024',
+            'imap_inbox_folder' => 'nullable|string|max:255',
+            'imap_sent_folder' => 'nullable|string|max:255',
+            'imap_trash_folder' => 'nullable|string|max:255',
+            'smtp_host' => 'required|string|max:255',
+            'smtp_port' => 'required|integer|min:1|max:65535',
+            'smtp_secure' => 'required|boolean',
+            'smtp_username' => 'required|string|max:255',
+            'smtp_password' => ($config ? 'nullable' : 'required') . '|string|max:1024',
+        ]);
 
         if (!filled($data['imap_password'] ?? null)) {
             unset($data['imap_password']);
@@ -73,21 +62,9 @@ class CrmMailSettingsController extends Controller
             unset($data['smtp_password']);
         }
 
-        if (env('IMAP_DEBUG', false)) {
-            \Log::channel('mail')->info('Mail settings payload', [
-                'user_id' => $user->id,
-                'imap_user' => $data['imap_username'] ?? null,
-                'imap_pass_len' => array_key_exists('imap_password', $data) ? strlen((string) $data['imap_password']) : null,
-                'smtp_user' => $data['smtp_username'] ?? null,
-                'smtp_pass_len' => array_key_exists('smtp_password', $data) ? strlen((string) $data['smtp_password']) : null,
-            ]);
-        }
-
-        if ($isAdmin) {
-            $data['imap_inbox_folder'] = $data['imap_inbox_folder'] ?: 'INBOX';
-            $data['imap_sent_folder'] = $data['imap_sent_folder'] ?: 'Sent';
-            $data['imap_trash_folder'] = $data['imap_trash_folder'] ?: 'Trash';
-        }
+        $data['imap_inbox_folder'] = $data['imap_inbox_folder'] ?: 'INBOX';
+        $data['imap_sent_folder'] = $data['imap_sent_folder'] ?: 'Sent';
+        $data['imap_trash_folder'] = $data['imap_trash_folder'] ?: 'Trash';
 
         $payload = $data;
         if ($config) {
@@ -97,17 +74,12 @@ class CrmMailSettingsController extends Controller
             if (!array_key_exists('smtp_password', $payload)) {
                 $payload['smtp_password'] = $config->smtp_password;
             }
-            if ($isAdmin) {
-                $payload['imap_inbox_folder'] = $payload['imap_inbox_folder'] ?: $config->imap_inbox_folder;
-                $payload['imap_sent_folder'] = $payload['imap_sent_folder'] ?: $config->imap_sent_folder;
-                $payload['imap_trash_folder'] = $payload['imap_trash_folder'] ?: $config->imap_trash_folder;
-            }
+            $payload['imap_inbox_folder'] = $payload['imap_inbox_folder'] ?: $config->imap_inbox_folder;
+            $payload['imap_sent_folder'] = $payload['imap_sent_folder'] ?: $config->imap_sent_folder;
+            $payload['imap_trash_folder'] = $payload['imap_trash_folder'] ?: $config->imap_trash_folder;
         }
 
         if (!$config) {
-            if (!$isAdmin) {
-                return response()->json(['message' => 'Brak konfiguracji poczty. Skontaktuj się z administratorem.'], 422);
-            }
             $config = CrmMailConfig::create(array_merge($data, [
                 'user_id' => $user->id,
             ]));
