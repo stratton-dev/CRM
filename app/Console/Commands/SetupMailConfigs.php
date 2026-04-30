@@ -60,7 +60,10 @@ class SetupMailConfigs extends Command
             ];
 
             if ($existing) {
-                $existing->fill($data)->save();
+                // Delete and recreate to avoid DecryptException from isDirty()
+                // comparison when APP_KEY was rotated (old encrypted value can't be decrypted)
+                $existing->delete();
+                CrmMailConfig::create($data);
                 $this->info("Updated: $email");
             } else {
                 CrmMailConfig::create($data);
