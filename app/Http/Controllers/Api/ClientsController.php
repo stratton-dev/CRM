@@ -127,9 +127,14 @@ class ClientsController extends Controller
         ]);
         $client = Client::create($data);
 
-        // Auto-register activity
+        // Auto-assign owner and create CRM profile for the creating user
         $userId = $this->resolveUserId($context->actorSupabaseId());
         if ($userId) {
+            $client->crmProfile()->create([
+                'owner_user_id' => $userId,
+                'status' => 'NEW',
+            ]);
+
             CrmClientActivity::create([
                 'client_id' => $client->id,
                 'user_id' => $userId,
@@ -139,7 +144,7 @@ class ClientsController extends Controller
             ]);
         }
 
-        return response()->json($client, 201);
+        return response()->json($client->load(['crmProfile', 'crmProfile.owner:id,supabase_id,name']), 201);
     }
 
     public function update(Request $request, Client $client, TokenContext $context)
@@ -175,6 +180,8 @@ class ClientsController extends Controller
         ]);
         $client->update($data);
 
+        $userId = $this->resolveUserId($context->actorSupabaseId());
+
         // Update profile if any profile fields are present
         $profileData = array_intersect_key($data, array_flip([
             'contact_name', 'contact_phone', 'contact_email', 'contact_position',
@@ -182,11 +189,18 @@ class ClientsController extends Controller
         ]));
 
         if (!empty($profileData)) {
-            $client->crmProfile()->updateOrCreate([], $profileData);
+            $existingProfile = $client->crmProfile;
+            if ($existingProfile) {
+                $existingProfile->update($profileData);
+            } else {
+                $client->crmProfile()->create(array_merge(
+                    $profileData,
+                    $userId ? ['owner_user_id' => $userId] : []
+                ));
+            }
         }
 
         // Auto-register activity
-        $userId = $this->resolveUserId($context->actorSupabaseId());
         if ($userId) {
             CrmClientActivity::create([
                 'client_id' => $client->id,
