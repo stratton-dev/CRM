@@ -174,26 +174,36 @@ class CrmMailboxService
 
     private function imapConfig(CrmMailConfig $config): array
     {
+        try {
+            $pass = $config->imap_password;
+        } catch (\Throwable) {
+            throw new \RuntimeException('Hasło IMAP jest nieprawidłowe lub wymaga ponownego ustawienia. Przejdź do Ustawień poczty i zapisz hasło ponownie.');
+        }
         return [
             'host' => $config->imap_host,
             'port' => $config->imap_port,
             'secure' => (bool) $config->imap_secure,
             'auth' => [
                 'user' => $config->imap_username,
-                'pass' => $config->imap_password,
+                'pass' => $pass,
             ],
         ];
     }
 
     private function smtpConfig(CrmMailConfig $config): array
     {
+        try {
+            $smtpPass = $config->smtp_password;
+        } catch (\Throwable) {
+            throw new \RuntimeException('Hasło SMTP jest nieprawidłowe lub wymaga ponownego ustawienia. Przejdź do Ustawień poczty i zapisz hasło ponownie.');
+        }
         return [
             'host' => $config->smtp_host,
             'port' => $config->smtp_port,
             'secure' => (bool) $config->smtp_secure,
             'auth' => [
                 'user' => $config->smtp_username,
-                'pass' => $config->smtp_password,
+                'pass' => $smtpPass,
             ],
             'from' => [
                 'name' => $config->from_name,
