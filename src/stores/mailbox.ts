@@ -36,7 +36,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   const { emails: localEmails, users } = storeToRefs(data)
   const emails = ref<Email[]>([])
-  const emailsTotal = ref(parseInt(localStorage.getItem('mailbox_emails_total') || '0', 10))
+  const emailsTotal = ref(0)
   const emailsLoading = ref(false)
   const composeState = ref<{
     open: boolean
@@ -136,13 +136,17 @@ export const useMailboxStore = defineStore('mailbox', () => {
           if (meta?.total) total = Math.max(total, Number(meta.total))
         }
         emails.value = list.map(mapMailboxEmail)
-        if (total > 0) {
-          emailsTotal.value = total
-          localStorage.setItem('mailbox_emails_total', String(total))
-        }
+        emailsTotal.value = total
         return
-      } catch {
-        // Silent fail — polling error, do not spam toast
+      } catch (err: any) {
+        // Reset stale state so stale data doesn't show misleading pagination
+        emails.value = []
+        emailsTotal.value = 0
+        // Show toast only for password/auth errors, not for transient polling errors
+        const msg = err?.response?.data?.message as string | undefined
+        if (msg && msg.includes('hasło')) {
+          toast.error(msg)
+        }
         return
       } finally {
         emailsLoading.value = false
@@ -294,7 +298,6 @@ export const useMailboxStore = defineStore('mailbox', () => {
     if (idx !== -1) emails.value.splice(idx, 1)
     if (emailsTotal.value > 0) {
       emailsTotal.value -= 1
-      localStorage.setItem('mailbox_emails_total', String(emailsTotal.value))
     }
     return api.post(`/v1/crm-mailbox/messages/${encodeURIComponent(emailId)}/move`, { to_folder: toFolder }).catch((error) => {
       const message = error?.response?.data?.message || error?.message || 'Nie udało się przenieść wiadomości.'
