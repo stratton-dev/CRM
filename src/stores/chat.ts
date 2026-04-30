@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { computed, onScopeDispose, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
-import { useStructureStore } from '@/stores/structure'
 import { api } from '@/api/client'
 import { getEcho, initEcho } from '@/realtime/echo'
 
@@ -47,7 +46,6 @@ export type ChatUser = {
 export const useChatStore = defineStore('chat', () => {
   const auth = useAuthStore()
   const session = useSessionStore()
-  const structure = useStructureStore()
 
   const isOpen = ref(false)
   const conversations = ref<ChatConversation[]>([])
@@ -55,6 +53,8 @@ export const useChatStore = defineStore('chat', () => {
   const messages = ref<Record<number, ChatMessage[]>>({})
   const loadingMessages = ref(false)
   const loadingConversations = ref(false)
+  const loadingChatUsers = ref(false)
+  const apiChatUsers = ref<ChatUser[]>([])
   const subscribedChannels = new Map<number, any>()
 
   const totalUnread = computed(() => conversations.value.reduce((sum, c) => sum + (c.unread || 0), 0))
@@ -65,22 +65,22 @@ export const useChatStore = defineStore('chat', () => {
   const teamConversations = computed(() => conversations.value.filter((c) => c.key?.startsWith('team:') ?? false))
   const dmConversations = computed(() => conversations.value.filter((c) => !c.isGroup))
 
-  // Derived from structure store — already loaded, no extra API call needed
-  const chatUsers = computed<ChatUser[]>(() => {
-    const me = session.currentUser
-    return structure.users
-      .filter((u) => !u.isRemovedFromStructure && !u.isBlocked && u.id !== me?.id)
-      .map((u) => ({
-        id: u.id as any,           // supabase UUID string — used as identifier
-        supabaseId: u.id,
-        name: u.name,
-        role: u.role ?? null,
-        teamGroupPath: (u as any).teamGroupPath ?? null,
-        parentSupabaseId: u.parentSupabaseId ?? null,
-      }))
-  })
+  const chatUsers = computed<ChatUser[]>(() => apiChatUsers.value)
 
-  const loadingUsers = computed(() => structure.users.length === 0 && auth.isAuthenticated)
+  const loadingUsers = computed(() => loadingChatUsers.value)
+
+  const fetchChatUsers = async () => {
+    if (!auth.enabled || !auth.isAuthenticated) return
+    loadingChatUsers.value = true
+    try {
+      const { data: resp } = await api.get('/v1/chat/users')
+      apiChatUsers.value = Array.isArray(resp?.data) ? resp.data : []
+    } catch {
+      apiChatUsers.value = []
+    } finally {
+      loadingChatUsers.value = false
+    }
+  }
 
   const ensureGroup = async (key: string, name: string): Promise<number | null> => {
     try {
@@ -276,8 +276,8 @@ export const useChatStore = defineStore('chat', () => {
     if (isOpen.value && conversations.value.length === 0) {
       fetchConversations()
     }
-    if (isOpen.value && structure.users.length === 0) {
-      structure.fetchStructure()
+    if (isOpen.value && apiChatUsers.value.length === 0) {
+      fetchChatUsers()
     }
   }
 
@@ -297,6 +297,7 @@ export const useChatStore = defineStore('chat', () => {
     loadingMessages,
     loadingConversations,
     loadingUsers,
+    fetchChatUsers,
     totalUnread,
     activeConversation,
     activeMessages,
