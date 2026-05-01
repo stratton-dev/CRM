@@ -61,11 +61,15 @@ class ProcessKnowledgeBaseDocument implements ShouldQueue
                     $saved = KnowledgeBaseChunk::create($chunkData);
 
                     if (config('database.default') === 'pgsql' && isset($embeddings[$i]) && $embeddings[$i] !== null) {
-                        $vectorStr = $embeddingService->vectorToString($embeddings[$i]);
-                        DB::statement(
-                            "UPDATE knowledge_base_chunks SET embedding = ?::vector WHERE id = ?",
-                            [$vectorStr, $saved->id]
-                        );
+                        try {
+                            $vectorStr = $embeddingService->vectorToString($embeddings[$i]);
+                            DB::statement(
+                                "UPDATE knowledge_base_chunks SET embedding = ?::vector WHERE id = ?",
+                                [$vectorStr, $saved->id]
+                            );
+                        } catch (\Exception $vectorEx) {
+                            Log::warning("KnowledgeBase: nie udało się zapisać embeddingu dla chunka #{$saved->id}: " . $vectorEx->getMessage());
+                        }
                     }
                 }
             });
