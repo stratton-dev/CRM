@@ -33,10 +33,15 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Dodaj kolumnę vector tylko na PostgreSQL
+        // Dodaj kolumnę vector tylko na PostgreSQL, z try/catch bo pgvector może być niedostępny
         if (config('database.default') === 'pgsql') {
-            DB::statement('ALTER TABLE knowledge_base_chunks ADD COLUMN embedding vector(1536)');
-            DB::statement('CREATE INDEX knowledge_base_chunks_embedding_idx ON knowledge_base_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)');
+            try {
+                DB::statement('CREATE EXTENSION IF NOT EXISTS vector');
+                DB::statement('ALTER TABLE knowledge_base_chunks ADD COLUMN IF NOT EXISTS embedding vector(1536)');
+                DB::statement('CREATE INDEX IF NOT EXISTS knowledge_base_chunks_embedding_idx ON knowledge_base_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)');
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('pgvector niedostępny, pomijam kolumnę embedding: ' . $e->getMessage());
+            }
         }
     }
 
