@@ -46,11 +46,20 @@ class KnowledgeBaseController extends Controller
             'uploaded_by'       => $user->id,
         ]);
 
-        ProcessKnowledgeBaseDocument::dispatch($doc->id, $absolutePath);
+        try {
+            ProcessKnowledgeBaseDocument::dispatch($doc->id, $absolutePath);
+        } catch (\Throwable $e) {
+            Log::warning("KnowledgeBase: dispatch error #{$doc->id}: " . $e->getMessage());
+        }
 
-        Log::info("KnowledgeBase: upload dokumentu #{$doc->id} przez user #{$user->id}");
+        $doc->refresh();
+        Log::info("KnowledgeBase: upload dokumentu #{$doc->id} przez user #{$user->id}, status: {$doc->status}");
 
-        return response()->json(['data' => $doc, 'message' => 'Dokument przyjęty do przetworzenia.'], 201);
+        if ($doc->status === 'failed') {
+            return response()->json(['message' => 'Błąd przetwarzania PDF: ' . $doc->error_message], 422);
+        }
+
+        return response()->json(['data' => $doc, 'message' => 'Dokument przetworzony pomyślnie.'], 201);
     }
 
     public function destroy(int $id): JsonResponse

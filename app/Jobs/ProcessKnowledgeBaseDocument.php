@@ -90,7 +90,6 @@ class ProcessKnowledgeBaseDocument implements ShouldQueue
                 'error_message' => $e->getMessage(),
             ]);
             Log::error("KnowledgeBase: błąd przetwarzania #{$doc->id}", ['error' => $e->getMessage()]);
-            throw $e;
         }
     }
 }
