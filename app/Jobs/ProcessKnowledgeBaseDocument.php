@@ -28,6 +28,8 @@ class ProcessKnowledgeBaseDocument implements ShouldQueue
 
     public function handle(PdfProcessingService $pdfService, EmbeddingService $embeddingService): void
     {
+        ini_set('memory_limit', '512M');
+
         $doc = KnowledgeBaseDocument::findOrFail($this->documentId);
         $doc->update(['status' => 'processing']);
 
@@ -85,15 +87,20 @@ class ProcessKnowledgeBaseDocument implements ShouldQueue
 
             Log::info("KnowledgeBase: dokument #{$doc->id} przetworzony, " . count($chunks) . " chunków.");
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             if (file_exists($this->filePath)) {
                 @unlink($this->filePath);
             }
             $doc->update([
                 'status'        => 'failed',
-                'error_message' => $e->getMessage(),
+                'error_message' => get_class($e) . ': ' . $e->getMessage(),
             ]);
-            Log::error("KnowledgeBase: błąd przetwarzania #{$doc->id}", ['error' => $e->getMessage()]);
+            Log::error("KnowledgeBase: błąd przetwarzania #{$doc->id}", [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
+            ]);
         }
     }
 }
