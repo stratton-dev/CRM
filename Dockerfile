@@ -116,6 +116,15 @@ stdout_logfile=/dev/stdout \n\
 stdout_logfile_maxbytes=0 \n\
 stderr_logfile=/dev/stderr \n\
 stderr_logfile_maxbytes=0 \n\
+\n\
+[program:queue] \n\
+command=php /var/www/html/artisan queue:work --sleep=3 --tries=3 --timeout=300 --no-interaction \n\
+autostart=true \n\
+autorestart=true \n\
+stdout_logfile=/dev/stdout \n\
+stdout_logfile_maxbytes=0 \n\
+stderr_logfile=/dev/stderr \n\
+stderr_logfile_maxbytes=0 \n\
 ' > /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 80
