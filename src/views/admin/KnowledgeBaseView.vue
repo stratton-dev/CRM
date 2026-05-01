@@ -19,6 +19,7 @@ const isLoading   = ref(false)
 const isUploading = ref(false)
 const uploadTitle = ref('')
 const fileInput   = ref<HTMLInputElement | null>(null)
+const selectedFile = ref<File | null>(null)
 const error       = ref<string | null>(null)
 const success     = ref<string | null>(null)
 
@@ -37,7 +38,7 @@ async function loadDocuments() {
 }
 
 async function uploadDocument() {
-  const file = fileInput.value?.files?.[0]
+  const file = selectedFile.value
   if (!file) return
 
   isUploading.value = true
@@ -55,10 +56,12 @@ async function uploadDocument() {
     })
     success.value = 'Dokument przetworzony i dodany do bazy wiedzy.'
     uploadTitle.value = ''
+    selectedFile.value = null
     if (fileInput.value) fileInput.value.value = ''
     await loadDocuments()
   } catch (e: any) {
-    error.value = e?.response?.data?.message ?? 'Błąd uploadu dokumentu.'
+    const msg = e?.response?.data?.message ?? e?.message ?? 'Błąd uploadu dokumentu.'
+    error.value = msg
   } finally {
     isUploading.value = false
   }
@@ -142,12 +145,13 @@ function statusColor(status: string): string {
             ref="fileInput"
             type="file"
             accept=".pdf"
+            @change="selectedFile = ($event.target as HTMLInputElement).files?.[0] ?? null"
             class="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
         </div>
         <button
           @click="uploadDocument"
-          :disabled="isUploading || !fileInput?.files?.length"
+          :disabled="isUploading || !selectedFile"
           class="w-full py-2 px-4 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {{ isUploading ? 'Przetwarzam PDF... (może zająć do 1 min)' : 'Załaduj do bazy wiedzy' }}
