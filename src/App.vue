@@ -15,6 +15,7 @@ import AppIcon from '@/components/AppIcon.vue'
 import MailComposeModal from '@/components/MailComposeModal.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import { useChatStore } from '@/stores/chat'
+import { webPush } from '@/services/webPush'
 import logoUrl from '@/assets/logo.svg'
 
 const route = useRoute()
@@ -254,6 +255,8 @@ onMounted(async () => {
   viewPermissions.ensureLoaded()
   if (auth.enabled && auth.isAuthenticated) {
     await session.resolveUserFromAuth()
+    // Init Web Push (registers SW, subscribes if permission already granted)
+    webPush.init().catch(() => {})
   }
 })
 
@@ -367,7 +370,7 @@ onBeforeUnmount(() => {
                <div class="relative cursor-pointer group" @click="chatStore.toggle()">
                  <div class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition">
                    <AppIcon name="chat-bubble" class="w-5 h-5 text-slate-400 group-hover:text-stratton-gold transition" />
-                   <span v-if="chatUnread > 0" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-stratton-gold border border-white z-10"></span>
+                   <span v-if="chatUnread > 0" class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center border border-white z-10 leading-none">{{ chatUnread > 99 ? '99+' : chatUnread }}</span>
                  </div>
                </div>
                <div class="h-4 w-px bg-slate-200 mx-1"></div>
@@ -383,6 +386,19 @@ onBeforeUnmount(() => {
                     <span v-if="unreadCount > 0" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 border border-white z-10"></span>
                   </div>
                </div>
+               <!-- Web Push permission button — shown only if not yet granted -->
+               <template v-if="webPush.isSupported && webPush.permissionState !== 'granted'">
+                 <div class="h-4 w-px bg-slate-200 mx-1"></div>
+                 <button
+                   type="button"
+                   class="flex items-center gap-1 text-slate-400 hover:text-stratton-gold transition text-[11px] font-bold uppercase tracking-wide group"
+                   title="Włącz powiadomienia push"
+                   @click="webPush.requestPermissionAndSubscribe()"
+                 >
+                   <AppIcon name="bell" class="w-4 h-4" />
+                   <span class="group-hover:underline hidden sm:inline">Push</span>
+                 </button>
+               </template>
                <div class="h-4 w-px bg-slate-200 mx-1"></div>
                <button type="button" class="flex items-center gap-1.5 text-slate-400 hover:text-slate-800 transition text-[11px] font-bold uppercase tracking-wide group" @click="logout">
                  <span class="group-hover:underline">Wyloguj</span>

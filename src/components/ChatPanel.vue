@@ -1030,10 +1030,10 @@ const handleLeave = async () => {
                       </div>
 
                       <div class="max-w-[72%] flex flex-col" :class="msg.mine ? 'items-end' : 'items-start'">
-                        <!-- Sender name (group chats only, first in sequence) -->
+                        <!-- Sender name (group chats only, every message) -->
                         <span
-                          v-if="!msg.mine && activeConversation?.isGroup && (idx === 0 || group.messages[idx-1]?.senderId !== msg.senderId)"
-                          class="text-[9px] mb-1 ml-1 font-semibold"
+                          v-if="!msg.mine && activeConversation?.isGroup"
+                          class="text-[10px] mb-0.5 ml-1 font-bold"
                           :class="theme.subText"
                         >{{ msg.senderName }}</span>
 
