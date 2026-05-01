@@ -100,7 +100,7 @@ const messagesEl = ref<HTMLElement | null>(null)
 const inputEl = ref<HTMLTextAreaElement | null>(null)
 const userSearch = ref('')
 const convSearch = ref('')
-const expandedSections = ref({ general: true, teams: true, dm: true, users: false })
+const expandedSections = ref({ general: true, teams: true, dm: true, users: true })
 const collapsedNodes = ref(new Set<string>())
 
 // Opening DM loading state per user
