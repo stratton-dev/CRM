@@ -19,12 +19,27 @@ class ProcessKnowledgeBaseDocument implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 300;
-    public int $tries   = 2;
+    public int $tries   = 3;
+    public int $backoff = 30;
 
     public function __construct(
         public readonly int    $documentId,
         public readonly string $filePath,
     ) {}
+
+    public function failed(?\Throwable $exception): void
+    {
+        $doc = KnowledgeBaseDocument::find($this->documentId);
+        if ($doc && $doc->status !== 'ready') {
+            $doc->update([
+                'status'        => 'failed',
+                'error_message' => $exception ? get_class($exception) . ': ' . $exception->getMessage() : 'Job failed after max attempts',
+            ]);
+        }
+        if (file_exists($this->filePath)) {
+            @unlink($this->filePath);
+        }
+    }
 
     public function handle(PdfProcessingService $pdfService, EmbeddingService $embeddingService): void
     {
