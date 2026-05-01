@@ -79,6 +79,9 @@ RUN echo 'server { \n\
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; \n\
         include fastcgi_params; \n\
         fastcgi_read_timeout 300; \n\
+        add_header Access-Control-Allow-Origin * always; \n\
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always; \n\
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With" always; \n\
     } \n\
     location ~ /\.(?!well-known).* { deny all; } \n\
     client_max_body_size 50m; \n\
