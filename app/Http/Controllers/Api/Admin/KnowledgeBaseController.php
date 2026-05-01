@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class KnowledgeBaseController extends Controller
@@ -32,6 +33,10 @@ class KnowledgeBaseController extends Controller
         $user = Auth::user();
         $file = $request->file('file');
 
+        $storagePath = 'kb-uploads/' . Str::uuid() . '.pdf';
+        Storage::disk('local')->put($storagePath, file_get_contents($file->getRealPath()));
+        $absolutePath = Storage::disk('local')->path($storagePath);
+
         $doc = KnowledgeBaseDocument::create([
             'title'             => $request->input('title') ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
             'original_filename' => $file->getClientOriginalName(),
@@ -41,10 +46,7 @@ class KnowledgeBaseController extends Controller
             'uploaded_by'       => $user->id,
         ]);
 
-        $tmpPath = sys_get_temp_dir() . '/kb_' . Str::uuid() . '.pdf';
-        $file->move(dirname($tmpPath), basename($tmpPath));
-
-        ProcessKnowledgeBaseDocument::dispatch($doc->id, $tmpPath);
+        ProcessKnowledgeBaseDocument::dispatch($doc->id, $absolutePath);
 
         Log::info("KnowledgeBase: upload dokumentu #{$doc->id} przez user #{$user->id}");
 

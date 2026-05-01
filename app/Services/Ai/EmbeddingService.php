@@ -7,15 +7,20 @@ use OpenAI;
 
 class EmbeddingService
 {
-    private Client $client;
+    private ?Client $client = null;
 
     public function __construct()
     {
-        $this->client = OpenAI::client(config('ai.openai_key'));
+        $key = config('ai.openai_key');
+        if ($key) {
+            $this->client = OpenAI::client($key);
+        }
     }
 
     public function embed(string $text): array
     {
+        if (!$this->client) return [];
+
         $response = $this->client->embeddings()->create([
             'model'      => config('ai.embedding_model', 'text-embedding-3-small'),
             'input'      => $this->prepareText($text),
@@ -27,7 +32,7 @@ class EmbeddingService
 
     public function embedBatch(array $texts): array
     {
-        if (empty($texts)) return [];
+        if (!$this->client || empty($texts)) return [];
 
         $prepared = array_map(fn($t) => $this->prepareText($t), $texts);
 
