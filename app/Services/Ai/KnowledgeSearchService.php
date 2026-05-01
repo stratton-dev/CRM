@@ -15,41 +15,41 @@ class KnowledgeSearchService
     {
         $limit = $limit ?? config('ai.kb_top_k', 5);
 
-        if (config('database.default') !== 'pgsql') {
-            return $this->fallbackSearch($query, $limit);
+        if (config('database.default') === 'pgsql') {
+            try {
+                $queryEmbedding = $this->embeddingService->embed($query);
+                if (!empty($queryEmbedding)) {
+                    $vectorStr = $this->embeddingService->vectorToString($queryEmbedding);
+
+                    $results = DB::select(
+                        "SELECT kbc.content,
+                                1 - (kbc.embedding <=> :embedding::vector) AS similarity,
+                                kbd.title AS document_title
+                         FROM knowledge_base_chunks kbc
+                         JOIN knowledge_base_documents kbd ON kbd.id = kbc.document_id
+                         WHERE kbd.status = 'ready'
+                           AND kbc.embedding IS NOT NULL
+                         ORDER BY kbc.embedding <=> :embedding2::vector
+                         LIMIT :limit",
+                        [
+                            'embedding'  => $vectorStr,
+                            'embedding2' => $vectorStr,
+                            'limit'      => $limit,
+                        ]
+                    );
+
+                    if (!empty($results)) {
+                        return array_map(function ($row) {
+                            return "[Dokument: {$row->document_title}]\n{$row->content}";
+                        }, $results);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Log::warning('KnowledgeSearchService: vector search failed, using text fallback', ['error' => $e->getMessage()]);
+            }
         }
 
-        try {
-            $queryEmbedding = $this->embeddingService->embed($query);
-            $vectorStr      = $this->embeddingService->vectorToString($queryEmbedding);
-
-            $results = DB::select(
-                "SELECT kbc.content,
-                        1 - (kbc.embedding <=> :embedding::vector) AS similarity,
-                        kbd.title AS document_title
-                 FROM knowledge_base_chunks kbc
-                 JOIN knowledge_base_documents kbd ON kbd.id = kbc.document_id
-                 WHERE kbd.status = 'ready'
-                   AND kbc.embedding IS NOT NULL
-                 ORDER BY kbc.embedding <=> :embedding2::vector
-                 LIMIT :limit",
-                [
-                    'embedding'  => $vectorStr,
-                    'embedding2' => $vectorStr,
-                    'limit'      => $limit,
-                ]
-            );
-
-            if (empty($results)) return [];
-
-            return array_map(function ($row) {
-                return "[Dokument: {$row->document_title}]\n{$row->content}";
-            }, $results);
-
-        } catch (\Exception $e) {
-            \Log::warning('KnowledgeSearchService: błąd wyszukiwania', ['error' => $e->getMessage()]);
-            return [];
-        }
+        return $this->fallbackSearch($query, $limit);
     }
 
     public function hasDocuments(): bool
@@ -59,17 +59,20 @@ class KnowledgeSearchService
 
     private function fallbackSearch(string $query, int $limit): array
     {
-        $words    = array_filter(explode(' ', mb_strtolower($query)));
-        $results  = [];
+        $words   = array_filter(explode(' ', mb_strtolower($query)));
+        $results = [];
+        $likeOp  = config('database.default') === 'pgsql' ? 'ilike' : 'like';
 
         foreach ($words as $word) {
-            if (mb_strlen($word) < 4) continue;
-            $chunks = KnowledgeBaseChunk::whereHas('document', fn($q) => $q->where('status', 'ready'))
-                ->where('content', 'like', "%{$word}%")
+            if (mb_strlen($word) < 3) continue;
+            $chunks = KnowledgeBaseChunk::with('document:id,title')
+                ->whereHas('document', fn($q) => $q->where('status', 'ready'))
+                ->where('content', $likeOp, "%{$word}%")
                 ->limit($limit)
                 ->get();
             foreach ($chunks as $chunk) {
-                $results[$chunk->id] = $chunk->content;
+                $title = $chunk->document->title ?? 'Dokument';
+                $results[$chunk->id] = "[Dokument: {$title}]\n{$chunk->content}";
             }
             if (count($results) >= $limit) break;
         }
