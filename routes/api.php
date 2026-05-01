@@ -34,6 +34,7 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
     require __DIR__ . '/api/crm.php';
     require __DIR__ . '/api/chat.php';
     require __DIR__ . '/api/push.php';
+    require __DIR__ . '/api/ai.php';
 });
 
 Route::options('/{any}', function () {
