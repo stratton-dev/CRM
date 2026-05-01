@@ -8,9 +8,9 @@ use App\Models\AiMessage;
 use App\Services\Ai\AiToolsService;
 use App\Services\Ai\KnowledgeSearchService;
 use App\Services\Ai\RolePromptService;
-use EchoLabs\Prism\Enums\Provider;
-use EchoLabs\Prism\Prism;
-use EchoLabs\Prism\Tool;
+use Prism\Prism\Enums\Provider;
+use Prism\Prism\Prism;
+use Prism\Prism\Tool;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -85,9 +85,9 @@ class AiChatController extends Controller
         $prismMessages = [];
         foreach ($history as $msg) {
             if ($msg->role === 'user') {
-                $prismMessages[] = new \EchoLabs\Prism\ValueObjects\Messages\UserMessage($msg->content ?? '');
+                $prismMessages[] = new \Prism\Prism\ValueObjects\Messages\UserMessage($msg->content ?? '');
             } elseif ($msg->role === 'assistant') {
-                $prismMessages[] = new \EchoLabs\Prism\ValueObjects\Messages\AssistantMessage($msg->content ?? '');
+                $prismMessages[] = new \Prism\Prism\ValueObjects\Messages\AssistantMessage($msg->content ?? '');
             }
         }
 
