@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\ChatMessageSent;
+use App\Services\Push\PushService;
 use App\Http\Controllers\Controller;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
@@ -207,6 +208,30 @@ class ChatController extends Controller
         $message->load('sender:id,name');
 
         event(new ChatMessageSent($message));
+
+        // Push notifications to all other participants
+        $conv->loadMissing('participants:id');
+        $otherUserIds = $conv->participants
+            ->where('id', '!=', $me->id)
+            ->pluck('id')
+            ->all();
+
+        if (!empty($otherUserIds)) {
+            $pushTitle = $conv->is_group
+                ? ($conv->name ?? 'Czat grupowy')
+                : ($me->name ?? 'Wiadomość');
+            $pushBody = strlen($message->body) > 80
+                ? substr($message->body, 0, 80) . '…'
+                : $message->body;
+
+            app(PushService::class)->notifyUsers(
+                $otherUserIds,
+                $me->id,
+                $pushTitle,
+                ($conv->is_group ? ($me->name . ': ') : '') . $pushBody,
+                ['type' => 'chat', 'conversationId' => $conv->id]
+            );
+        }
 
         return response()->json([
             'data' => [
