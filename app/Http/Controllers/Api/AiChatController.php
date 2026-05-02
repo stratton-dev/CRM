@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
+use App\Models\CrmMailConfig;
 use App\Services\Ai\AiToolsService;
 use App\Services\Ai\KnowledgeSearchService;
 use App\Services\Ai\RolePromptService;
+use App\Services\Crm\CrmMailboxService;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Facades\Tool;
@@ -18,10 +20,13 @@ use Illuminate\Support\Facades\Log;
 
 class AiChatController extends Controller
 {
+    private array $capturedToolResults = [];
+
     public function __construct(
-        private RolePromptService    $rolePromptService,
-        private AiToolsService       $toolsService,
+        private RolePromptService      $rolePromptService,
+        private AiToolsService         $toolsService,
         private KnowledgeSearchService $knowledgeSearch,
+        private CrmMailboxService      $mailboxService,
     ) {}
 
     public function indexConversations(Request $request): JsonResponse
@@ -77,7 +82,7 @@ class AiChatController extends Controller
 
         $history = $conv->messages()->orderBy('id')->get();
 
-        $kbChunks       = $this->knowledgeSearch->search($request->input('message'));
+        $kbChunks         = $this->knowledgeSearch->search($request->input('message'));
         $knowledgeContext = empty($kbChunks) ? '' : implode("\n\n---\n\n", $kbChunks);
 
         $systemPrompt = $this->rolePromptService->getSystemPrompt($user, $knowledgeContext);
@@ -91,6 +96,7 @@ class AiChatController extends Controller
             }
         }
 
+        $this->capturedToolResults = [];
         $tools = $this->buildTools($user);
 
         try {
@@ -107,15 +113,10 @@ class AiChatController extends Controller
 
             if ($response->toolCalls && count($response->toolCalls) > 0) {
                 foreach ($response->toolCalls as $toolCall) {
-                    $toolResult = $this->executeToolCall($user, $toolCall->name, $toolCall->arguments());
                     $toolResults[] = [
                         'tool'   => $toolCall->name,
-                        'result' => $toolResult,
+                        'result' => $this->capturedToolResults[$toolCall->name] ?? null,
                     ];
-                }
-                if (!empty($toolResults)) {
-                    $toolSummary = $this->formatToolResults($toolResults);
-                    $assistantContent = ($assistantContent ? $assistantContent . "\n\n" : '') . $toolSummary;
                 }
             }
 
@@ -158,9 +159,9 @@ class AiChatController extends Controller
         $request->validate(['message' => 'required|string|max:5000']);
         $user = Auth::user();
 
-        $kbChunks       = $this->knowledgeSearch->search($request->input('message'), 3);
+        $kbChunks         = $this->knowledgeSearch->search($request->input('message'), 3);
         $knowledgeContext = empty($kbChunks) ? '' : implode("\n\n---\n\n", $kbChunks);
-        $systemPrompt   = $this->rolePromptService->getSystemPrompt($user, $knowledgeContext);
+        $systemPrompt     = $this->rolePromptService->getSystemPrompt($user, $knowledgeContext);
 
         try {
             $response = Prism::text()
@@ -178,22 +179,37 @@ class AiChatController extends Controller
 
     private function buildTools(mixed $user): array
     {
-        $ts = $this->toolsService;
+        $ts       = $this->toolsService;
+        $mb       = $this->mailboxService;
+        $captured = &$this->capturedToolResults;
 
         return [
+            // ── CRM tools ────────────────────────────────────────────────────────────
             Tool::as('get_my_leads')
                 ->for('Pobiera moje aktualne leady/szanse sprzedażowe z CRM')
                 ->withStringParameter('status', 'Status: all, active, won, lost. Domyślnie: active')
-                ->using(fn(string $status = 'active') => json_encode($ts->getMyLeads($user, $status))),
+                ->using(function (string $status = 'active') use ($ts, $user, &$captured) {
+                    $result = $ts->getMyLeads($user, $status);
+                    $captured['get_my_leads'] = $result;
+                    return json_encode($result);
+                }),
 
             Tool::as('get_client_card')
                 ->for('Pobiera kartę klienta (dane kontaktowe, historia, notatki)')
                 ->withNumberParameter('client_id', 'ID klienta w systemie CRM')
-                ->using(fn(int $client_id) => json_encode($ts->getClientCard($user, $client_id))),
+                ->using(function (int $client_id) use ($ts, $user, &$captured) {
+                    $result = $ts->getClientCard($user, $client_id);
+                    $captured['get_client_card'] = $result;
+                    return json_encode($result);
+                }),
 
             Tool::as('get_today_meetings')
                 ->for('Pobiera listę dzisiejszych spotkań z kalendarza')
-                ->using(fn() => json_encode($ts->getTodayMeetings($user))),
+                ->using(function () use ($ts, $user, &$captured) {
+                    $result = $ts->getTodayMeetings($user);
+                    $captured['get_today_meetings'] = $result;
+                    return json_encode($result);
+                }),
 
             Tool::as('create_calendar_event')
                 ->for('Tworzy nowe wydarzenie/spotkanie w kalendarzu CRM')
@@ -202,38 +218,321 @@ class AiChatController extends Controller
                 ->withStringParameter('time', 'Godzina w formacie HH:MM (opcjonalnie)')
                 ->withStringParameter('location', 'Miejsce spotkania (opcjonalnie)')
                 ->withStringParameter('description', 'Opis lub notatki (opcjonalnie)')
-                ->using(fn(string $title, string $date, string $time = '', string $location = '', string $description = '')
-                    => json_encode($ts->createCalendarEvent($user, compact('title', 'date', 'time', 'location', 'description')))),
+                ->using(function (string $title, string $date, string $time = '', string $location = '', string $description = '') use ($ts, $user, &$captured) {
+                    $result = $ts->createCalendarEvent($user, compact('title', 'date', 'time', 'location', 'description'));
+                    $captured['create_calendar_event'] = $result;
+                    return json_encode($result);
+                }),
 
             Tool::as('send_email_to_client')
-                ->for('Przygotowuje email do klienta — otwiera okno compose')
+                ->for('Przygotowuje email do klienta CRM — otwiera okno compose (klient musi mieć ID w CRM)')
                 ->withNumberParameter('client_id', 'ID klienta')
                 ->withStringParameter('subject', 'Temat emaila')
                 ->withStringParameter('body', 'Treść emaila (może zawierać HTML)')
-                ->using(fn(int $client_id, string $subject, string $body)
-                    => json_encode($ts->sendEmailToClient($user, $client_id, $subject, $body))),
+                ->using(function (int $client_id, string $subject, string $body) use ($ts, $user, &$captured) {
+                    $result = $ts->sendEmailToClient($user, $client_id, $subject, $body);
+                    $captured['send_email_to_client'] = $result;
+                    return json_encode($result);
+                }),
 
             Tool::as('send_internal_notification')
                 ->for('Wysyła wewnętrzne powiadomienie do innego użytkownika CRM')
                 ->withNumberParameter('target_user_id', 'ID użytkownika docelowego')
                 ->withStringParameter('message', 'Treść powiadomienia')
-                ->using(fn(int $target_user_id, string $message)
-                    => json_encode($ts->sendInternalNotification($user, $target_user_id, $message))),
+                ->using(function (int $target_user_id, string $message) use ($ts, $user, &$captured) {
+                    $result = $ts->sendInternalNotification($user, $target_user_id, $message);
+                    $captured['send_internal_notification'] = $result;
+                    return json_encode($result);
+                }),
 
             Tool::as('get_my_stats')
                 ->for('Pobiera moje statystyki z CRM (liczba leadów, spotkań, wyniki)')
-                ->using(fn() => json_encode($ts->getMyStats($user))),
+                ->using(function () use ($ts, $user, &$captured) {
+                    $result = $ts->getMyStats($user);
+                    $captured['get_my_stats'] = $result;
+                    return json_encode($result);
+                }),
+
+            // ── Email / mailbox tools ─────────────────────────────────────────────────
+            Tool::as('list_emails')
+                ->for('Listuje emaile ze skrzynki pocztowej użytkownika. Zwraca nadawcę, temat, datę, UID i status przeczytania.')
+                ->withStringParameter('folder', 'Folder: INBOX (domyślnie), SENT, TRASH, DRAFTS, SPAM')
+                ->withNumberParameter('limit', 'Liczba wiadomości, max 50 (domyślnie 20)')
+                ->using(function (string $folder = 'INBOX', int $limit = 20) use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji skrzynki. Skonfiguruj pocztę w Ustawieniach.'];
+                        $captured['list_emails'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $data     = $mb->listMessages($config, strtoupper($folder), min($limit, 50), 0);
+                        $messages = $data['messages'] ?? (array) $data;
+                        $result   = [
+                            'success' => true,
+                            'folder'  => $folder,
+                            'count'   => count($messages),
+                            'emails'  => array_map(fn ($m) => [
+                                'uid'        => $m['uid'] ?? $m['id'] ?? null,
+                                'from'       => trim(($m['fromName'] ?? '') . ' <' . ($m['fromEmail'] ?? '') . '>'),
+                                'subject'    => $m['subject'] ?? '(brak tematu)',
+                                'date'       => $m['date'] ?? null,
+                                'read'       => $m['read'] ?? false,
+                                'has_attach' => !empty($m['attachments']),
+                            ], $messages),
+                        ];
+                        $captured['list_emails'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => $e->getMessage()];
+                        $captured['list_emails'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('read_email')
+                ->for('Odczytuje pełną treść konkretnego emaila po UID. Użyj list_emails żeby poznać UID.')
+                ->withStringParameter('folder', 'Folder emaila: INBOX, SENT, TRASH itp.')
+                ->withNumberParameter('uid', 'UID wiadomości (z list_emails)')
+                ->using(function (string $folder, int $uid) use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji skrzynki.'];
+                        $captured['read_email'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $data     = $mb->getMessageBody($config, strtoupper($folder), $uid);
+                        $bodyText = preg_replace('/\s+/', ' ', strip_tags($data['body'] ?? ''));
+                        $result   = [
+                            'success'     => true,
+                            'uid'         => $uid,
+                            'folder'      => $folder,
+                            'from'        => trim(($data['fromName'] ?? '') . ' <' . ($data['fromEmail'] ?? '') . '>'),
+                            'to'          => $data['toEmail'] ?? null,
+                            'subject'     => $data['subject'] ?? '(brak tematu)',
+                            'date'        => $data['date'] ?? null,
+                            'body_text'   => mb_substr($bodyText, 0, 3000),
+                            'attachments' => array_map(
+                                fn ($a) => is_array($a) ? ($a['filename'] ?? $a['name'] ?? 'plik') : (string) $a,
+                                $data['attachments'] ?? []
+                            ),
+                        ];
+                        try { $mb->markRead($config, strtoupper($folder), $uid); } catch (\Exception) {}
+                        $captured['read_email'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => $e->getMessage()];
+                        $captured['read_email'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('search_emails')
+                ->for('Wyszukuje emaile po słowie kluczowym (temat, nadawca). Zwraca pasujące wiadomości z UID.')
+                ->withStringParameter('keyword', 'Słowo kluczowe do wyszukania')
+                ->withStringParameter('folder', 'Folder: INBOX (domyślnie), SENT, TRASH')
+                ->using(function (string $keyword, string $folder = 'INBOX') use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji skrzynki.'];
+                        $captured['search_emails'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $data     = $mb->listMessages($config, strtoupper($folder), 50, 0);
+                        $messages = $data['messages'] ?? (array) $data;
+                        $kw       = mb_strtolower($keyword);
+                        $filtered = array_values(array_filter($messages, fn ($m) =>
+                            str_contains(mb_strtolower($m['subject'] ?? ''), $kw) ||
+                            str_contains(mb_strtolower($m['fromEmail'] ?? ''), $kw) ||
+                            str_contains(mb_strtolower($m['fromName'] ?? ''), $kw)
+                        ));
+                        $result = [
+                            'success' => true,
+                            'keyword' => $keyword,
+                            'folder'  => $folder,
+                            'count'   => count($filtered),
+                            'emails'  => array_map(fn ($m) => [
+                                'uid'     => $m['uid'] ?? $m['id'] ?? null,
+                                'from'    => trim(($m['fromName'] ?? '') . ' <' . ($m['fromEmail'] ?? '') . '>'),
+                                'subject' => $m['subject'] ?? '(brak tematu)',
+                                'date'    => $m['date'] ?? null,
+                                'read'    => $m['read'] ?? false,
+                            ], $filtered),
+                        ];
+                        $captured['search_emails'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => $e->getMessage()];
+                        $captured['search_emails'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('send_email')
+                ->for('Wysyła email bezpośrednio ze skrzynki użytkownika przez SMTP. Używaj do wysyłania do dowolnego adresu.')
+                ->withStringParameter('to', 'Adres email odbiorcy')
+                ->withStringParameter('subject', 'Temat wiadomości')
+                ->withStringParameter('body', 'Treść wiadomości (HTML lub tekst)')
+                ->using(function (string $to, string $subject, string $body) use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji SMTP. Skonfiguruj pocztę w Ustawieniach.'];
+                        $captured['send_email'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $mb->sendMessage($config, ['to' => $to, 'subject' => $subject, 'body' => $body]);
+                        $result = ['success' => true, 'message' => "Email do {$to} wysłany pomyślnie.", 'to' => $to, 'subject' => $subject];
+                        $captured['send_email'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => 'Nie udało się wysłać: ' . $e->getMessage()];
+                        $captured['send_email'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('reply_to_email')
+                ->for('Odpowiada na konkretny email (po UID). Pobiera oryginalną wiadomość i wysyła odpowiedź z cytowaniem.')
+                ->withStringParameter('folder', 'Folder oryginalnej wiadomości (np. INBOX)')
+                ->withNumberParameter('original_uid', 'UID oryginalnej wiadomości')
+                ->withStringParameter('reply_body', 'Treść odpowiedzi (HTML lub tekst)')
+                ->using(function (string $folder, int $original_uid, string $reply_body) use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji skrzynki.'];
+                        $captured['reply_to_email'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $original = $mb->getMessageBody($config, strtoupper($folder), $original_uid);
+                        $replyTo  = $original['replyTo'] ?? $original['fromEmail'] ?? '';
+                        $subject  = $original['subject'] ?? '';
+                        if (!str_starts_with(strtolower($subject), 're:')) {
+                            $subject = 'Re: ' . $subject;
+                        }
+                        $quotedBody = $reply_body
+                            . '<br><br><blockquote style="border-left:3px solid #ccc;padding-left:1em;color:#555">'
+                            . ($original['body'] ?? '')
+                            . '</blockquote>';
+
+                        $mb->sendMessage($config, [
+                            'to'        => $replyTo,
+                            'subject'   => $subject,
+                            'body'      => $quotedBody,
+                            'inReplyTo' => $original['messageId'] ?? null,
+                        ]);
+                        try { $mb->markRead($config, strtoupper($folder), $original_uid); } catch (\Exception) {}
+
+                        $result = ['success' => true, 'message' => "Odpowiedź do {$replyTo} wysłana pomyślnie.", 'to' => $replyTo, 'subject' => $subject];
+                        $captured['reply_to_email'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => 'Błąd odpowiedzi: ' . $e->getMessage()];
+                        $captured['reply_to_email'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('forward_email')
+                ->for('Przekazuje email do nowego odbiorcy z opcjonalną notatką.')
+                ->withStringParameter('folder', 'Folder oryginalnej wiadomości')
+                ->withNumberParameter('original_uid', 'UID oryginalnej wiadomości')
+                ->withStringParameter('to', 'Adres email do przekazania')
+                ->withStringParameter('note', 'Opcjonalna notatka poprzedzająca treść')
+                ->using(function (string $folder, int $original_uid, string $to, string $note = '') use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji skrzynki.'];
+                        $captured['forward_email'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $original = $mb->getMessageBody($config, strtoupper($folder), $original_uid);
+                        $subject  = $original['subject'] ?? '';
+                        if (!str_starts_with(strtolower($subject), 'fwd:')) {
+                            $subject = 'Fwd: ' . $subject;
+                        }
+                        $fwdBody = ($note ? '<p>' . htmlspecialchars($note) . '</p><br>' : '')
+                            . '<p style="color:#555">---------- Wiadomość przekazana ----------<br>'
+                            . 'Od: ' . htmlspecialchars($original['fromName'] ?? '') . ' &lt;' . htmlspecialchars($original['fromEmail'] ?? '') . '&gt;<br>'
+                            . 'Data: ' . ($original['date'] ?? '') . '<br>'
+                            . 'Temat: ' . htmlspecialchars($original['subject'] ?? '') . '</p><br>'
+                            . ($original['body'] ?? '');
+
+                        $mb->sendMessage($config, ['to' => $to, 'subject' => $subject, 'body' => $fwdBody]);
+
+                        $result = ['success' => true, 'message' => "Email przekazany do {$to} pomyślnie.", 'to' => $to, 'subject' => $subject];
+                        $captured['forward_email'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => 'Błąd przekazywania: ' . $e->getMessage()];
+                        $captured['forward_email'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('mark_email_read')
+                ->for('Oznacza wiadomość jako przeczytaną.')
+                ->withStringParameter('folder', 'Folder wiadomości')
+                ->withNumberParameter('uid', 'UID wiadomości')
+                ->using(function (string $folder, int $uid) use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji skrzynki.'];
+                        $captured['mark_email_read'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $mb->markRead($config, strtoupper($folder), $uid);
+                        $result = ['success' => true, 'message' => 'Wiadomość oznaczona jako przeczytana.'];
+                        $captured['mark_email_read'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => $e->getMessage()];
+                        $captured['mark_email_read'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('delete_email')
+                ->for('Przenosi wiadomość do kosza (TRASH).')
+                ->withStringParameter('folder', 'Aktualny folder wiadomości')
+                ->withNumberParameter('uid', 'UID wiadomości do usunięcia')
+                ->using(function (string $folder, int $uid) use ($mb, $user, &$captured) {
+                    $config = CrmMailConfig::where('user_id', $user->id)->first();
+                    if (!$config) {
+                        $result = ['success' => false, 'error' => 'Brak konfiguracji skrzynki.'];
+                        $captured['delete_email'] = $result;
+                        return json_encode($result);
+                    }
+                    try {
+                        $mb->moveMessage($config, strtoupper($folder), $uid, 'TRASH');
+                        $result = ['success' => true, 'message' => 'Wiadomość przeniesiona do kosza.'];
+                        $captured['delete_email'] = $result;
+                        return json_encode($result);
+                    } catch (\Exception $e) {
+                        $result = ['success' => false, 'error' => $e->getMessage()];
+                        $captured['delete_email'] = $result;
+                        return json_encode($result);
+                    }
+                }),
+
+            Tool::as('create_event_from_email')
+                ->for('Tworzy wydarzenie w kalendarzu na podstawie informacji z emaila. Użyj gdy email zawiera informacje o spotkaniu, spotkaniu, terminie lub wydarzeniu.')
+                ->withStringParameter('title', 'Tytuł spotkania')
+                ->withStringParameter('date', 'Data spotkania YYYY-MM-DD')
+                ->withStringParameter('time', 'Godzina HH:MM (opcjonalnie)')
+                ->withStringParameter('location', 'Miejsce (opcjonalnie)')
+                ->withStringParameter('description', 'Opis lub skrót treści emaila (opcjonalnie)')
+                ->using(function (string $title, string $date, string $time = '', string $location = '', string $description = '') use ($ts, $user, &$captured) {
+                    $result = $ts->createCalendarEvent($user, compact('title', 'date', 'time', 'location', 'description'));
+                    $captured['create_event_from_email'] = $result;
+                    return json_encode($result);
+                }),
         ];
-    }
-
-    private function executeToolCall(mixed $user, string $name, array $args): mixed
-    {
-        return ['executed' => $name, 'args' => $args];
-    }
-
-    private function formatToolResults(array $toolResults): string
-    {
-        return '';
     }
 
     private function extractFrontendActions(array $toolResults): array

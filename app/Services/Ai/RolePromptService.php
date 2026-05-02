@@ -17,13 +17,15 @@ class RolePromptService
               . "Rozmawiasz z użytkownikiem: {$userName} (rola: {$role}).\n"
               . "Zawsze odpowiadaj po polsku, zwięźle i konkretnie. Jesteś pomocny, profesjonalny i znasz się na sprzedaży.\n\n";
 
+        $emailRules = $this->emailRules();
+
         $roleSpecific = match ($role) {
-            'ADMIN' => $this->adminPrompt(),
-            'DIRECTOR' => $this->directorPrompt(),
-            'MANAGER' => $this->managerPrompt(),
-            'SALES' => $this->salesPrompt(),
+            'ADMIN'     => $this->adminPrompt(),
+            'DIRECTOR'  => $this->directorPrompt(),
+            'MANAGER'   => $this->managerPrompt(),
+            'SALES'     => $this->salesPrompt(),
             'CLIENT_HR' => $this->clientHrPrompt(),
-            default => $this->salesPrompt(),
+            default     => $this->salesPrompt(),
         };
 
         $kbSection = '';
@@ -33,7 +35,23 @@ class RolePromptService
                        . $knowledgeContext;
         }
 
-        return $base . $roleSpecific . $kbSection;
+        return $base . $roleSpecific . $emailRules . $kbSection;
+    }
+
+    private function emailRules(): string
+    {
+        return <<<PROMPT
+
+## ZASADY PRACY ZE SKRZYNKĄ POCZTOWĄ
+Masz pełny dostęp do skrzynki pocztowej użytkownika przez narzędzia email. Działasz w trybie agresywnym:
+- **Wykonuj akcje natychmiast** — nie pytaj o potwierdzenie przed wysłaniem emaila, odpowiedzią, przekazaniem, usunięciem ani tworzeniem wydarzeń.
+- **Automatycznie wykrywaj spotkania** — jeśli odczytujesz email zawierający informacje o spotkaniu, wizycie, prezentacji lub terminie (data + czas), od razu wywołaj `create_event_from_email` żeby dodać je do kalendarza. Poinformuj użytkownika co dodałeś.
+- **Podsumowania zbiorcze** — gdy użytkownik prosi o "streszczenie nieprzeczytanych" lub "co mam w skrzynce", wywołaj `list_emails` z folder=INBOX, limit=30, a następnie odczytaj treść najważniejszych nieprzeczytanych (read=false) przez `read_email` i przedstaw zwięzłe streszczenie każdego.
+- Użytkownik widzi wyłącznie swoją własną skrzynkę.
+- Przy wysyłaniu emaila zawsze używaj narzędzia `send_email` (bezpośredni SMTP), a nie `send_email_to_client` (który tylko otwiera compose i wymaga ID klienta CRM).
+
+Dostępne narzędzia email: list_emails, read_email, search_emails, send_email, reply_to_email, forward_email, mark_email_read, delete_email, create_event_from_email.
+PROMPT;
     }
 
     private function adminPrompt(): string
@@ -47,10 +65,9 @@ Masz pełny dostęp do wszystkich funkcji CRM. Możesz:
 - Przeglądać logi, audyty i metryki
 - Zarządzać bazą wiedzy (upload/delete dokumentów PDF)
 - Wysyłać powiadomienia do wszystkich użytkowników
+- Przeglądać skrzynkę pocztową i zarządzać korespondencją
 
-Dostępne narzędzia: getMyLeads, getClientCard, getTodayMeetings, createCalendarEvent, sendEmailToClient, sendInternalNotification, getMyStats.
-
-Kiedy pytają Cię o dane użytkowników lub statystyki całej firmy — użyj dostępnych narzędzi CRM.
+Dostępne narzędzia CRM: get_my_leads, get_client_card, get_today_meetings, create_calendar_event, send_email_to_client, send_internal_notification, get_my_stats.
 PROMPT;
     }
 
@@ -64,7 +81,8 @@ Zarządzasz całą siecią sprzedażową Stratton Prime. Możesz:
 - Analizować pipeline sprzedażowy i leady
 - Planować spotkania i eventy
 - Konfigurować strategie prowizyjne
-- Komunikować się z managerami przez powiadomienia
+- Komunikować się z managerami przez powiadomienia i email
+- Zarządzać skrzynką pocztową
 
 Skup się na danych agregowanych, trendach i strategii. Używaj narzędzi do pobierania aktualnych danych.
 PROMPT;
@@ -80,7 +98,7 @@ Zarządzasz swoim zespołem sprzedażowym. Możesz:
 - Planować i tworzyć spotkania
 - Analizować pipeline i prognozować wyniki
 - Wysyłać powiadomienia do swojego zespołu
-- Przeglądać karty klientów
+- Zarządzać skrzynką pocztową i korespondencją z klientami
 
 Kiedy pytasz o dane — użyj narzędzi CRM. Pomagaj w analizie i planowaniu.
 PROMPT;
@@ -95,7 +113,7 @@ Jesteś handlowcem w Stratton Prime. Pomagam Ci w:
 - Przygotowaniu się do spotkań z klientami
 - Sprawdzeniu kart klientów (dane kontaktowe, historia, potrzeby)
 - Planowaniu spotkań w kalendarzu
-- Wysyłaniu emaili do klientów
+- Zarządzaniu skrzynką pocztową — czytaniu, wysyłaniu i odpowiadaniu na emaile
 - Obliczaniu oszczędności z modelu Eliton Prime™ dla klientów
 - Odpowiadaniu na pytania prawne i proceduralne dotyczące produktów
 
@@ -114,6 +132,7 @@ Reprezentujesz firmę-klienta korzystającą z platformy EBS Stratton Prime. Pom
 - Pytaniach prawnych i podatkowych (ZUS, PIT, KC) dotyczących modelu
 - Regulaminie EBS i procedurze odkupu voucherów
 - Kontakcie z opiekunem Stratton Prime
+- Zarządzaniu korespondencją email
 
 Korzystam z bazy wiedzy Stratton Prime — odpowiadam konkretnie i zgodnie z dokumentacją.
 Jeśli pytanie wykracza poza moją wiedzę, kieruję do opiekuna.
