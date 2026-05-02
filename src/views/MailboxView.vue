@@ -12,6 +12,7 @@ import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { api } from '@/api/client'
 import type { Email } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
+import MailAiPanel from '@/components/MailAiPanel.vue'
 
 const mailboxStore = useMailboxStore()
 const knowledgeBaseStore = useKnowledgeBaseStore()
@@ -94,6 +95,7 @@ const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM' | 'STAR
 const starredIds = ref<Set<string>>(new Set(JSON.parse(localStorage.getItem('mailbox_starred') || '[]')))
 const saveStarred = () => localStorage.setItem('mailbox_starred', JSON.stringify([...starredIds.value]))
 const selectedEmail = ref<Email | null>(null)
+const showAiPanel = ref(false)
 const bodyLoading = ref(false)
 const currentPage = ref(1)
 const PAGE_SIZE = mailboxStore.PAGE_SIZE
@@ -954,8 +956,16 @@ watch(searchQuery, () => {
                   Spam
                 </button>
               </template>
-              <button class="ml-auto p-2 rounded-xl border border-slate-100 hover:bg-slate-50 text-slate-400 transition-colors">
-                <AppIcon name="dots-horizontal" class="w-4 h-4" />
+              <button
+                type="button"
+                class="ml-auto flex items-center gap-1.5 px-3 py-2 text-xs font-black rounded-xl border transition-all active:scale-95"
+                :class="showAiPanel ? 'bg-slate-900 text-white border-slate-800' : 'text-slate-600 bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'"
+                @click="showAiPanel = !showAiPanel"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2" />
+                </svg>
+                AI
               </button>
             </div>
           </div>
@@ -979,6 +989,8 @@ watch(searchQuery, () => {
           </div>
         </transition>
       </div>
+      <!-- AI Panel -->
+      <MailAiPanel v-model:open="showAiPanel" :selected-email="selectedEmail" />
     </div>
 
   </div>
