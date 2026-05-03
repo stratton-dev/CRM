@@ -85,18 +85,14 @@ class AiToolsService
         try {
             $today = Carbon::today();
 
-            $meetings = Meeting::where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhereJsonContains('participants', $user->id);
-            })
-            ->whereDate('date', $today)
-            ->orWhere(function ($q) use ($user, $today) {
-                $q->where('user_id', $user->id)
-                  ->whereDate('start_at', $today);
-            })
-            ->orderBy('date')
-            ->limit(10)
-            ->get();
+            $meetings = Meeting::where('user_id', $user->id)
+                ->where(function ($q) use ($today) {
+                    $q->whereDate('date', $today)
+                      ->orWhereDate('start_at', $today);
+                })
+                ->orderBy('date')
+                ->limit(10)
+                ->get();
 
             return [
                 'success'  => true,
