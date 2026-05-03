@@ -106,6 +106,7 @@ class AiChatController extends Controller
                 ->withMessages($prismMessages)
                 ->withTools($tools)
                 ->withMaxTokens(config('ai.max_tokens', 4096))
+                ->withMaxSteps(5)
                 ->generate();
 
             $assistantContent = $response->text;
