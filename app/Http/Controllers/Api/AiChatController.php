@@ -83,7 +83,7 @@ class AiChatController extends Controller
             'content'         => $request->input('message'),
         ]);
 
-        $history = $conv->messages()->orderBy('id')->latest('id')->limit(20)->get()->reverse()->values();
+        $history = $conv->messages()->orderByDesc('id')->limit(20)->get()->sortBy('id')->values();
 
         $kbChunks         = $this->knowledgeSearch->search($request->input('message'), 2);
         $knowledgeContext = '';

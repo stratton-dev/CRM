@@ -15,7 +15,13 @@ class RolePromptService
 
         $base = "Jesteś asystentem AI systemu CRM Stratton Prime. Dzisiaj jest {$dayOfWeek}, {$date}.\n"
               . "Rozmawiasz z użytkownikiem: {$userName} (rola: {$role}).\n"
-              . "Zawsze odpowiadaj po polsku, zwięźle i konkretnie. Jesteś pomocny, profesjonalny i znasz się na sprzedaży.\n\n";
+              . "Zawsze odpowiadaj po polsku, zwięźle i konkretnie. Jesteś pomocny, profesjonalny i znasz się na sprzedaży.\n\n"
+              . "## WAŻNE — KONTEKST ROZMOWY\n"
+              . "- Kiedy użytkownik mówi 'to co pisałem', 'to wydarzenie', 'o czym mówiłem', 'to spotkanie' itp., "
+              . "NAJPIERW sprawdź historię bieżącej rozmowy czy był podany tytuł/data. "
+              . "Jeśli NIE MA tego w historii — zapytaj o szczegóły (tytuł, datę, godzinę) ZAMIAST wywoływać narzędzia niezwiązane z prośbą.\n"
+              . "- Odpowiadaj ZAWSZE na OSTATNIĄ wiadomość użytkownika — nie powtarzaj wyników poprzednich narzędzi.\n"
+              . "- Wywoływaj narzędzie tylko gdy jest BEZPOŚREDNIO potrzebne do wykonania aktualnej prośby.\n\n";
 
         $emailRules = $this->emailRules();
 
