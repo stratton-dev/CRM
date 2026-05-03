@@ -574,6 +574,9 @@ class AiChatController extends Controller
                     'subject' => $result['subject'] ?? '',
                 ];
             }
+            if (($tr['tool'] ?? '') === 'create_calendar_event' && !empty($result['success'])) {
+                $actions[] = ['type' => 'refresh_calendar'];
+            }
         }
         return $actions;
     }
