@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\AiConversation;
 use App\Models\AiMessage;
 use App\Models\CrmMailConfig;
+use App\Jobs\ExtractMemoriesJob;
 use App\Services\Ai\AiToolsService;
 use App\Services\Ai\KnowledgeSearchService;
+use App\Services\Ai\MemoryService;
 use App\Services\Ai\RolePromptService;
 use App\Services\Crm\CrmMailboxService;
 use Prism\Prism\Enums\Provider;
@@ -27,6 +29,7 @@ class AiChatController extends Controller
         private AiToolsService         $toolsService,
         private KnowledgeSearchService $knowledgeSearch,
         private CrmMailboxService      $mailboxService,
+        private MemoryService          $memoryService,
     ) {}
 
     public function indexConversations(Request $request): JsonResponse
@@ -89,7 +92,10 @@ class AiChatController extends Controller
             $knowledgeContext = mb_substr($combined, 0, 2000);
         }
 
-        $systemPrompt = $this->rolePromptService->getSystemPrompt($user, $knowledgeContext);
+        // Pobierz pasujące wspomnienia z długoterminowej pamięci
+        $memoryContext = $this->memoryService->retrieveRelevant($user, $request->input('message'));
+
+        $systemPrompt = $this->rolePromptService->getSystemPrompt($user, $knowledgeContext, $memoryContext);
 
         $prismMessages = [];
         foreach ($history as $msg) {
@@ -139,6 +145,11 @@ class AiChatController extends Controller
             if ($history->count() === 1 && $conv->title === 'Nowa rozmowa') {
                 $conv->update(['title' => mb_substr($request->input('message'), 0, 60)]);
             }
+
+            // Asynchronicznie wyodrębnij wspomnienia z tej wymiany
+            ExtractMemoriesJob::dispatch($conv->id, $user->id)
+                ->onQueue('default')
+                ->delay(now()->addSeconds(3)); // małe opóźnienie żeby message był już zapisany
 
             return response()->json([
                 'data' => [

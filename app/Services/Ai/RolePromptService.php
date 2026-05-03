@@ -6,7 +6,7 @@ use App\Models\User;
 
 class RolePromptService
 {
-    public function getSystemPrompt(User $user, string $knowledgeContext = ''): string
+    public function getSystemPrompt(User $user, string $knowledgeContext = '', string $memoryContext = ''): string
     {
         $role      = $user->role_cached ?? 'SALES';
         $userName  = $user->name;
@@ -28,6 +28,16 @@ class RolePromptService
             default     => $this->salesPrompt(),
         };
 
+        // Sekcja długoterminowej pamięci — ładuje się tylko gdy są pasujące wspomnienia
+        $memorySection = '';
+        if (!empty(trim($memoryContext))) {
+            $memorySection = "\n\n## TWOJA PAMIĘĆ O TYM UŻYTKOWNIKU\n"
+                           . "Poniżej są fakty które zapamiętałeś z poprzednich rozmów. "
+                           . "Używaj ich żeby lepiej personalizować odpowiedzi — nie musisz o nich wspominać wprost, "
+                           . "chyba że są bezpośrednio istotne:\n"
+                           . $memoryContext;
+        }
+
         $kbSection = '';
         if (!empty(trim($knowledgeContext))) {
             $kbSection = "\n\n## BAZA WIEDZY STRATTON PRIME\nPoniżej znajdziesz fragmenty dokumentów z bazy wiedzy firmy. "
@@ -35,7 +45,7 @@ class RolePromptService
                        . $knowledgeContext;
         }
 
-        return $base . $roleSpecific . $emailRules . $kbSection;
+        return $base . $roleSpecific . $emailRules . $memorySection . $kbSection;
     }
 
     private function emailRules(): string
