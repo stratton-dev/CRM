@@ -80,10 +80,14 @@ class AiChatController extends Controller
             'content'         => $request->input('message'),
         ]);
 
-        $history = $conv->messages()->orderBy('id')->get();
+        $history = $conv->messages()->orderBy('id')->latest('id')->limit(20)->get()->reverse()->values();
 
-        $kbChunks         = $this->knowledgeSearch->search($request->input('message'));
-        $knowledgeContext = empty($kbChunks) ? '' : implode("\n\n---\n\n", $kbChunks);
+        $kbChunks         = $this->knowledgeSearch->search($request->input('message'), 2);
+        $knowledgeContext = '';
+        if (!empty($kbChunks)) {
+            $combined = implode("\n\n---\n\n", $kbChunks);
+            $knowledgeContext = mb_substr($combined, 0, 2000);
+        }
 
         $systemPrompt = $this->rolePromptService->getSystemPrompt($user, $knowledgeContext);
 
@@ -149,8 +153,19 @@ class AiChatController extends Controller
 
         } catch (\Exception $e) {
             Log::error('AiChatController: błąd Prism', ['error' => $e->getMessage()]);
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'rate limit') || str_contains($msg, 'rate_limit') || str_contains($msg, 'overloaded')) {
+                $retryAfter = 30;
+                if (preg_match('/retry after (\d+)/i', $msg, $m)) {
+                    $retryAfter = (int) $m[1];
+                }
+                return response()->json([
+                    'error' => "Zbyt duże obciążenie AI — spróbuj ponownie za {$retryAfter} sekund.",
+                    'retry_after' => $retryAfter,
+                ], 429);
+            }
             return response()->json([
-                'error' => 'Błąd komunikacji z AI: ' . $e->getMessage(),
+                'error' => 'Błąd komunikacji z AI: ' . $msg,
             ], 500);
         }
     }
