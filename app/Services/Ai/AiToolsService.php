@@ -5,7 +5,7 @@ namespace App\Services\Ai;
 use App\Models\User;
 use App\Models\Lead;
 use App\Models\Client;
-use App\Models\Meeting;
+use App\Models\CrmDashboardEvent;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -85,26 +85,20 @@ class AiToolsService
         try {
             $today = Carbon::today();
 
-            $meetings = Meeting::where('user_id', $user->id)
-                ->where(function ($q) use ($today) {
-                    $q->whereDate('date', $today)
-                      ->orWhereDate('start_at', $today);
-                })
-                ->orderBy('date')
+            $events = CrmDashboardEvent::where('user_id', $user->id)
+                ->whereDate('start_at', $today)
+                ->orderBy('start_at')
                 ->limit(10)
                 ->get();
 
             return [
                 'success'  => true,
                 'date'     => $today->format('d.m.Y'),
-                'count'    => $meetings->count(),
-                'meetings' => $meetings->map(fn($m) => [
-                    'id'       => $m->id,
-                    'title'    => $m->title ?? $m->name ?? 'Spotkanie',
-                    'time'     => $m->time ?? $m->start_time ?? null,
-                    'location' => $m->location ?? $m->place ?? null,
-                    'client'   => $m->client_name ?? ($m->client?->name ?? null),
-                    'notes'    => $m->notes ?? null,
+                'count'    => $events->count(),
+                'meetings' => $events->map(fn($e) => [
+                    'id'    => $e->id,
+                    'title' => $e->title,
+                    'time'  => $e->start_at ? Carbon::parse($e->start_at)->format('H:i') : null,
                 ])->toArray(),
             ];
         } catch (\Exception $e) {
@@ -116,19 +110,15 @@ class AiToolsService
     public function createCalendarEvent(User $user, array $data): array
     {
         try {
-            $modelClass = class_exists(\App\Models\CrmEvent::class) ? \App\Models\CrmEvent::class : \App\Models\Meeting::class;
+            $startAt = $data['date'] ?? null;
+            if ($startAt && !empty($data['time'])) {
+                $startAt = $data['date'] . ' ' . $data['time'];
+            }
 
-            $event = $modelClass::create([
-                'user_id'     => $user->id,
-                'title'       => $data['title'] ?? 'Spotkanie',
-                'date'        => $data['date'] ?? null,
-                'start_at'    => $data['date'] ?? null,
-                'time'        => $data['time'] ?? null,
-                'start_time'  => $data['time'] ?? null,
-                'location'    => $data['location'] ?? null,
-                'description' => $data['description'] ?? $data['notes'] ?? null,
-                'notes'       => $data['description'] ?? $data['notes'] ?? null,
-                'type'        => $data['type'] ?? 'meeting',
+            $event = CrmDashboardEvent::create([
+                'user_id' => $user->id,
+                'title'   => $data['title'] ?? 'Spotkanie',
+                'start_at' => $startAt,
             ]);
 
             return [
@@ -219,9 +209,9 @@ class AiToolsService
                     ->count();
             }
 
-            if (class_exists(\App\Models\Meeting::class)) {
-                $stats['meetings_this_week'] = Meeting::where('user_id', $user->id)
-                    ->whereBetween('date', [now()->startOfWeek(), now()->endOfWeek()])
+            if (class_exists(\App\Models\CrmDashboardEvent::class)) {
+                $stats['meetings_this_week'] = CrmDashboardEvent::where('user_id', $user->id)
+                    ->whereBetween('start_at', [now()->startOfWeek(), now()->endOfWeek()])
                     ->count();
             }
 
