@@ -8,6 +8,7 @@ import { useSessionStore } from '@/stores/session'
 import { useNotificationStore } from '@/stores/notification'
 import { useRoute } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
+import api from '@/api/client'
 
 const data = useDataStore()
 const clientStore = useClientStore()
@@ -50,6 +51,28 @@ const yearsRange = computed(() => {
 })
 
 const draggedEvent = ref<any>(null)
+const dashboardEvents = ref<any[]>([])
+
+const fetchDashboardEvents = async () => {
+  if (!auth.enabled) return
+  try {
+    const { data } = await api.get('/v1/crm-dashboard-events', { params: { per_page: 500 } })
+    dashboardEvents.value = data?.data ?? data?.items ?? (Array.isArray(data) ? data : [])
+  } catch (e) {
+    console.error('Failed to fetch dashboard events', e)
+  }
+}
+
+const deleteDashboardEvent = async (eventId: string | number, domEvent: Event) => {
+  domEvent.stopPropagation()
+  if (!confirm('Czy na pewno usunąć to wydarzenie?')) return
+  try {
+    await api.delete(`/v1/crm-dashboard-events/${eventId}`)
+    dashboardEvents.value = dashboardEvents.value.filter(e => e.id !== eventId)
+  } catch (e) {
+    console.error('Failed to delete dashboard event', e)
+  }
+}
 
 const onDragStart = (e: DragEvent, act: any) => {
   if (session.isReadOnly) {
@@ -222,6 +245,33 @@ const daysInMonth = computed(() => {
             }
           }
         })
+      }
+    })
+
+    // Also include AI/dashboard events (from crm_dashboard_events)
+    dashboardEvents.value.forEach((event: any) => {
+      if (!event.start_at) return
+      const evDate = new Date(event.start_at)
+      if (
+        evDate.getFullYear() === date.getFullYear() &&
+        evDate.getMonth() === date.getMonth() &&
+        evDate.getDate() === date.getDate()
+      ) {
+        const titleLower = (event.title || '').toLowerCase()
+        if (!query || titleLower.includes(query)) {
+          activities.push({
+            id: `de-${event.id}`,
+            clientId: null,
+            clientName: event.title,
+            type: 'MEETING',
+            description: event.title,
+            time: evDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            originalDate: event.start_at,
+            isCompleted: false,
+            isDashboardEvent: true,
+            dashboardEventId: event.id,
+          })
+        }
       }
     })
 
@@ -426,6 +476,9 @@ onMounted(() => {
       }
     }
     
+    fetchDashboardEvents()
+    window.addEventListener('crm:refresh-calendar', fetchDashboardEvents)
+    
     // Safety check: sometimes data is there but reactivity needs a nudge
     setTimeout(() => {
        if (clients.value.length === 0 && (clientStore as any).fetchClients) {
@@ -464,6 +517,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (reminderTimer.value) window.clearInterval(reminderTimer.value)
+  window.removeEventListener('crm:refresh-calendar', fetchDashboardEvents)
 })
 </script>
 
@@ -598,7 +652,7 @@ onBeforeUnmount(() => {
                 'border-l-slate-400 shadow-slate-100/50': act.type === 'NOTE',
                 'border-l-amber-500 shadow-amber-100/50': act.type === 'EMAIL',
               }"
-              @click="openEditModal(act, day.date, $event)"
+              @click="act.isDashboardEvent ? null : openEditModal(act, day.date, $event)"
               :title="`${act.time} - ${act.clientName}: ${act.description}`"
               draggable="true"
               @dragstart="onDragStart($event, act)"
@@ -630,7 +684,7 @@ onBeforeUnmount(() => {
               
               <button 
                  class="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/ev:opacity-100 p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-all z-20 shadow-sm bg-white"
-                 @click.stop="deleteEvent(act, $event)"
+                 @click.stop="act.isDashboardEvent ? deleteDashboardEvent(act.dashboardEventId, $event) : deleteEvent(act, $event)"
               >
                 <AppIcon name="trash" class="w-3 h-3" />
               </button>

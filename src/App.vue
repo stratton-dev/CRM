@@ -14,6 +14,7 @@ import ToastContainer from '@/components/ToastContainer.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import MailComposeModal from '@/components/MailComposeModal.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
+import AiChatWidget from '@/components/AiChatWidget.vue'
 import { useChatStore } from '@/stores/chat'
 import { webPush } from '@/services/webPush'
 import logoUrl from '@/assets/logo.svg'
@@ -119,12 +120,15 @@ const navLinks = computed(() => {
   )
 
   if (role === 'ADMIN') {
-    links.push({ label: 'Aktualności', path: '/app/news-management', icon: 'document-text', viewKey: 'news-management' })
+    links.push(
+      { label: 'Aktualności', path: '/app/news-management', icon: 'document-text', viewKey: 'news-management' },
+      { label: 'Baza Wiedzy AI', path: '/app/admin/knowledge-base', icon: 'book-open', viewKey: 'admin-knowledge-base' }
+    )
   }
 
   const filteredLinks = links.filter((link) => {
     // Force show for newly added permissions if viewPermissions might be lagging or configured strangely
-    if (['user-management', 'admin-analytics', 'admin-logs'].includes(link.viewKey) && role === 'ADMIN') return true
+    if (['user-management', 'admin-analytics', 'admin-logs', 'admin-knowledge-base'].includes(link.viewKey) && role === 'ADMIN') return true
 
     if (link.viewKey === 'settings') {
       return viewPermissions.isSettingsAllowed(role)
@@ -270,6 +274,7 @@ onBeforeUnmount(() => {
     <ToastContainer />
     <MailComposeModal />
     <ChatPanel />
+    <AiChatWidget />
 
     <aside
       v-if="shouldShowSidebar"

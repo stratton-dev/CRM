@@ -141,6 +141,23 @@ export const useAuthStore = defineStore('auth', () => {
     saveToken(null)
   }
 
+  async function getToken(): Promise<string | null> {
+    if (!enabled.value) return null
+    const supabase = getSupabase()
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      saveToken(session.access_token)
+      return session.access_token
+    }
+    // Try to refresh
+    const { data: refreshData } = await supabase.auth.refreshSession()
+    if (refreshData?.session?.access_token) {
+      saveToken(refreshData.session.access_token)
+      return refreshData.session.access_token
+    }
+    return null
+  }
+
   return {
     enabled,
     initializing,
@@ -153,5 +170,6 @@ export const useAuthStore = defineStore('auth', () => {
     ensureInitialized,
     login,
     logout,
+    getToken,
   }
 })

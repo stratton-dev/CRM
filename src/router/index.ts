@@ -38,6 +38,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/leaderboard', name: 'leaderboard', component: () => import('@/views/LeaderboardView.vue'), meta: { requiresAuth: true } },
   { path: '/app/settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
   { path: '/app/meetings', name: 'meetings', component: () => import('@/views/MeetingsManagementView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/admin/knowledge-base', name: 'admin-knowledge-base', component: () => import('@/views/admin/KnowledgeBaseView.vue'), meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({
@@ -71,6 +72,9 @@ router.beforeEach(async (to) => {
     if (!viewPermissions.isSettingsAllowed(role)) {
       return { path: '/app/dashboard' }
     }
+    return true
+  }
+  if (String(to.name || '') === 'admin-knowledge-base' && role === 'ADMIN') {
     return true
   }
   if (!viewPermissions.isViewAllowed(String(to.name || ''), role)) {

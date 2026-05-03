@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
 const envNumber = (value: unknown, fallback: number): number => {
   if (typeof value === 'string') {
@@ -67,20 +68,26 @@ export const setApiBaseUrl = (value?: string | null) => {
 export const getApiBaseOverride = () => runtimeApiBase
 export const getDefaultApiBaseUrl = () => ENV_API_BASE_URL
 
-// Attach token from localStorage
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('crm_token')
+// Attach token — always get fresh token from Supabase session
+api.interceptors.request.use(async (config) => {
+  let token: string | null = null
+  try {
+    const authStore = useAuthStore()
+    token = await authStore.getToken()
+  } catch {
+    token = localStorage.getItem('crm_token')
+  }
   if (token) {
     config.headers = config.headers || {}
     config.headers.Authorization = `Bearer ${token}`
   }
-  
+
   const impersonateId = localStorage.getItem('x_impersonate_user')
   if (impersonateId) {
     config.headers = config.headers || {}
     config.headers['X-Impersonate-User'] = impersonateId
   }
-  
+
   return config
 })
 
