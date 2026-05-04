@@ -1041,11 +1041,23 @@ try {
   await browser.close();
   process.stdout.write(Buffer.from(pdfBuffer).toString('base64'));
 } catch (err) {
-  if (err.code === 'ERR_MODULE_NOT_FOUND' || err.message?.includes('Cannot find package')) {
-    // Puppeteer not available — return HTML for fallback
+  const msg = err.message || '';
+  const isPuppeteerUnavailable =
+    err.code === 'ERR_MODULE_NOT_FOUND' ||
+    msg.includes('Cannot find package') ||
+    msg.includes('Failed to launch') ||
+    msg.includes('executable doesn') ||
+    msg.includes('No usable sandbox') ||
+    msg.includes('ENOENT') ||
+    msg.includes('spawn') ||
+    msg.includes('chrome') ||
+    msg.includes('chromium') ||
+    msg.includes('browser');
+  if (isPuppeteerUnavailable) {
+    // Puppeteer / Chrome not available — return HTML for window.print() fallback
     process.stdout.write('PUPPETEER_UNAVAILABLE:' + htmlContent);
   } else {
-    process.stderr.write('PDF generation error: ' + err.message + '\n');
+    process.stderr.write('PDF generation error: ' + msg + '\n');
     process.exit(1);
   }
 }
