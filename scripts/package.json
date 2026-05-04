@@ -6,6 +6,7 @@
   "dependencies": {
     "imapflow": "^1.0.167",
     "mailparser": "^3.7.1",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "puppeteer": "^22.0.0"
   }
 }
