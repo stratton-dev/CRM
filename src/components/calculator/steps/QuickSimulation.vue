@@ -206,97 +206,219 @@ const isSendingOffer = ref(false);
 // Określa czy jesteśmy w kontekście klienta (z ProcessStart/ClientsView)
 const hasClientContext = computed(() => Boolean(props.clientId || store.context.clientId));
 
+// Opens the premium HTML in a new tab using a blob URL (popup-blocker-safe)
+const printPremiumOffer = (html: string) => {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (win) {
+    win.addEventListener('load', () => {
+      setTimeout(() => {
+        win.print();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      }, 800);
+    });
+  } else {
+    // If still blocked, trigger a direct download fallback
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `oferta-${store.firma.nip || 'stratton'}.html`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+};
+
 const buildQuickSimHtml = () => {
   const s = simulation.value;
-  const firmaNazwa = store.firma.nazwa || 'Oferta dla Twojej firmy';
-  const firmaNip = store.firma.nip ? `NIP: ${store.firma.nip}` : '';
+  const firmaNazwa = store.firma.nazwa || 'Twoja Firma';
+  const firmaNip = store.firma.nip || '';
   const date = new Date().toLocaleDateString('pl-PL');
+  const dateWaz = new Date(Date.now() + 14 * 86400000).toLocaleDateString('pl-PL');
   const provPercent = strategy.value === 'SAVINGS' ? 28 : 26;
+  const oszczMies = s.monthlySavings;
+  const oszczRocz = s.yearlySavings;
+  const prowizja = s.totalProv;
+  const roi = prowizja > 0 ? Math.round((oszczRocz / (prowizja * 12)) * 100) : 0;
+  const zyskNetto = oszczRocz - prowizja * 12;
+  const liczbaPrac = s.countUOP + s.countUZ;
 
   return `<!DOCTYPE html>
 <html lang="pl">
 <head>
   <meta charset="UTF-8"/>
   <title>Oferta szacunkowa — ${firmaNazwa}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
   <style>
-    @page { size: A4; margin: 20mm; }
-    body { font-family: Arial, sans-serif; color: #1e293b; font-size: 13px; }
-    .header { background: #0f172a; color: white; padding: 32px; border-radius: 8px; margin-bottom: 24px; }
-    .header h1 { margin: 0 0 4px; font-size: 22px; }
-    .header p { margin: 0; opacity: 0.6; font-size: 11px; }
-    .badge { display: inline-block; background: #C5A059; color: white; padding: 2px 10px; border-radius: 99px; font-size: 10px; font-weight: bold; letter-spacing: 0.08em; margin-top: 8px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
-    .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
-    .card .label { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 6px; }
-    .card .value { font-size: 28px; font-weight: 900; color: #0f172a; }
-    .card .sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
-    .table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-    .table th { background: #f8fafc; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    .table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
-    .highlight { background: #fffbeb; }
-    .footer { font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 24px; }
-    .tag { font-size: 9px; font-weight: bold; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+    @page { size: A4 portrait; margin: 0; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;font-weight:300;color:#111827;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .serif{font-family:'Playfair Display',Georgia,serif;}
+    .page{background:white;width:210mm;min-height:297mm;height:297mm;overflow:hidden;position:relative;display:flex;flex-direction:column;page-break-after:always;break-after:page;}
+    @media print{html,body{padding:0!important;margin:0!important;background:white!important;}.page{margin:0!important;box-shadow:none!important;}}
+    .pre-tag{font-size:9px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#C5A059;display:block;margin-bottom:10px;}
+    .page-header{background:#05162e;color:white;padding:28px 44px;border-bottom:3px solid #C5A059;flex-shrink:0;}
+    .page-section{padding:20px 44px;flex-grow:1;}
+    .page-footer{padding:9px 44px;border-top:1px solid #d1d5db;font-size:9px;color:#9ca3af;display:flex;justify-content:space-between;text-transform:uppercase;font-weight:700;letter-spacing:.1em;}
+    table{width:100%;border-collapse:collapse;}
+    thead tr{background:#05162e;color:white;font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;}
+    thead th{padding:10px 14px;text-align:left;}
+    tbody td{padding:10px 14px;border-bottom:1px solid #f3f4f6;font-size:12px;}
+    tbody tr:nth-child(even){background:#fafafa;}
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>${firmaNazwa}</h1>
-    <p>${firmaNip} ${firmaNip ? '·' : ''} Oferta szacunkowa · ${date}</p>
-    <span class="badge">QUICK SIMULATION</span>
-  </div>
 
-  <div class="grid">
-    <div class="card">
-      <div class="label">Oszczędność miesięczna netto</div>
-      <div class="value">${formatPLN(s.monthlySavings)}</div>
-      <div class="sub">Przy ${strategy.value === 'WIN_WIN' ? 'wypłacie podwyżek pracownikom' : 'pełnej oszczędności dla firmy'}</div>
+<!-- ══════════════════════ PAGE 1 ══════════════════════ -->
+<div class="page">
+  <!-- Header -->
+  <header style="background:#05162e;color:white;padding:32px 44px 22px;position:relative;overflow:hidden;flex-shrink:0;">
+    <div style="position:absolute;top:0;right:0;width:200px;height:100%;background:linear-gradient(135deg,transparent 60%,rgba(197,160,89,0.07) 60%);pointer-events:none;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+      <div>
+        <div style="font-size:20px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;">STRATTON <span style="color:#C5A059;">PRIME</span></div>
+        <div style="font-size:8px;letter-spacing:.3em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-top:3px;">ARCHITEKCI WARTOŚCI BIZNESOWEJ</div>
+      </div>
+      <div style="text-align:right;font-size:9px;letter-spacing:.1em;text-transform:uppercase;line-height:2;color:rgba(255,255,255,.5);">
+        <div>DATA: ${date}</div>
+        <div>WAŻNA DO: <span style="color:#C5A059;">${dateWaz}</span></div>
+        <div>OPIEKUN: <span style="color:#C5A059;">Agnieszka Cięciara</span></div>
+      </div>
     </div>
-    <div class="card">
-      <div class="label">Potencjał roczny</div>
-      <div class="value">${formatPLN(s.yearlySavings)}</div>
-      <div class="sub">Szacunkowe oszczędności w skali roku</div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#C5A059;margin-bottom:8px;">OFERTA SZACUNKOWA · ANALIZA LISTY PŁAC</div>
+    <h1 class="serif" style="font-size:32px;line-height:1;letter-spacing:-.02em;color:white;margin-bottom:6px;">Eliton Benefits System™</h1>
+    <p style="font-size:12px;font-weight:300;color:rgba(255,255,255,.65);max-width:420px;line-height:1.5;">Szacujemy Twój potencjał oszczędności bez konieczności podawania pełnej listy płac.</p>
+    <div style="margin-top:10px;font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.4);">
+      PRZYGOTOWANO DLA: <span style="color:white;font-size:12px;letter-spacing:.06em;font-weight:600;">${firmaNazwa}</span>
+      ${firmaNip ? `<span style="color:rgba(255,255,255,.35);font-size:10px;margin-left:8px;">NIP: ${firmaNip}</span>` : ''}
     </div>
-  </div>
+    <div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:#C5A059;"></div>
+  </header>
 
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Parametr</th>
-        <th>Stan obecny</th>
-        <th>Model Eliton Prime™</th>
-        <th>Różnica</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Liczba pracowników UoP</td>
-        <td>${s.countUOP}</td>
-        <td>${s.countUOP}</td>
-        <td>—</td>
-      </tr>
-      <tr>
-        <td>Liczba pracowników UZ</td>
-        <td>${s.countUZ}</td>
-        <td>${s.countUZ}</td>
-        <td>—</td>
-      </tr>
-      <tr>
-        <td>Całkowity koszt zatrudnienia / mies.</td>
-        <td>${formatPLN(s.totalStd)}</td>
-        <td>${formatPLN(s.totalNew)}</td>
-        <td>${formatPLN(s.totalStd - s.totalNew)}</td>
-      </tr>
-      <tr class="highlight">
-        <td><strong>Oszczędność miesięczna</strong> <span class="tag">Prowizja ${provPercent}%</span></td>
-        <td colspan="2" style="text-align:center">—</td>
-        <td><strong>${formatPLN(s.monthlySavings)}</strong></td>
-      </tr>
-    </tbody>
-  </table>
+  <!-- KPI strip -->
+  <section class="page-section">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-bottom:14px;border:1px solid #e5e7eb;overflow:hidden;">
+      <div style="padding:13px 15px;text-align:center;background:white;border-right:1px solid #e5e7eb;">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#6b7280;margin-bottom:6px;">Oszczędność miesięczna</div>
+        <div class="serif" style="font-size:24px;font-weight:700;color:#16a34a;">${formatPLN(oszczMies)}</div>
+        <div style="font-size:9px;color:#9ca3af;margin-top:2px;">/miesiąc netto dla firmy</div>
+      </div>
+      <div style="padding:13px 15px;text-align:center;background:#05162e;border-right:1px solid #0e2a4e;">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px;">Potencjał roczny</div>
+        <div class="serif" style="font-size:24px;font-weight:700;color:#C5A059;">${formatPLN(oszczRocz)}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.35);margin-top:2px;">/rok oszczędności</div>
+      </div>
+      <div style="padding:13px 15px;text-align:center;background:white;">
+        <div style="font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#6b7280;margin-bottom:6px;">Pracownicy objęci</div>
+        <div class="serif" style="font-size:24px;font-weight:700;color:#05162e;">${liczbaPrac}</div>
+        <div style="font-size:9px;color:#9ca3af;margin-top:2px;">UoP: ${s.countUOP} · UZ: ${s.countUZ}</div>
+      </div>
+    </div>
 
-  <div class="footer">
-    Niniejsza oferta ma charakter szacunkowy i została przygotowana na podstawie deklarowanych danych. Ostateczne wartości ustalane są po analizie listy płac. Obowiązuje 30 dni od daty wystawienia.
-  </div>
+    <!-- Table -->
+    <div style="margin-bottom:10px;">
+      <span class="pre-tag">Wynik szacunkowy · ${liczbaPrac} pracownik(ów)</span>
+      <h2 class="serif" style="font-size:20px;line-height:1.1;color:#05162e;">Twoje liczby. Twoja decyzja.</h2>
+    </div>
+    <table style="margin-bottom:12px;">
+      <thead><tr><th>Parametr</th><th style="text-align:right;">Stan obecny</th><th style="text-align:right;">Model Eliton Prime™</th><th style="text-align:right;">Różnica</th></tr></thead>
+      <tbody>
+        <tr><td>Pracownicy UoP</td><td style="text-align:right;">${s.countUOP}</td><td style="text-align:right;">${s.countUOP}</td><td style="text-align:right;color:#9ca3af;">—</td></tr>
+        <tr><td>Pracownicy UZ</td><td style="text-align:right;">${s.countUZ}</td><td style="text-align:right;">${s.countUZ}</td><td style="text-align:right;color:#9ca3af;">—</td></tr>
+        <tr><td>Koszt zatrudnienia / mies.</td><td style="text-align:right;">${formatPLN(s.totalStd)}</td><td style="text-align:right;">${formatPLN(s.totalNew)}</td><td style="text-align:right;color:#16a34a;font-weight:600;">${formatPLN(s.totalStd - s.totalNew)}</td></tr>
+        <tr style="background:#f3f4f6;"><td><strong>Oszczędność netto / mies.</strong> <span style="font-size:9px;font-weight:700;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;margin-left:4px;">Prowizja ${provPercent}%</span></td><td colspan="2" style="text-align:center;color:#9ca3af;">—</td><td style="text-align:right;color:#16a34a;font-weight:700;">${formatPLN(oszczMies)}</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Pull quote -->
+    <div style="background:#05162e;color:white;padding:12px 24px;font-family:'Playfair Display',serif;font-size:14px;font-style:italic;line-height:1.5;text-align:center;border-top:3px solid #C5A059;border-bottom:3px solid #C5A059;">
+      Każdy miesiąc zwłoki to <span style="color:#C5A059;font-style:normal;font-weight:700;">${formatPLN(oszczMies)}</span>, które oddajesz do ZUS bezpowrotnie.
+    </div>
+  </section>
+
+  <footer class="page-footer"><span>Stratton Prime · Architekci Wartości Biznesowej</span><span>01</span></footer>
+</div>
+
+<!-- ══════════════════════ PAGE 2 ══════════════════════ -->
+<div class="page">
+  <header class="page-header">
+    <span class="pre-tag">Co zawiera wdrożenie &amp; analiza ROI</span>
+    <h2 class="serif" style="font-size:26px;line-height:1.1;color:white;">Pełny pakiet Eliton Benefits System™</h2>
+  </header>
+
+  <section class="page-section">
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:28px;">
+      <div>
+        ${['Pełna dokumentacja: Regulamin wynagradzania, aneksy do umów, tabele stanowisk.',
+           'Obsługa kadrowa: Gotowe instrukcje księgowania i rozliczania składek.',
+           'Szkolenia: Przygotowanie HR i księgowości w 15 minut miesięcznie.',
+           'Asekuracja prawna: Przejęcie odpowiedzialności za komunikację z ZUS/KAS.',
+           'Polisa D&O: Ochrona osobista Zarządu do kwoty 1 000 000 zł.',
+           'Opieka post-wdrożeniowa: Dedykowany opiekun i comiesięczny audyt.',
+        ].map(item => {
+          const [title, ...rest] = item.split(': ');
+          return `<div style="display:flex;gap:9px;margin-bottom:7px;align-items:flex-start;">
+            <span style="color:#C5A059;font-weight:700;font-size:14px;line-height:1.4;flex-shrink:0;">✓</span>
+            <span style="font-size:11px;color:#374151;line-height:1.5;"><strong>${title}:</strong> ${rest.join(': ')}</span>
+          </div>`;
+        }).join('')}
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:12px 16px;background:#f8f9fa;border-left:3px solid #C5A059;">
+          <div>
+            <div style="font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#6b7280;margin-bottom:2px;">Prowizja za zarządzanie · miesięcznie</div>
+            <div style="font-weight:600;color:#05162e;font-size:12px;">Inwestycja w system</div>
+          </div>
+          <div class="serif" style="font-size:24px;font-weight:700;color:#05162e;white-space:nowrap;">${formatPLN(prowizja)}</div>
+        </div>
+      </div>
+
+      <!-- ROI box -->
+      <div style="background:#05162e;color:white;padding:24px 18px;border-bottom:5px solid #C5A059;text-align:center;">
+        <span class="pre-tag" style="margin-bottom:16px;display:block;">Analiza ROI · I rok</span>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:8px;text-transform:uppercase;letter-spacing:.18em;color:rgba(255,255,255,.4);margin-bottom:3px;">Oszczędność roczna</div>
+          <div class="serif" style="font-size:22px;font-weight:700;">${formatPLN(oszczRocz)}</div>
+        </div>
+        <div style="border-top:1px solid rgba(255,255,255,.1);margin:10px 0;"></div>
+        <div style="margin-bottom:10px;">
+          <div style="font-size:8px;text-transform:uppercase;letter-spacing:.18em;color:rgba(255,255,255,.4);margin-bottom:3px;">Inwestycja roczna</div>
+          <div class="serif" style="font-size:22px;font-weight:700;">${formatPLN(prowizja * 12)}</div>
+        </div>
+        <div style="background:#C5A059;color:#05162e;padding:13px;margin-top:10px;">
+          <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.2em;margin-bottom:3px;">Zysk netto / rok</div>
+          <div class="serif" style="font-size:26px;font-weight:700;">+${formatPLN(zyskNetto)}</div>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:rgba(197,160,89,.15);">
+          <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.25em;color:rgba(255,255,255,.45);margin-bottom:3px;">ROI</div>
+          <div class="serif" style="font-size:40px;font-weight:700;color:#C5A059;line-height:1;">${roi}%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Partners strip -->
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb;">
+      <div style="font-size:8px;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:#6b7280;margin-bottom:4px;">Partnerzy ubezpieczeniowi platformy EBS</div>
+      <div style="font-size:10px;color:#9ca3af;letter-spacing:.08em;">PZU · Ergo Hestia · Allianz · Generali · Warta · Lloyd's · Vienna Life · Uniqa · Signal Iduna · LuxMed · Orange</div>
+    </div>
+  </section>
+
+  <!-- Contact footer -->
+  <footer style="background:#05162e;color:white;padding:16px 44px;border-top:3px solid #C5A059;flex-shrink:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:8px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#C5A059;margin-bottom:3px;">Opiekun Projektu</div>
+        <div class="serif" style="font-size:16px;font-weight:700;">Agnieszka Cięciara</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.04em;">Dyrektor ds. Wdrożeń i Relacji Biznesowych</div>
+      </div>
+      <div style="text-align:right;font-size:9px;line-height:2;letter-spacing:.1em;text-transform:uppercase;">
+        <div style="color:#C5A059;font-weight:700;">STRATTON PRIME</div>
+        <div>EMAIL: a.cieciara@stratton-prime.pl</div>
+        <div style="color:#C5A059;">WWW.STRATTON-PRIME.PL</div>
+      </div>
+    </div>
+  </footer>
+</div>
+
 </body>
 </html>`;
 };
@@ -335,7 +457,12 @@ const handleShortOffer = async () => {
     dataWystawienia: new Date().toLocaleDateString('pl-PL'),
     dataWaznosci: new Date(Date.now() + 14 * 86400000).toLocaleDateString('pl-PL'),
   };
-  await pdfGen.generatePdf('short', data);
+  try {
+    await pdfGen.generatePdf('short', data);
+  } catch {
+    // API failed (Puppeteer unavailable on Railway) — fall back to client-side premium HTML
+    printPremiumOffer(buildQuickSimHtml());
+  }
 };
 
 const generateQuickOffer = async () => {
@@ -377,14 +504,8 @@ const generateQuickOffer = async () => {
       };
       await router.push('/app/mailbox');
     } else {
-      // Bez klienta — tylko drukuj / PDF
-      const printWin = window.open('', '_blank');
-      if (printWin) {
-        printWin.document.write(htmlContent);
-        printWin.document.close();
-        printWin.focus();
-        printWin.print();
-      }
+      // Bez klienta — premium offer print (blob URL, popup-blocker-safe)
+      printPremiumOffer(htmlContent);
     }
   } finally {
     isSendingOffer.value = false;
