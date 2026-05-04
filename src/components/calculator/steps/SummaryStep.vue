@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth';
 
 import { useToastStore } from '@/stores/toast';
 import { generateOfferEmailBody } from '@/utils/offerEmailGenerator';
+import { usePdfGenerator } from '@/composables/usePdfGenerator';
 
 const emit = defineEmits<{ (event: 'backToDashboard'): void }>();
 const store = useCalculatorStore();
@@ -89,7 +90,72 @@ const yAxisTicks = computed(() => {
   return ticks.reverse();
 });
 
-const offerButtonLabel = computed(() => (isOfferLocked.value ? 'Wygeneruj ponownie' : 'Generuj ofertę'));
+const offerButtonLabel = computed(() => (isOfferLocked.value ? 'Wygeneruj ponownie' : 'Generuj ofertę'))
+
+const pdfGen = usePdfGenerator()
+
+const buildLongOfferData = () => {
+  if (!store.wyniki) return null
+  const s = store.wyniki.podsumowanie
+  const sumaZusStd = store.wyniki.szczegoly.reduce((acc, w) => acc + w.standard.zusPracodawca.suma, 0)
+  return {
+    firma: {
+      nazwa: store.firma.nazwa,
+      nip: store.firma.nip,
+      miasto: store.firma.miasto || '',
+      kontaktEmail: store.firma.kontakty?.[0]?.email || store.firma.email || '',
+    },
+    podsumowanie: {
+      liczbaObjetchPracownikow: store.pracownicy.length,
+      kosztObecny: s.sumaKosztStandard,
+      kosztNowy: s.sumaKosztPodzial + s.prowizja,
+      oszczednoscMiesieczna: s.oszczednoscNetto,
+      oszczednoscRoczna: s.oszczednoscRoczna,
+      prowizja: s.prowizja,
+      prowizjaRoczna: s.prowizja * 12,
+      prowizjaProc: store.prowizjaProc,
+      oszczednoscBrutto: s.oszczednoscBrutto,
+      zyskNetto: s.oszczednoscRoczna - s.prowizja * 12,
+      roi: s.prowizja > 0 ? Math.round((s.oszczednoscRoczna / (s.prowizja * 12)) * 100) : 0,
+      zwrotWMiesiacach: s.oszczednoscNetto > 0 ? Math.ceil(s.prowizja / s.oszczednoscNetto) : 0,
+      sredniaOszczednoscNaEtat: s.sredniaOszczednoscNaEtat,
+      sumaZusPracodawcyStandard: sumaZusStd,
+    },
+    pracownicy: store.wyniki.szczegoly.map(w => ({
+      imie: w.pracownik.imie,
+      nazwisko: w.pracownik.nazwisko,
+      typUmowy: w.pracownik.typUmowy,
+      kosztStandard: w.standard.kosztPracodawcy,
+      bruttoStandard: w.standard.brutto,
+      nettoStandard: w.standard.netto,
+      zusStandard: w.standard.zusPracodawca.suma,
+      kosztEliton: w.podzial.kosztPracodawcy,
+      nettoElitonCalkowite: w.podzial.nettoCalkowite,
+      nettoZasadnicza: w.podzial.zasadnicza.netto,
+      nettoSwiadczenie: w.podzial.swiadczenie.netto,
+      zusEliton: w.podzial.zasadnicza.zusPracodawca.suma,
+      oszczednosc: w.oszczednosc,
+      podwyzka: w.podzial.nettoCalkowite - w.standard.netto,
+    })),
+    handlowiec: { imie: 'Agnieszka', nazwisko: 'Cięciara', email: 'a.cieciara@stratton-prime.pl' },
+    dataWystawienia: new Date().toLocaleDateString('pl-PL'),
+    dataWaznosci: new Date(Date.now() + 14 * 86400000).toLocaleDateString('pl-PL'),
+  }
+}
+
+const handleLongOffer = async () => {
+  const data = buildLongOfferData()
+  if (!data) return
+  await pdfGen.generatePdf('long', data as Record<string, unknown>)
+}
+
+const handleProductCard = async () => {
+  await pdfGen.generatePdf('product-card', {
+    firma: { nazwa: store.firma.nazwa || '', nip: store.firma.nip || '' },
+    handlowiec: { imie: 'Agnieszka', nazwisko: 'Cięciara', email: 'a.cieciara@stratton-prime.pl' },
+    dataWystawienia: new Date().toLocaleDateString('pl-PL'),
+  })
+};
 
 const buildSnapshot = (): ZapisanaKalkulacja | null => {
   if (!store.wyniki) return null;
@@ -320,6 +386,21 @@ onMounted(async () => {
             <button type="button"
               class="h-8 px-3 rounded-md border border-rose-200 bg-rose-50 text-xs font-semibold text-rose-600 hover:bg-rose-100 transition-all active:scale-95"
               @click="handleTestOffer">Test PDF
+            </button>
+            <button type="button"
+              class="h-8 px-3 rounded-md border border-amber-200 bg-amber-50 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+              :disabled="pdfGen.isGenerating.value || !store.wyniki"
+              @click="handleLongOffer">
+              <AppIcon v-if="pdfGen.isGenerating.value" name="arrow-path" class="w-3 h-3 animate-spin" />
+              <AppIcon v-else name="document-text" class="w-3 h-3" />
+              {{ pdfGen.isGenerating.value ? '...' : 'Pełna oferta PDF' }}
+            </button>
+            <button type="button"
+              class="h-8 px-3 rounded-md border border-indigo-200 bg-indigo-50 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+              :disabled="pdfGen.isGenerating.value"
+              @click="handleProductCard">
+              <AppIcon name="rectangle-stack" class="w-3 h-3" />
+              Karta produktu
             </button>
             <div class="w-px h-5 bg-slate-200 mx-0.5 hidden sm:block"></div>
             <button type="button"

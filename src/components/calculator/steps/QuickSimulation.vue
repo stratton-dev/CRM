@@ -7,6 +7,7 @@ import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useMailboxStore } from '@/stores/mailbox';
 import { obliczWariantPodzial, obliczWariantStandard } from '../tax-engine';
 import { Pracownik } from '../models/employee';
+import { usePdfGenerator } from '@/composables/usePdfGenerator';
 
 type ContractType = 'UOP' | 'UZ' | 'MIXED';
 type StrategyType = 'SAVINGS' | 'WIN_WIN';
@@ -39,6 +40,7 @@ const store = useCalculatorStore();
 const mailboxStore = useMailboxStore();
 const router = useRouter();
 const route = useRoute();
+const pdfGen = usePdfGenerator();
 
 const openEmailModal = () => {
   mailboxStore.composeState = {
@@ -297,6 +299,43 @@ const buildQuickSimHtml = () => {
   </div>
 </body>
 </html>`;
+};
+
+const handleShortOffer = async () => {
+  const s = simulation.value;
+  const provPercent = strategy.value === 'SAVINGS' ? 28 : 26;
+  const oszczMies = s.monthlySavings;
+  const oszczRocz = s.yearlySavings;
+  const prowizja = s.totalProv;
+  const roi = prowizja > 0 ? Math.round((oszczRocz / (prowizja * 12)) * 100) : 0;
+  const data = {
+    firma: {
+      nazwa: store.firma.nazwa || 'Twoja Firma',
+      nip: store.firma.nip || '',
+    },
+    podsumowanie: {
+      liczbaObjetchPracownikow: s.countUOP + s.countUZ,
+      liczbaUop: s.countUOP,
+      liczbaUz: s.countUZ,
+      kosztObecny: s.totalStd,
+      kosztNowy: s.totalNew,
+      oszczednoscMiesieczna: oszczMies,
+      oszczednoscRoczna: oszczRocz,
+      prowizja: prowizja,
+      prowizjaProc: provPercent,
+      roi,
+      zyskNetto: oszczRocz - prowizja * 12,
+    },
+    handlowiec: {
+      imie: 'Agnieszka',
+      nazwisko: 'Cięciara',
+      email: 'a.cieciara@stratton-prime.pl',
+      telefon: '',
+    },
+    dataWystawienia: new Date().toLocaleDateString('pl-PL'),
+    dataWaznosci: new Date(Date.now() + 14 * 86400000).toLocaleDateString('pl-PL'),
+  };
+  await pdfGen.generatePdf('short', data);
 };
 
 const generateQuickOffer = async () => {
@@ -685,6 +724,16 @@ const generateQuickOffer = async () => {
             <button
               type="button"
               class="flex-1 h-12 bg-white border border-stratton-gold/40 text-stratton-gold font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stratton-gold hover:text-white active:scale-95"
+              :disabled="!isCountValid || pdfGen.isGenerating.value"
+              @click="handleShortOffer"
+            >
+              <AppIcon v-if="pdfGen.isGenerating.value" name="arrow-path" class="w-4 h-4 animate-spin" />
+              <AppIcon v-else name="document-text" class="w-4 h-4" />
+              <span class="text-[12px]">{{ pdfGen.isGenerating.value ? 'Generowanie...' : 'Krótka oferta PDF' }}</span>
+            </button>
+            <button
+              type="button"
+              class="flex-1 h-12 bg-white border border-slate-200 text-slate-600 font-extrabold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 active:scale-95"
               :disabled="!isCountValid || isSendingOffer"
               @click="generateQuickOffer"
             >
