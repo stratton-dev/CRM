@@ -12,6 +12,10 @@ use App\Services\Ai\KnowledgeSearchService;
 use App\Services\Ai\MemoryService;
 use App\Services\Ai\RolePromptService;
 use App\Services\Crm\CrmMailboxService;
+use App\Models\AiChatFile;
+use App\Services\Ai\FileUploadService;
+use App\Services\Ai\TextExtractionService;
+use Illuminate\Support\Facades\Storage;
 use Prism\Prism\Enums\Provider;
 use Prism\Prism\Facades\Prism;
 use Prism\Prism\Facades\Tool;
@@ -30,6 +34,8 @@ class AiChatController extends Controller
         private KnowledgeSearchService $knowledgeSearch,
         private CrmMailboxService      $mailboxService,
         private MemoryService          $memoryService,
+        private FileUploadService      $fileUploadService,
+        private TextExtractionService  $textExtractionService,
     ) {}
 
     public function indexConversations(Request $request): JsonResponse
@@ -72,15 +78,28 @@ class AiChatController extends Controller
 
     public function sendMessage(Request $request, int $id): JsonResponse
     {
-        $request->validate(['message' => 'required|string|max:10000']);
+        $request->validate([
+            'message' => 'required|string|max:10000',
+            'file_id' => 'nullable|integer',
+        ]);
         $user = Auth::user();
 
         $conv = AiConversation::where('id', $id)->where('user_id', $user->id)->firstOrFail();
 
+        $userMessageContent = $request->input('message');
+        if ($request->filled('file_id')) {
+            $fileRecord = AiChatFile::where('id', $request->input('file_id'))
+                ->where('user_id', $user->id)
+                ->first();
+            if ($fileRecord) {
+                $userMessageContent = "[Załączony plik: {$fileRecord->original_name} (ID: {$fileRecord->id})]\n\n" . $userMessageContent;
+            }
+        }
+
         AiMessage::create([
             'conversation_id' => $conv->id,
             'role'            => 'user',
-            'content'         => $request->input('message'),
+            'content'         => $userMessageContent,
         ]);
 
         $history = $conv->messages()->orderByDesc('id')->limit(20)->get()->sortBy('id')->values();
@@ -202,6 +221,47 @@ class AiChatController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function uploadFile(Request $request): JsonResponse
+    {
+        $request->validate(['file' => 'required|file|max:20480']);
+        $user = Auth::user();
+
+        try {
+            $record = $this->fileUploadService->store(
+                $request->file('file'),
+                $user->id,
+                $request->input('conversation_id') ? (int) $request->input('conversation_id') : null
+            );
+
+            return response()->json([
+                'data' => [
+                    'file_id'   => (string) $record->id,
+                    'filename'  => $record->original_name,
+                    'size'      => $record->size_bytes,
+                    'mime_type' => $record->mime_type,
+                ],
+            ], 201);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+    }
+
+    public function downloadFile(int $id): mixed
+    {
+        $user   = Auth::user();
+        $record = AiChatFile::where('id', $id)->where('user_id', $user->id)->firstOrFail();
+
+        if (!Storage::disk('local')->exists($record->stored_path)) {
+            return response()->json(['error' => 'Plik wygasł lub nie istnieje.'], 404);
+        }
+
+        return Storage::disk('local')->download(
+            $record->stored_path,
+            $record->original_name,
+            ['Content-Type' => $record->mime_type]
+        );
     }
 
     private function buildTools(mixed $user): array

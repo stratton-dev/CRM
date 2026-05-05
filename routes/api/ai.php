@@ -13,6 +13,8 @@ Route::prefix('ai-chat')->group(function () {
     Route::delete('conversations/{id}', [AiChatController::class, 'destroyConversation']);
     Route::post('conversations/{id}/messages', [AiChatController::class, 'sendMessage']);
     Route::post('quick', [AiChatController::class, 'quickMessage']);
+    Route::post('upload', [AiChatController::class, 'uploadFile']);
+    Route::get('files/{id}', [AiChatController::class, 'downloadFile']);
 });
 
 // Pamięć AI — każdy user zarządza swoją pamięcią
