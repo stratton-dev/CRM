@@ -338,6 +338,43 @@ const getMessageBody = async ({ config, params }) => {
   }
 }
 
+const getAttachment = async ({ config, params }) => {
+  const client = await connectImap(config)
+  try {
+    await ensureConnected(client)
+    const lock = await client.getMailboxLock(params.folderName)
+    try {
+      const uid = params.uid
+      const fetchTimeoutMs = Number(process.env.IMAP_BODY_TIMEOUT_MS || 45000)
+      const fetchStart = Date.now()
+      const fetchIterator = client.fetch([uid], { uid: true, source: true }, { uid: true })
+      for await (const msg of fetchIterator) {
+        checkElapsedTimeout(fetchStart, fetchTimeoutMs, 'attachment fetch')
+        const parsed = await simpleParser(msg.source)
+        const attachment = (parsed.attachments || []).find(
+          (a) => a.filename === params.attachmentFilename
+        )
+        if (!attachment) {
+          throw new Error(`Załącznik "${params.attachmentFilename}" nie znaleziony w wiadomości ${uid}`)
+        }
+        return {
+          filename: attachment.filename,
+          content: attachment.content.toString('base64'),
+          mimeType: attachment.contentType || 'application/octet-stream',
+          size: attachment.size || attachment.content.length,
+        }
+      }
+      throw new Error('Message not found: ' + uid)
+    } finally {
+      lock.release()
+    }
+  } finally {
+    if (client.usable) {
+      await client.logout().catch(() => {})
+    }
+  }
+}
+
 const saveDraft = async ({ config, params }) => {
   const imapCfg = config.imap || config
   const fromName = params.from_name || config.smtp?.from?.name || undefined
@@ -429,6 +466,12 @@ const main = async () => {
 
     if (payload.action === 'moveMessage') {
       const data = await moveMessage(payload)
+      process.stdout.write(JSON.stringify({ data }))
+      return
+    }
+
+    if (payload.action === 'getAttachment') {
+      const data = await getAttachment(payload)
       process.stdout.write(JSON.stringify({ data }))
       return
     }
