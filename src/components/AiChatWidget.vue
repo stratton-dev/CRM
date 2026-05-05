@@ -4,11 +4,13 @@ import { storeToRefs } from 'pinia'
 import { useAiChatStore } from '@/stores/aiChat'
 
 const store = useAiChatStore()
-const { isOpen, isSending, messages, conversations, activeConversation, error } = storeToRefs(store)
+const { isOpen, isSending, messages, conversations, activeConversation, error,
+        pendingFileId, pendingFileName, uploadProgress, uploadError } = storeToRefs(store)
 
 const inputText    = ref('')
 const messagesEnd  = ref<HTMLDivElement | null>(null)
 const inputRef     = ref<HTMLTextAreaElement | null>(null)
+const fileInput    = ref<HTMLInputElement | null>(null)
 const showSidebar  = ref(false)
 
 const quickSuggestions = [
@@ -50,14 +52,43 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+function handleFileSelect(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file  = input.files?.[0]
+  if (!file) return
+  store.uploadFile(file, activeConversation.value?.id)
+  input.value = ''
+}
+
+function clearPendingFile() {
+  store.pendingFileId   = null
+  store.pendingFileName = null
+  store.uploadProgress  = 0
+  store.uploadError     = null
+}
+
 function formatContent(content: string | null): string {
   if (!content) return ''
-  return content
+  let html = content
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`(.*?)`/g, '<code>$1</code>')
     .replace(/\n/g, '<br>')
+
+  html = html.replace(
+    /\[FILE:(\d+):([^\]]+)\]/g,
+    (_, fileId, filename) => {
+      const url = `${import.meta.env.VITE_API_BASE_URL}/ai-chat/files/${fileId}`
+      return `<a href="${url}" target="_blank" download="${filename}"
+         class="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-lg text-xs font-medium text-white"
+         style="background:linear-gradient(135deg,#C5A059,#d4b06a);">` +
+        `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>` +
+        `${filename}</a>`
+    }
+  )
+
+  return html
 }
 </script>
 
@@ -232,7 +263,33 @@ function formatContent(content: string | null): string {
 
           <!-- Input -->
           <div class="border-t border-slate-200 p-3 flex-shrink-0 bg-white">
+            <!-- File chip -->
+            <div v-if="pendingFileName" class="px-3 pb-1 flex items-center gap-2">
+              <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 max-w-full">
+                <svg class="w-3.5 h-3.5 text-[#003366] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span class="truncate max-w-[220px]">{{ pendingFileName }}</span>
+                <span v-if="uploadProgress > 0 && uploadProgress < 100" class="text-slate-400 shrink-0">{{ uploadProgress }}%</span>
+                <button @click="clearPendingFile" class="text-slate-400 hover:text-slate-600 shrink-0">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+              <span v-if="uploadError" class="text-red-500 text-xs">{{ uploadError }}</span>
+            </div>
             <div class="flex items-end gap-2 bg-slate-50 rounded-xl border border-slate-200 px-3 py-2 focus-within:border-[#003366]/40 focus-within:ring-1 focus-within:ring-[#003366]/20 transition-all">
+              <button
+                type="button"
+                @click="fileInput?.click()"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-[#003366] hover:bg-slate-100 transition-colors shrink-0"
+                title="Dodaj plik"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+              </button>
               <textarea
                 ref="inputRef"
                 v-model="inputText"
@@ -260,6 +317,14 @@ function formatContent(content: string | null): string {
           </div>
         </div>
       </div>
+
+      <input
+        ref="fileInput"
+        type="file"
+        class="hidden"
+        accept=".pdf,.doc,.docx,.txt,.md"
+        @change="handleFileSelect"
+      />
     </div>
   </Teleport>
 </template>
