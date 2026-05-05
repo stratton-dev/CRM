@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { api } from '@/api/client'
 import type { AiConversation, AiMessage, AiFrontendAction } from '@/types/ai'
 import { useMailboxStore } from '@/stores/mailbox'
+import { useToastStore } from '@/stores/toast'
 
 export const useAiChatStore = defineStore('aiChat', () => {
   const isOpen            = ref(false)
@@ -13,7 +14,14 @@ export const useAiChatStore = defineStore('aiChat', () => {
   const messages          = ref<AiMessage[]>([])
   const error             = ref<string | null>(null)
 
+  const pendingFileId    = ref<string | null>(null)
+  const pendingFileName  = ref<string | null>(null)
+  const uploadProgress   = ref<number>(0)
+  const uploadError      = ref<string | null>(null)
+
   const hasConversation = computed(() => activeConversation.value !== null)
+
+  let _currentAbortController: AbortController | null = null
 
   function openWidget() {
     isOpen.value = true
@@ -77,7 +85,9 @@ export const useAiChatStore = defineStore('aiChat', () => {
       id: Date.now(),
       conversation_id: activeConversation.value.id,
       role: 'user',
-      content: text,
+      content: pendingFileName.value
+        ? `[📄 ${pendingFileName.value}]\n${text}`
+        : text,
       tool_calls: null,
       tokens_used: 0,
       created_at: new Date().toISOString(),
@@ -97,11 +107,42 @@ export const useAiChatStore = defineStore('aiChat', () => {
     }
     messages.value.push(placeholder)
 
+    const abortController = new AbortController()
+    _currentAbortController = abortController
+    const toastStore = useToastStore()
+    let slowToastId: string | null = null
+
+    const slowTimer = window.setTimeout(() => {
+      slowToastId = toastStore.show(
+        'warning',
+        'Pracuję nad odpowiedzią, ale zajmuje to więcej czasu niż zwykle.',
+        0,
+        [
+          {
+            label: 'Czekaj dalej',
+            onClick: () => { slowToastId = null },
+          },
+          {
+            label: 'Przerwij',
+            onClick: () => {
+              abortController.abort()
+              slowToastId = null
+            },
+          },
+        ]
+      )
+    }, 30000)
+
     try {
+      const payload: Record<string, unknown> = { message: text }
+      if (pendingFileId.value) {
+        payload.file_id = pendingFileId.value
+      }
+
       const { data } = await api.post(
         `/v1/ai-chat/conversations/${activeConversation.value.id}/messages`,
-        { message: text },
-        { timeout: 90000 }
+        payload,
+        { timeout: 90000, signal: abortController.signal }
       )
       const aiMsg: AiMessage = data.data
 
@@ -111,6 +152,10 @@ export const useAiChatStore = defineStore('aiChat', () => {
       } else {
         messages.value.push(aiMsg)
       }
+
+      pendingFileId.value   = null
+      pendingFileName.value = null
+      uploadProgress.value  = 0
 
       if (aiMsg.actions && aiMsg.actions.length > 0) {
         handleActions(aiMsg.actions)
@@ -123,9 +168,18 @@ export const useAiChatStore = defineStore('aiChat', () => {
         }
       }
     } catch (e: any) {
-      messages.value = messages.value.filter(m => m.id !== placeholderId)
-      error.value = e?.response?.data?.error ?? 'Błąd komunikacji z AI'
+      if (abortController.signal.aborted) {
+        // User cancelled — remove placeholder silently, no error shown
+        messages.value = messages.value.filter(m => m.id !== placeholderId)
+        error.value = null
+      } else {
+        messages.value = messages.value.filter(m => m.id !== placeholderId)
+        error.value = e?.response?.data?.error ?? 'Błąd komunikacji z AI'
+      }
     } finally {
+      clearTimeout(slowTimer)
+      if (slowToastId) toastStore.remove(slowToastId)
+      _currentAbortController = null
       isSending.value = false
     }
   }
@@ -147,6 +201,33 @@ export const useAiChatStore = defineStore('aiChat', () => {
     }
   }
 
+  async function uploadFile(file: File, conversationId?: number): Promise<void> {
+    uploadProgress.value = 0
+    uploadError.value    = null
+
+    const formData = new FormData()
+    formData.append('file', file)
+    if (conversationId) {
+      formData.append('conversation_id', String(conversationId))
+    }
+
+    try {
+      const { data } = await api.post('/v1/ai-chat/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (evt) => {
+          uploadProgress.value = evt.total ? Math.round((evt.loaded / evt.total) * 100) : 50
+        },
+      })
+      pendingFileId.value   = data.data.file_id
+      pendingFileName.value = data.data.filename
+      uploadProgress.value  = 100
+    } catch (e: any) {
+      uploadError.value     = e?.response?.data?.error ?? 'Błąd uploadu pliku'
+      pendingFileId.value   = null
+      pendingFileName.value = null
+    }
+  }
+
   async function startNewConversation() {
     activeConversation.value = null
     messages.value = []
@@ -160,6 +241,10 @@ export const useAiChatStore = defineStore('aiChat', () => {
     activeConversation,
     messages,
     error,
+    pendingFileId,
+    pendingFileName,
+    uploadProgress,
+    uploadError,
     hasConversation,
     openWidget,
     closeWidget,
@@ -169,6 +254,7 @@ export const useAiChatStore = defineStore('aiChat', () => {
     selectConversation,
     deleteConversation,
     sendMessage,
+    uploadFile,
     startNewConversation,
   }
 })
