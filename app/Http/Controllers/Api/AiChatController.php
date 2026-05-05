@@ -619,6 +619,62 @@ class AiChatController extends Controller
                     $captured['create_event_from_email'] = $result;
                     return json_encode($result);
                 }),
+
+            // ── File tools ────────────────────────────────────────────────────────────
+            Tool::as('read_uploaded_file')
+                ->for('Odczytuje tekst z pliku uploadowanego przez użytkownika (PDF, DOC, DOCX, TXT, MD). Wywołaj gdy użytkownik wspomni o załączonym pliku.')
+                ->withStringParameter('file_id', 'ID pliku z systemu (liczba jako string)')
+                ->using(function (string $file_id) use ($ts, $user, &$captured) {
+                    $result = $ts->readUploadedFile($user, $file_id);
+                    $captured['read_uploaded_file'] = $result;
+                    return json_encode($result);
+                }),
+
+            Tool::as('read_email_attachment')
+                ->for('Pobiera i odczytuje załącznik z wiadomości email. Używaj gdy użytkownik prosi o odczyt załącznika z konkretnego maila.')
+                ->withStringParameter('message_uid', 'UID wiadomości email (z list_emails lub read_email)')
+                ->withStringParameter('attachment_filename', 'Nazwa pliku załącznika')
+                ->withStringParameter('folder', 'Folder email: INBOX (domyślnie), SENT, TRASH, DRAFTS, SPAM')
+                ->using(function (string $message_uid, string $attachment_filename, string $folder = 'INBOX') use ($ts, $user, &$captured) {
+                    $result = $ts->readEmailAttachment($user, $message_uid, $attachment_filename, $folder);
+                    $captured['read_email_attachment'] = $result;
+                    return json_encode($result);
+                }),
+
+            Tool::as('generate_pdf_summary')
+                ->for('Generuje plik PDF z podaną treścią (analizy, podsumowania, streszczenia). Zwraca marker do pobrania pliku.')
+                ->withStringParameter('title', 'Tytuł dokumentu PDF')
+                ->withStringParameter('content_markdown', 'Treść dokumentu w formacie Markdown')
+                ->using(function (string $title, string $content_markdown) use ($ts, $user, &$captured) {
+                    $result = $ts->generatePdfSummary($user, $title, $content_markdown);
+                    $captured['generate_pdf_summary'] = $result;
+                    return json_encode($result);
+                }),
+
+            Tool::as('generate_crm_report')
+                ->for('Generuje raport CRM jako PDF. Typy: leads (lista leadów), clients (lista klientów), sales_stats (statystyki sprzedaży), meetings (lista spotkań).')
+                ->withStringParameter('report_type', 'Typ raportu: leads, clients, sales_stats, meetings')
+                ->withStringParameter('date_from', 'Filtr: data od, format YYYY-MM-DD (opcjonalnie)')
+                ->withStringParameter('date_to', 'Filtr: data do, format YYYY-MM-DD (opcjonalnie)')
+                ->withStringParameter('status', 'Filtr: status (opcjonalnie, np. active, won, lost)')
+                ->using(function (string $report_type, string $date_from = '', string $date_to = '', string $status = '') use ($ts, $user, &$captured) {
+                    $filters = array_filter(compact('date_from', 'date_to', 'status'));
+                    $result  = $ts->generateCrmReport($user, $report_type, $filters);
+                    $captured['generate_crm_report'] = $result;
+                    return json_encode($result);
+                }),
+
+            Tool::as('send_file_via_email')
+                ->for('Wysyła wygenerowany lub uploadowany plik jako załącznik emaila przez skrzynkę CRM użytkownika.')
+                ->withStringParameter('file_id', 'ID pliku do wysłania')
+                ->withStringParameter('to', 'Adres email odbiorcy')
+                ->withStringParameter('subject', 'Temat wiadomości')
+                ->withStringParameter('body', 'Treść wiadomości (HTML)')
+                ->using(function (string $file_id, string $to, string $subject, string $body) use ($ts, $user, &$captured) {
+                    $result = $ts->sendFileViaEmail($user, $file_id, $to, $subject, $body);
+                    $captured['send_file_via_email'] = $result;
+                    return json_encode($result);
+                }),
         ];
     }
 

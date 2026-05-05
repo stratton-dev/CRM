@@ -51,7 +51,9 @@ class RolePromptService
                        . $knowledgeContext;
         }
 
-        return $base . $roleSpecific . $emailRules . $memorySection . $kbSection;
+        $fileMarkerInstruction = "\n\nGdy generujesz plik PDF (narzędzia generate_pdf_summary lub generate_crm_report), ZAWSZE umieść marker [FILE:{file_id}:{filename}] verbatim w swojej odpowiedzi, żeby użytkownik mógł pobrać plik. Przykład: po wygenerowaniu raportu napisz: \"Raport gotowy! [FILE:42:raport_leads_2026-05-06.pdf]\"";
+
+        return $base . $roleSpecific . $emailRules . $memorySection . $kbSection . $fileMarkerInstruction;
     }
 
     private function emailRules(): string
