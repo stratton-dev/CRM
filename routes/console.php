@@ -589,3 +589,5 @@ Artisan::command('structure:regenerate-codes {--reset-counters} {--dry-run}', fu
 
     $this->info('Regeneration completed.');
 })->purpose('Regenerate hierarchical codes for structure users.');
+
+Schedule::command('ai:cleanup-files')->daily();
