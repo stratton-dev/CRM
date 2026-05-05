@@ -166,8 +166,8 @@ class CrmMailboxService
         return match (strtoupper($folderKey)) {
             'SENT'   => $config->imap_sent_folder,
             'TRASH'  => $config->imap_trash_folder,
-            'DRAFTS' => $config->imap_drafts_folder ?? 'Drafts',
-            'SPAM'   => $config->imap_spam_folder ?? 'Junk',
+            'DRAFTS' => $config->imap_drafts_folder ?? 'DRAFTS',
+            'SPAM'   => $config->imap_spam_folder ?? 'SPAM',
             default  => $config->imap_inbox_folder,
         };
     }

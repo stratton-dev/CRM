@@ -19,6 +19,8 @@ class CrmMailConfig extends Model
         'imap_inbox_folder',
         'imap_sent_folder',
         'imap_trash_folder',
+        'imap_drafts_folder',
+        'imap_spam_folder',
         'smtp_host',
         'smtp_port',
         'smtp_secure',
