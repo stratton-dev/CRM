@@ -112,6 +112,23 @@ class CrmMailboxService
         return $result['data'] ?? [];
     }
 
+    public function getAttachment(CrmMailConfig $config, string $folderKey, int|string $uid, string $attachmentFilename): array
+    {
+        $payload = [
+            'action' => 'getAttachment',
+            'config' => $this->imapConfig($config),
+            'params' => [
+                'folderKey'          => $folderKey,
+                'folderName'         => $this->folderName($config, $folderKey),
+                'uid'                => $uid,
+                'attachmentFilename' => $attachmentFilename,
+            ],
+        ];
+
+        $result = $this->runNode($payload);
+        return $result['data'] ?? [];
+    }
+
     public function sendMessage(CrmMailConfig $config, array $message): array
     {
         $payload = [

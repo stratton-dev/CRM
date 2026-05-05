@@ -272,39 +272,25 @@ class AiToolsService
                 return ['success' => false, 'error' => 'Brak konfiguracji skrzynki pocztowej.'];
             }
 
-            // getMessageBody returns body HTML + attachment metadata (filename, contentType, size).
-            // The Node.js script does not support fetching raw attachment binary, so we extract
-            // text from the email body and return matching attachment info for the requested filename.
-            $bodyData = $this->mailbox->getMessageBody($config, strtolower($folder), $messageUid);
+            $attachmentData = $this->mailbox->getAttachment($config, strtolower($folder), $messageUid, $attachmentFilename);
 
-            if (empty($bodyData)) {
-                return ['success' => false, 'error' => 'Nie udało się pobrać treści wiadomości.'];
+            if (empty($attachmentData) || !isset($attachmentData['content'])) {
+                return ['success' => false, 'error' => "Załącznik \"{$attachmentFilename}\" nie znaleziony w wiadomości {$messageUid}."];
             }
 
-            // Try to find the requested attachment in metadata
-            $attachments = $bodyData['attachments'] ?? [];
-            $found = null;
-            foreach ($attachments as $att) {
-                if (isset($att['filename']) && strcasecmp($att['filename'], $attachmentFilename) === 0) {
-                    $found = $att;
-                    break;
-                }
-            }
+            $rawContent = base64_decode($attachmentData['content']);
+            $mime       = $attachmentData['mimeType'] ?? 'application/octet-stream';
 
-            if (!$found) {
-                return [
-                    'success'     => false,
-                    'error'       => "Załącznik '{$attachmentFilename}' nie znaleziony w wiadomości. Dostępne załączniki: "
-                        . implode(', ', array_column($attachments, 'filename')),
-                ];
-            }
+            $record   = $this->fileUpload->storeRaw($rawContent, $attachmentFilename, $mime, $user->id);
+            $fullPath = Storage::disk('local')->path($record->stored_path);
+            $content  = $this->textExtraction->extract($fullPath, $mime);
 
             return [
-                'success'      => true,
-                'filename'     => $found['filename'],
-                'content_type' => $found['contentType'] ?? 'application/octet-stream',
-                'size'         => $found['size'] ?? 0,
-                'note'         => 'Pobieranie zawartości binarnej załączników nie jest obsługiwane. Dostępne są tylko metadane załącznika.',
+                'success'    => true,
+                'file_id'    => (string) $record->id,
+                'filename'   => $attachmentFilename,
+                'content'    => $content,
+                'char_count' => mb_strlen($content),
             ];
         } catch (\Exception $e) {
             Log::warning('AiTools::readEmailAttachment error', ['error' => $e->getMessage()]);
