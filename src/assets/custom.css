@@ -26,3 +26,21 @@
   .crm-badge-info { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800; }
   .crm-badge-neutral { @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700; }
 }
+
+/* Mobile: safe areas, iOS zoom fix, tap highlight */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+}
+
+input, select, textarea {
+  font-size: max(16px, 1rem);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-overflow-scrolling: touch;
+}
