@@ -978,9 +978,9 @@ const exportToCsv = () => {
     </div>
 
     <!-- Add Meeting Modal -->
-    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showAddModal = false"></div>
-      <div class="relative bg-surface w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-card shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300 border border-slate-200">
+      <div class="relative bg-surface w-full md:max-w-4xl max-h-[90vh] overflow-y-auto rounded-t-2xl md:rounded-card shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300 border border-slate-200">
         <div class="p-6 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-surface-dark z-10 text-white rounded-t-card">
           <div>
             <h2 class="text-xl font-bold">{{ isEditing ? 'Edycja Spotkania' : 'Nowe Spotkanie' }}</h2>
@@ -1184,9 +1184,9 @@ const exportToCsv = () => {
     <!-- We will remove the v-if from here or comment out the block to ensure it's not used. 
          Actually, let's keep it but since we changed openEditClient to use showAddModal, this block will never be shown.
     -->
-    <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showEditModal = false"></div>
-      <div class="relative bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
+      <div class="relative bg-white w-full md:max-w-4xl max-h-[90vh] overflow-y-auto rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
         <div class="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
           <div>
             <h2 class="text-2xl font-bold text-slate-900">Edycja Klienta</h2>

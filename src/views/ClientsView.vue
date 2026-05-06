@@ -1936,10 +1936,10 @@ if (route.query.expand) {
     <!-- Client Edit Modal -->
     <div
       v-if="isClientEditOpen"
-      class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px]"
+      class="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/20 backdrop-blur-[2px]"
       @click.self="isClientEditOpen = false"
     >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="bg-white rounded-t-2xl md:rounded-xl shadow-2xl w-full md:max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div>

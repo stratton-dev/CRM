@@ -437,8 +437,8 @@ onMounted(() => {
     </div>
     
     <!-- Add Modal -->
-    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all scale-100">
+    <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 md:p-4 animate-fade-in">
+        <div class="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full md:max-w-2xl overflow-hidden transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
             <div class="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                 <div>
                     <h2 class="text-xl font-bold text-slate-900">Dodaj Nowego Leada</h2>
@@ -489,7 +489,7 @@ onMounted(() => {
     </div>
 
     <!-- Qualify Modal -->
-    <div v-if="showQualifyModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
+    <div v-if="showQualifyModal" class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 md:p-4 animate-fade-in">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
              <div class="px-8 py-6 border-b border-slate-100 bg-emerald-50/50 flex items-center gap-4">
                 <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center text-emerald-600">
