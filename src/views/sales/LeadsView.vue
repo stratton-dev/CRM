@@ -288,11 +288,11 @@ onMounted(() => {
 <template>
   <div class="p-6 max-w-[1920px] mx-auto space-y-8">
     <!-- Header -->
-    <div class="text-white rounded-card p-8 shadow-card-hover border relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      
-      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full">
-        <div class="flex items-center gap-6">
-          <button @click="router.push('/app/sales/start')" class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
+    <div class="text-white rounded-card p-4 md:p-8 shadow-card-hover border relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+
+      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 w-full">
+        <div class="flex items-center gap-4 md:gap-6">
+          <button @click="router.push('/app/sales/start')" class="hidden md:flex w-12 h-12 rounded-md bg-slate-800 border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
             <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           </button>
           
@@ -330,7 +330,40 @@ onMounted(() => {
 
     <!-- Table -->
     <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="overflow-x-auto">
+        <!-- Mobile cards -->
+        <div class="md:hidden divide-y divide-slate-100">
+          <div v-for="lead in filteredLeads" :key="lead.id" class="p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="font-bold text-slate-800 truncate">{{ lead.name }}</div>
+                <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                  <AppIcon name="user" class="w-3 h-3 shrink-0" />
+                  {{ lead.contact_person || 'Brak kontaktu' }}
+                </div>
+              </div>
+              <span :class="['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase shrink-0', getStatusClass(lead.status)]">
+                {{ getStatusLabel(lead.status) }}
+              </span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="font-mono text-slate-500 text-xs bg-slate-100 px-2 py-0.5 rounded">{{ lead.nip }}</span>
+              <div class="flex items-center gap-1">
+                <button v-if="['new', 'processing'].includes(lead.status)" @click="openQualifyModal(lead)" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl min-w-9 min-h-9 flex items-center justify-center">
+                  <AppIcon name="phone" class="w-4 h-4" />
+                </button>
+                <button v-if="lead.status === 'qualified'" @click="handleConvert(lead)" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl min-w-9 min-h-9 flex items-center justify-center">
+                  <AppIcon name="arrow-right-circle" class="w-4 h-4" />
+                </button>
+                <button @click="leadStore.deleteLead(lead.id)" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl min-w-9 min-h-9 flex items-center justify-center">
+                  <AppIcon name="trash" class="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div v-if="filteredLeads.length === 0" class="p-8 text-center text-slate-400 text-sm">Brak wyników</div>
+        </div>
+        <!-- Desktop table -->
+        <div class="overflow-x-auto hidden md:block">
             <table class="w-full text-left">
               <thead class="bg-slate-50 border-b border-slate-200">
                 <tr>
