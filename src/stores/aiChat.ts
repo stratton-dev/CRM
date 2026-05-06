@@ -142,7 +142,7 @@ export const useAiChatStore = defineStore('aiChat', () => {
       const { data } = await api.post(
         `/v1/ai-chat/conversations/${activeConversation.value.id}/messages`,
         payload,
-        { timeout: 90000, signal: abortController.signal }
+        { timeout: 240000, signal: abortController.signal }
       )
       const aiMsg: AiMessage = data.data
 
@@ -174,7 +174,7 @@ export const useAiChatStore = defineStore('aiChat', () => {
         error.value = null
       } else {
         messages.value = messages.value.filter(m => m.id !== placeholderId)
-        error.value = e?.response?.data?.error ?? 'Błąd komunikacji z AI'
+        error.value = e?.response?.data?.error ?? e?.response?.data?.message ?? (e?.code === 'ECONNABORTED' ? 'Przekroczono czas oczekiwania (AI pracuje zbyt długo)' : 'Błąd komunikacji z AI')
       }
     } finally {
       clearTimeout(slowTimer)
@@ -228,6 +228,10 @@ export const useAiChatStore = defineStore('aiChat', () => {
     }
   }
 
+  function cancelCurrentRequest() {
+    _currentAbortController?.abort()
+  }
+
   async function startNewConversation() {
     activeConversation.value = null
     messages.value = []
@@ -254,6 +258,7 @@ export const useAiChatStore = defineStore('aiChat', () => {
     selectConversation,
     deleteConversation,
     sendMessage,
+    cancelCurrentRequest,
     uploadFile,
     startNewConversation,
   }

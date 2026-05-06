@@ -39,6 +39,7 @@ export const initEcho = (): Echo<any> => {
   if (echo) return echo
   const config = resolveConfig()
   const transports = config.forceTLS ? ['wss'] : ['ws']
+  ;(Pusher as any).logToConsole = false
   ;(window as any).Pusher = Pusher
   echo = new Echo({
     broadcaster: 'reverb',

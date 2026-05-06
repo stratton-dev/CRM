@@ -24,12 +24,9 @@ export interface AiToolCall {
   result: Record<string, unknown>
 }
 
-export interface AiFrontendAction {
-  type: 'open_compose'
-  to?: string
-  subject?: string
-  body?: string
-}
+export type AiFrontendAction =
+  | { type: 'open_compose'; to?: string; subject?: string; body?: string }
+  | { type: 'refresh_calendar' }
 
 export interface AiSendRequest {
   message: string
