@@ -675,16 +675,15 @@ const exportToCsv = () => {
       class="flex flex-col min-h-0 bg-surface"
       :class="embedded ? 'h-auto overflow-visible rounded-t-card' : 'rounded-card shadow-card border border-slate-200 overflow-hidden'"
     >
-      <div 
-        class="bg-slate-50 border-b border-slate-200 p-2 flex items-center shadow-sm shrink-0"
+      <div
+        class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap items-center gap-y-2 shadow-sm shrink-0"
         :class="embedded ? 'rounded-t-card' : ''"
       >
         <div class="flex items-center gap-3 ml-4">
           <AppIcon name="calendar" class="w-5 h-5 text-primary" />
           <h3 class="font-black text-slate-800 text-xl tracking-tight">Spotkania w obsłudze</h3>
         </div>
-
-        <div class="flex-1 flex items-center justify-end px-4 gap-4">
+        <div class="flex-1 flex flex-wrap items-center justify-end px-2 md:px-4 gap-2 md:gap-4">
           <div class="flex items-center space-x-2">
             <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="openAddModal">
               <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -696,9 +695,9 @@ const exportToCsv = () => {
             </button>
           </div>
 
-          <div class="w-96 relative">
+          <div class="w-full md:w-96 relative">
             <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
-            <input 
+            <input
               v-model="searchQuery"
               type="text" 
               placeholder="Szukaj klienta, firmy lub NIP..."
@@ -709,7 +708,43 @@ const exportToCsv = () => {
       </div>
 
       <div class="flex-1 relative bg-surface" :class="embedded ? 'overflow-visible' : 'overflow-hidden'">
-        <div :class="embedded ? 'h-auto overflow-auto' : 'h-full overflow-auto'">
+        <!-- Mobile card list -->
+        <div class="md:hidden divide-y divide-slate-100 bg-white overflow-y-auto" :class="embedded ? 'h-auto' : 'h-full'">
+          <div
+            v-for="client in slicedMeetings"
+            :key="client.id"
+            class="p-4 cursor-pointer active:bg-slate-50 transition-colors"
+            @click="openEditClient(client)"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <div class="font-bold text-slate-800 truncate">{{ client.name || 'Nieznana firma' }}</div>
+                <div class="text-xs text-slate-400 font-mono mt-0.5">NIP: {{ client.nip || 'brak' }}</div>
+              </div>
+              <span class="text-xs text-slate-500 shrink-0">{{ client.ownerName || 'Nieprzypisany' }}</span>
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                <span class="w-2 h-2 rounded-full shrink-0" :class="getLastActivityDate(client) === 'Brak' ? 'bg-slate-300' : 'bg-emerald-500'"></span>
+                {{ getLastActivityDate(client) }}
+              </div>
+              <div class="flex items-center gap-1">
+                <button @click.stop="promoteToClient(client)" class="p-2 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 min-w-9 min-h-9 flex items-center justify-center">
+                  <AppIcon name="calculator" class="w-4 h-4" />
+                </button>
+                <button @click.stop="openEditClient(client)" class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 min-w-9 min-h-9 flex items-center justify-center">
+                  <AppIcon name="pencil-square" class="w-4 h-4" />
+                </button>
+                <button @click.stop="handleDeleteClient(client)" class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 min-w-9 min-h-9 flex items-center justify-center">
+                  <AppIcon name="trash" class="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div v-if="filteredClients.length === 0" class="p-8 text-center text-slate-500 text-sm">Nie znaleziono rekordów spełniających kryteria.</div>
+        </div>
+        <!-- Desktop table -->
+        <div :class="embedded ? 'h-auto overflow-auto' : 'h-full overflow-auto hidden md:block'">
           <table class="w-full divide-y divide-slate-100">
             <thead class="bg-slate-50 sticky top-0 z-10 shadow-sm">
               <tr>
