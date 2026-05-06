@@ -87,6 +87,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
     toEmail: item.toEmail || item.to_email || '',
     subject: item.subject || '(bez tematu)',
     body: item.body || '',
+    hasAttachments: Boolean(item.hasAttachments),
     attachments: Array.isArray(item.attachments) ? item.attachments : [],
     date: item.date || item.sent_at || item.created_at || new Date().toISOString(),
     read: Boolean(item.read),

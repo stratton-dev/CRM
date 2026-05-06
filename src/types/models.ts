@@ -195,6 +195,7 @@ export interface Email {
   toEmail: string
   subject: string
   body: string
+  hasAttachments?: boolean
   attachments?: Array<{
     filename: string
     contentType: string

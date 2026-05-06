@@ -586,9 +586,7 @@ const moveToTrash = async () => {
   } catch {}
 }
 
-const toggleStarred = () => {
-  if (!selectedEmail.value) return
-  const id = selectedEmail.value.id
+const toggleStarredById = (id: string) => {
   if (starredIds.value.has(id)) {
     starredIds.value.delete(id)
   } else {
@@ -596,6 +594,21 @@ const toggleStarred = () => {
   }
   starredIds.value = new Set(starredIds.value)
   saveStarred()
+}
+
+const toggleStarred = () => {
+  if (!selectedEmail.value) return
+  toggleStarredById(selectedEmail.value.id)
+}
+
+const moveEmailToTrash = async (emailId: string) => {
+  const email = mailboxStore.emails.find(e => e.id === emailId)
+  if (!email || email.folder === 'TRASH') return
+  if (selectedEmail.value?.id === emailId) selectedEmail.value = null
+  try {
+    await mailboxStore.moveMessage(emailId, 'TRASH')
+    toast.success('Wiadomość przeniesiona do kosza.')
+  } catch {}
 }
 
 const editDraft = () => {
@@ -880,16 +893,18 @@ watch(searchQuery, () => {
                   </p>
                   <div class="flex items-center gap-0.5 shrink-0">
                     <button
-                      class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-slate-200 text-slate-400 hover:text-sky-500 transition-all"
+                      class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-amber-50 transition-all"
+                      :class="starredIds.has(email.id) ? 'text-amber-400 !opacity-100' : 'text-slate-400 hover:text-amber-400'"
                       title="Oznacz gwiazdką"
-                      @click.stop
+                      @click.stop="toggleStarredById(email.id)"
                     >
-                      <AppIcon name="star" class="w-3 h-3" />
+                      <svg class="w-3 h-3" :fill="starredIds.has(email.id) ? '#FBBF24' : 'none'" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" /></svg>
                     </button>
                     <button
+                      v-if="currentFolder !== 'TRASH'"
                       class="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-all"
-                      title="Usuń"
-                      @click.stop
+                      title="Przenieś do kosza"
+                      @click.stop="moveEmailToTrash(email.id)"
                     >
                       <AppIcon name="trash" class="w-3 h-3" />
                     </button>
@@ -898,9 +913,14 @@ watch(searchQuery, () => {
                     </p>
                   </div>
                 </div>
-                <p class="text-[12px] text-slate-800 leading-tight truncate" :class="!email.read ? 'font-extrabold' : 'font-semibold opacity-90'">
-                  {{ email.subject }}
-                </p>
+                <div class="flex items-center gap-1 min-w-0">
+                  <svg v-if="email.hasAttachments || email.attachments?.some(a => !a.isInline)" class="w-3 h-3 text-slate-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                  <p class="text-[12px] text-slate-800 leading-tight truncate" :class="!email.read ? 'font-extrabold' : 'font-semibold opacity-90'">
+                    {{ email.subject }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
