@@ -131,6 +131,99 @@ const formatEmailDate = (dateStr: string) => {
   const yyyy = d.getFullYear()
   return `${dd}.${mm}.${yyyy}, ${time}`
 }
+
+const formatFileSize = (bytes: number): string => {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+const isPreviewable = (mimeType: string): boolean =>
+  !!mimeType && (mimeType.startsWith('image/') || mimeType === 'application/pdf')
+
+const attIconBg = (mimeType: string): string => {
+  if (mimeType === 'application/pdf') return 'bg-red-50'
+  if (mimeType?.startsWith('image/')) return 'bg-sky-50'
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return 'bg-blue-50'
+  if (mimeType?.includes('sheet') || mimeType?.includes('excel')) return 'bg-emerald-50'
+  return 'bg-slate-100'
+}
+
+const attachmentLoadingSet = ref<Set<string>>(new Set())
+
+const previewModal = ref<{ open: boolean; filename: string; mimeType: string; blobUrl: string }>({
+  open: false, filename: '', mimeType: '', blobUrl: '',
+})
+
+const closeAttachmentPreview = () => {
+  if (previewModal.value.blobUrl) URL.revokeObjectURL(previewModal.value.blobUrl)
+  previewModal.value = { open: false, filename: '', mimeType: '', blobUrl: '' }
+}
+
+const base64ToBlob = (base64: string, mimeType: string): Blob => {
+  const byteChars = atob(base64)
+  const byteArr = new Uint8Array(byteChars.length)
+  for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i)
+  return new Blob([byteArr], { type: mimeType })
+}
+
+const fetchAttachmentData = async (filename: string) => {
+  if (!selectedEmail.value) throw new Error('No email selected')
+  const { data } = await api.get(
+    `/v1/crm-mailbox/messages/${encodeURIComponent(selectedEmail.value.id)}/attachment`,
+    { params: { filename }, timeout: 60000 }
+  )
+  return { content: data.data.content as string, mimeType: data.data.mimeType as string }
+}
+
+const downloadAttachment = async (filename: string) => {
+  if (!selectedEmail.value) return
+  const key = `${selectedEmail.value.id}:${filename}`
+  if (attachmentLoadingSet.value.has(key)) return
+  attachmentLoadingSet.value = new Set([...attachmentLoadingSet.value, key])
+  try {
+    const { content, mimeType } = await fetchAttachmentData(filename)
+    const blob = base64ToBlob(content, mimeType)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  } catch {
+    toast.error('Nie udało się pobrać załącznika.')
+  } finally {
+    const next = new Set(attachmentLoadingSet.value)
+    next.delete(key)
+    attachmentLoadingSet.value = next
+  }
+}
+
+const openAttachmentPreview = async (filename: string, mimeType: string) => {
+  if (!isPreviewable(mimeType)) {
+    await downloadAttachment(filename)
+    return
+  }
+  if (!selectedEmail.value) return
+  const key = `${selectedEmail.value.id}:${filename}`
+  if (attachmentLoadingSet.value.has(key)) return
+  attachmentLoadingSet.value = new Set([...attachmentLoadingSet.value, key])
+  try {
+    const { content, mimeType: responseMime } = await fetchAttachmentData(filename)
+    const blob = base64ToBlob(content, responseMime)
+    const url = URL.createObjectURL(blob)
+    previewModal.value = { open: true, filename, mimeType: responseMime, blobUrl: url }
+  } catch {
+    toast.error('Nie udało się otworzyć podglądu.')
+  } finally {
+    const next = new Set(attachmentLoadingSet.value)
+    next.delete(key)
+    attachmentLoadingSet.value = next
+  }
+}
 const composeData = ref<{
   to: string
   subject: string
@@ -913,6 +1006,83 @@ watch(searchQuery, () => {
                 </div>
                 <div v-else v-html="selectedEmail.body"></div>
               </div>
+
+              <!-- Attachments -->
+              <div v-if="!bodyLoading && selectedEmail.attachments?.some(a => !a.isInline)" class="px-12 pb-10">
+                <div class="border-t border-slate-100 pt-6">
+                  <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    Załączniki ({{ selectedEmail.attachments!.filter(a => !a.isInline).length }})
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <div
+                      v-for="att in selectedEmail.attachments!.filter(a => !a.isInline)"
+                      :key="att.filename"
+                      class="flex items-center gap-2.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl hover:border-stratton-gold/40 hover:bg-amber-50/20 transition-all group"
+                    >
+                      <!-- Icon -->
+                      <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" :class="attIconBg(att.contentType)">
+                        <!-- PDF -->
+                        <svg v-if="att.contentType === 'application/pdf'" class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8.5 19c-.3 0-.5-.2-.5-.5v-5c0-.3.2-.5.5-.5s.5.2.5.5v5c0 .3-.2.5-.5.5zm3.5 0h-1.5v-6H12c.8 0 1.5.7 1.5 1.5v3c0 .8-.7 1.5-1.5 1.5zm4 0h-1v-6h1c.6 0 1 .4 1 1v4c0 .6-.4 1-1 1z"/>
+                        </svg>
+                        <!-- Image -->
+                        <svg v-else-if="att.contentType?.startsWith('image/')" class="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <!-- Excel -->
+                        <svg v-else-if="att.contentType?.includes('sheet') || att.contentType?.includes('excel') || att.filename.endsWith('.xlsx') || att.filename.endsWith('.xls')" class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M3 3h18v18H3z" />
+                        </svg>
+                        <!-- Word / generic doc -->
+                        <svg v-else class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+
+                      <!-- Name + size -->
+                      <div class="min-w-0 max-w-[160px]">
+                        <p class="text-[12px] font-bold text-slate-800 truncate" :title="att.filename">{{ att.filename }}</p>
+                        <p class="text-[10px] text-slate-400 font-medium">{{ formatFileSize(att.size) }}</p>
+                      </div>
+
+                      <!-- Actions -->
+                      <div class="flex items-center gap-0.5 ml-1 shrink-0">
+                        <!-- Preview (PDF / images only) -->
+                        <button
+                          v-if="isPreviewable(att.contentType)"
+                          :disabled="attachmentLoadingSet.has(`${selectedEmail.id}:${att.filename}`)"
+                          class="p-1.5 rounded-lg hover:bg-white text-slate-400 hover:text-sky-600 transition-colors disabled:opacity-40"
+                          title="Podgląd"
+                          @click="openAttachmentPreview(att.filename, att.contentType)"
+                        >
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          </svg>
+                        </button>
+                        <!-- Download -->
+                        <button
+                          :disabled="attachmentLoadingSet.has(`${selectedEmail.id}:${att.filename}`)"
+                          class="p-1.5 rounded-lg hover:bg-white text-slate-400 hover:text-emerald-600 transition-colors disabled:opacity-40"
+                          title="Pobierz"
+                          @click="downloadAttachment(att.filename)"
+                        >
+                          <svg v-if="!attachmentLoadingSet.has(`${selectedEmail.id}:${att.filename}`)" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          <svg v-else class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <!-- Action Bar -->
@@ -994,6 +1164,56 @@ watch(searchQuery, () => {
     </div>
 
   </div>
+
+  <!-- Attachment Preview Modal -->
+  <Teleport to="body">
+    <div v-if="previewModal.open" class="fixed inset-0 z-[300] flex items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="closeAttachmentPreview"></div>
+      <div class="relative bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden" style="width: 90vw; max-width: 1200px; height: 90vh;">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
+          <p class="text-sm font-black text-slate-900 truncate max-w-[500px]">{{ previewModal.filename }}</p>
+          <div class="flex items-center gap-2">
+            <button
+              class="px-3 py-1.5 text-xs font-black bg-white border border-slate-200 rounded-xl hover:border-emerald-400 hover:text-emerald-600 transition-all flex items-center gap-1.5"
+              @click="downloadAttachment(previewModal.filename)"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Pobierz
+            </button>
+            <button
+              class="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              @click="closeAttachmentPreview"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <!-- Content -->
+        <div class="flex-1 overflow-auto min-h-0 bg-slate-50">
+          <iframe
+            v-if="previewModal.mimeType === 'application/pdf'"
+            :src="previewModal.blobUrl"
+            class="w-full h-full border-0"
+          />
+          <div
+            v-else-if="previewModal.mimeType?.startsWith('image/')"
+            class="flex items-center justify-center h-full p-8"
+          >
+            <img
+              :src="previewModal.blobUrl"
+              :alt="previewModal.filename"
+              class="max-w-full max-h-full object-contain rounded-xl shadow-xl"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar {
