@@ -42,6 +42,13 @@ const imapLogger = isDebug ? {
 
 const hasFlag = (flags, flag) => flags instanceof Set ? flags.has(flag) : Array.isArray(flags) && flags.includes(flag)
 
+const hasAttachmentParts = (structure) => {
+  if (!structure) return false
+  if (structure.disposition?.type?.toLowerCase() === 'attachment') return true
+  if (Array.isArray(structure.childNodes)) return structure.childNodes.some(hasAttachmentParts)
+  return false
+}
+
 const toSafeNumberOrString = (value) => {
   if (typeof value === 'bigint') {
     const max = BigInt(Number.MAX_SAFE_INTEGER)
@@ -139,7 +146,7 @@ const listMessages = async ({ config, params }) => {
       const messages = []
       const fetchTimeoutMs = Number(process.env.IMAP_FETCH_TIMEOUT_MS || 20000)
       const fetchStart = Date.now()
-      const fetchIterator = client.fetch(recent, { uid: true, envelope: true, flags: true, internalDate: true }, { uid: true })
+      const fetchIterator = client.fetch(recent, { uid: true, envelope: true, flags: true, internalDate: true, bodyStructure: true }, { uid: true })
       for await (const msg of fetchIterator) {
         checkElapsedTimeout(fetchStart, fetchTimeoutMs, 'fetch')
         const from = msg.envelope?.from?.[0]
@@ -152,6 +159,7 @@ const listMessages = async ({ config, params }) => {
           subject: msg.envelope?.subject || '(bez tematu)',
           body: '',
           attachments: [],
+          hasAttachments: hasAttachmentParts(msg.bodyStructure),
           date: (msg.internalDate || new Date()).toISOString(),
           read: hasFlag(msg.flags, '\\Seen'),
           folder: params.folderKey,
