@@ -56,6 +56,7 @@ Route::get('crm-mail-settings', [CrmMailSettingsController::class, 'show'])->mid
 Route::put('crm-mail-settings', [CrmMailSettingsController::class, 'update'])->middleware('can:crm-mail-settings.update');
 Route::get('crm-mailbox/messages', [CrmMailboxController::class, 'index'])->middleware('can:crm-mailbox.view');
 Route::get('crm-mailbox/messages/{messageId}/body', [CrmMailboxController::class, 'showBody'])->middleware('can:crm-mailbox.view');
+Route::get('crm-mailbox/messages/{messageId}/attachment', [CrmMailboxController::class, 'getAttachment'])->middleware('can:crm-mailbox.view');
 Route::get('crm-mailbox/folders', [CrmMailboxController::class, 'folders'])->middleware('can:crm-mailbox.view');
 Route::get('crm-mailbox/test', [CrmMailboxController::class, 'test'])->middleware('can:crm-mailbox.view');
 Route::post('crm-mailbox/send', [CrmMailboxController::class, 'send'])->middleware('can:crm-mailbox.send');

@@ -362,5 +362,47 @@ class CrmMailboxController extends Controller
         return response()->json(['data' => $data]);
     }
 
+    public function getAttachment(Request $request, string $messageId)
+    {
+        $user = $request->user();
+        $config = CrmMailConfig::query()->where('user_id', $user->id)->first();
+        if (!$config) {
+            return response()->json(['message' => 'Brak konfiguracji poczty.'], 422);
+        }
+
+        if (!str_contains($messageId, ':')) {
+            return response()->json(['message' => 'Invalid message id.'], 422);
+        }
+        [$folderKey, $uid] = explode(':', $messageId, 2);
+        if (!ctype_digit($uid)) {
+            return response()->json(['message' => 'Invalid message id.'], 422);
+        }
+
+        $filename = trim($request->string('filename')->toString());
+        if (!$filename) {
+            return response()->json(['message' => 'Missing filename.'], 422);
+        }
+
+        try {
+            $data = $this->mailbox->getAttachment($config, $folderKey, (int) $uid, $filename);
+        } catch (RuntimeException $exception) {
+            \Log::channel('mail')->warning('Mailbox getAttachment failed', [
+                'user_id' => $user->id,
+                'message_id' => $messageId,
+                'filename' => $filename,
+                'message' => $exception->getMessage(),
+            ]);
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        \Log::channel('mail')->info('Mailbox getAttachment ok', [
+            'user_id' => $user->id,
+            'message_id' => $messageId,
+            'filename' => $filename,
+        ]);
+
+        return response()->json(['data' => $data]);
+    }
+
 }
 
