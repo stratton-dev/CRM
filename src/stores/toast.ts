@@ -3,23 +3,33 @@ import { ref } from 'vue'
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning'
 
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
 export interface Toast {
   id: string
   type: ToastType
   message: string
+  actions?: ToastAction[]
 }
 
 export const useToastStore = defineStore('toast', () => {
   const toasts = ref<Toast[]>([])
 
-  const show = (type: ToastType, message: string, duration = 3000) => {
+  const show = (type: ToastType, message: string, duration = 3000, actions?: ToastAction[]): string => {
     const id = Math.random().toString(36).substring(2)
-    const toast: Toast = { id, type, message }
+    const toast: Toast = { id, type, message, actions }
     toasts.value = [toast, ...toasts.value]
 
-    window.setTimeout(() => {
-      remove(id)
-    }, duration)
+    if (!actions?.length) {
+      window.setTimeout(() => {
+        remove(id)
+      }, duration)
+    }
+
+    return id
   }
 
   const success = (message: string) => show('success', message)
