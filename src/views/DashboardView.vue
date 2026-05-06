@@ -444,9 +444,9 @@ watch(
 <template>
   <div class="view-transition space-y-4">
     <div v-if="viewMode === 'hub'" class="w-full pt-2">
-      <div class="rounded-card shadow-card-hover border p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+      <div class="rounded-card shadow-card-hover border p-4 md:p-8 mb-4 md:mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="flex-1">
-          <h1 class="font-serif font-bold text-3xl text-white mb-2 tracking-tight">Dzień dobry, {{ firstName }}</h1>
+          <h1 class="font-serif font-bold text-xl md:text-3xl text-white mb-2 tracking-tight">Dzień dobry, {{ firstName }}</h1>
           <div class="flex flex-col gap-1.5 max-w-md">
             <div class="flex justify-end items-baseline gap-2">
               <span class="text-xs font-bold text-slate-400">{{ goalLabel }}:</span>
@@ -457,12 +457,12 @@ watch(
             </div>
           </div>
         </div>
-        <div class="flex gap-4">
-          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-4 w-32 flex flex-col items-center justify-center h-24">
+        <div class="flex gap-3 self-stretch md:self-auto">
+          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-3 md:p-4 flex-1 md:w-32 flex flex-col items-center justify-center min-h-[72px] md:h-24">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Leady Nowe</span>
             <span class="text-2xl font-bold text-primary">{{ leadCount }}</span>
           </div>
-          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-4 w-32 flex flex-col items-center justify-center h-24">
+          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-3 md:p-4 flex-1 md:w-32 flex flex-col items-center justify-center min-h-[72px] md:h-24">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Spotkania</span>
             <span class="text-2xl font-bold text-primary">{{ todaysMeetings }}</span>
           </div>
