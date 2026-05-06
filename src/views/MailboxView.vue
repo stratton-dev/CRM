@@ -31,6 +31,8 @@ const showKbDropdown = ref(false)
 
 const sidebarWidth = ref(300)
 const isResizing = ref(false)
+const isMobile = ref(window.innerWidth < 768)
+const onWindowResize = () => { isMobile.value = window.innerWidth < 768 }
 
 const startResize = () => {
   isResizing.value = true
@@ -626,10 +628,12 @@ const formatDoc = (command: string, value?: string) => {
 onMounted(() => {
   mailboxStore.fetchEmailsForFolder(currentFolder.value, 1)
   mailboxStore.startPolling?.()
+  window.addEventListener('resize', onWindowResize)
 })
 
 onBeforeUnmount(() => {
   mailboxStore.stopPolling?.()
+  window.removeEventListener('resize', onWindowResize)
 })
 
 watch(
@@ -649,17 +653,15 @@ watch(searchQuery, () => {
   <div class="p-4 md:p-6 lg:p-8 max-w-[1920px] mx-auto space-y-6 h-full flex flex-col bg-surface-subtle">
     
     <!-- Header: Reimagined with more depth and professional feel -->
-    <div class="rounded-card shadow-card-hover border p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden shrink-0 group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      <!-- Decorative element for "enterprise" feel -->
+    <div class="rounded-card shadow-card-hover border p-4 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 relative overflow-hidden shrink-0 group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-      
-      <div class="relative z-10 flex items-center gap-6">
-        <RouterLink to="/app/dashboard" class="w-12 h-12 rounded-2xl bg-slate-800/80 backdrop-blur-md border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 hover:border-stratton-gold/30 transition-all duration-300 shadow-lg group/back">
+      <div class="relative z-10 flex items-center gap-4 md:gap-6">
+        <RouterLink to="/app/dashboard" class="hidden md:flex w-12 h-12 rounded-2xl bg-slate-800/80 backdrop-blur-md border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 hover:border-stratton-gold/30 transition-all duration-300 shadow-lg group/back">
           <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover/back:-translate-x-1" />
         </RouterLink>
         <div>
-          <div class="flex items-center gap-3">
-            <h1 class="font-serif font-bold text-3xl md:text-4xl text-white tracking-tight leading-none">Skrzynka Pocztowa</h1>
+          <div class="flex items-center gap-2 md:gap-3">
+            <h1 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight leading-none">Skrzynka Pocztowa</h1>
             <div class="px-2 py-1 bg-stratton-gold/10 border border-stratton-gold/20 rounded-md">
               <span class="text-[10px] text-stratton-gold font-bold uppercase tracking-tighter">Enterprise Edition</span>
             </div>
@@ -691,8 +693,8 @@ watch(searchQuery, () => {
     <!-- Main Content: Refined with Modern Glassmorphism & Structured Layout -->
     <div class="flex-1 bg-white rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border border-slate-200/60 flex overflow-hidden min-h-0 relative">
       
-      <!-- Folders Sidebar -->
-      <div class="w-52 bg-slate-50/80 border-r border-slate-200/60 p-4 flex flex-col shrink-0">
+      <!-- Folders Sidebar — hidden on mobile -->
+      <div class="hidden md:flex w-52 bg-slate-50/80 border-r border-slate-200/60 p-4 flex-col shrink-0">
         
         <div
           v-if="auth.enabled && mailSettingsLoaded && mailMode !== 'imap'"
@@ -805,8 +807,14 @@ watch(searchQuery, () => {
         </div>
       </div>
 
-      <!-- Email List Column -->
-      <div class="border-r border-slate-200/60 flex flex-col shrink-0 bg-white relative" :style="{ width: sidebarWidth + 'px' }">
+      <!-- Email List Column — full-width on mobile, hidden when email selected on mobile -->
+      <div
+        :class="[
+          'border-r border-slate-200/60 flex-col shrink-0 bg-white relative',
+          selectedEmail && isMobile ? 'hidden' : 'flex'
+        ]"
+        :style="isMobile ? {} : { width: sidebarWidth + 'px' }"
+      >
         <!-- Resizer Handle -->
         <div 
            class="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-sky-500/20 active:bg-sky-500/40 transition-colors z-50 translate-x-1/2" 
@@ -981,7 +989,10 @@ watch(searchQuery, () => {
         >
           <div v-if="selectedEmail" :key="selectedEmail.id" class="flex flex-col h-full">
             <!-- Email Header — compact single-line bar -->
-            <div class="px-5 py-2.5 border-b border-slate-100 bg-white sticky top-0 z-20 flex items-center gap-3 min-w-0">
+            <div class="px-3 md:px-5 py-2.5 border-b border-slate-100 bg-white sticky top-0 z-20 flex items-center gap-2 md:gap-3 min-w-0">
+              <button class="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition shrink-0" @click="selectedEmail = null">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              </button>
               <div class="w-8 h-8 rounded-xl shrink-0 bg-slate-100 border border-slate-200/60 flex items-center justify-center font-black text-slate-500 text-[11px]">
                 {{ selectedEmail.fromName.charAt(0).toUpperCase() }}
               </div>
