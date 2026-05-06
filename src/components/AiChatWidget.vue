@@ -22,6 +22,10 @@ const quickSuggestions = [
 
 onMounted(() => {
   store.loadConversations()
+  window.addEventListener('toggle-ai-chat', () => {
+    if (isOpen.value) store.closeWidget()
+    else store.openWidget()
+  })
 })
 
 watch(messages, async () => {
@@ -94,11 +98,11 @@ function formatContent(content: string | null): string {
 
 <template>
   <Teleport to="body">
-    <!-- Trigger button -->
+    <!-- Trigger button — hidden on mobile (MobileBottomNav handles it) -->
     <button
       v-if="!isOpen"
       @click="store.openWidget()"
-      class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-200 hover:scale-110"
+      class="hidden md:flex fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-xl items-center justify-center transition-all duration-200 hover:scale-110"
       style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%);"
       title="Asystent AI"
     >
@@ -108,10 +112,11 @@ function formatContent(content: string | null): string {
       </svg>
     </button>
 
-    <!-- Chat widget -->
+    <!-- Chat widget — full-screen on mobile, floating on desktop -->
     <div
       v-if="isOpen"
-      class="fixed bottom-6 right-6 z-50 w-[420px] h-[600px] bg-slate-50 rounded-2xl shadow-2xl flex flex-col border border-slate-200 overflow-hidden"
+      class="fixed inset-0 z-50 bg-slate-50 flex flex-col border border-slate-200 overflow-hidden shadow-2xl
+             md:inset-auto md:bottom-6 md:right-6 md:w-[420px] md:h-[600px] md:rounded-2xl"
     >
       <!-- Header — złoty gradient z granatowym napisem -->
       <div
