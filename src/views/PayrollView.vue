@@ -2,13 +2,13 @@
   <div class="view-transition pb-10 space-y-4">
     <!-- Header -->
     <div class="w-full pt-2">
-      <div class="rounded-card shadow-card-hover border p-8 mb-6 flex flex-col md:flex-row justify-between items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-        <div class="flex items-center gap-6 self-start md:self-center">
-            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="router.back()">
+      <div class="rounded-card shadow-card-hover border p-4 md:p-8 mb-4 md:mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+        <div class="flex items-center gap-4 md:gap-6 self-start md:self-center">
+            <button type="button" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="router.back()">
               <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             </button>
             <div>
-              <h1 class="font-serif font-bold text-3xl text-white mb-2 tracking-tight">Lista Płac</h1>
+              <h1 class="font-serif font-bold text-xl md:text-3xl text-white mb-1 md:mb-2 tracking-tight">Lista Płac</h1>
               <p class="text-slate-400 text-sm">Importuj listy płac i generuj symulacje oszczędności</p>
             </div>
         </div>
