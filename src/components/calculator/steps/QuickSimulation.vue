@@ -513,7 +513,7 @@ const generateQuickOffer = async () => {
 };</script>
 
 <template>
-  <div class="animate-fade-in" style="zoom: 0.8; transform-origin: top center;">
+  <div class="animate-fade-in">
     <div class="space-y-8">
       
       <!-- Top Header Area: Results & Controls (Full Width) -->

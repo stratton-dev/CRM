@@ -186,7 +186,7 @@ const signedContractsWithDetails = computed(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="rounded-card p-8 mb-8 shadow-card-hover border relative overflow-hidden group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+    <div class="rounded-card p-4 md:p-8 mb-4 md:mb-8 shadow-card-hover border relative overflow-hidden group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       <!-- Decor -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
       
@@ -197,7 +197,7 @@ const signedContractsWithDetails = computed(() => {
           </RouterLink>
 
           <div>
-            <h1 class="text-4xl font-serif font-bold text-white tracking-wide leading-tight">Rozliczenia i Prowizje</h1>
+            <h1 class="text-2xl md:text-4xl font-serif font-bold text-white tracking-wide leading-tight">Rozliczenia i Prowizje</h1>
             <div v-if="isManagerView && selectedRep" class="mt-2 flex items-center">
               <button
                 type="button"
@@ -224,18 +224,18 @@ const signedContractsWithDetails = computed(() => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10 relative z-10">
-        <div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 shadow-xl group/card hover:bg-white/15 transition-all">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-6 md:mt-10 relative z-10">
+        <div class="bg-white/10 backdrop-blur-md p-4 md:p-6 rounded-2xl border border-white/10 shadow-xl group/card hover:bg-white/15 transition-all">
           <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 group-hover/card:text-stratton-gold">Suma Prowizji (Ten miesiąc)</div>
-          <div class="text-3xl font-bold text-white font-serif">{{ structureTotalCommission.toFixed(2) }} <span class="text-stratton-gold text-lg">PLN</span></div>
+          <div class="text-xl md:text-3xl font-bold text-white font-serif">{{ structureTotalCommission.toFixed(2) }} <span class="text-stratton-gold text-lg">PLN</span></div>
         </div>
-        <div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 shadow-xl group/card hover:bg-white/15 transition-all">
+        <div class="bg-white/10 backdrop-blur-md p-4 md:p-6 rounded-2xl border border-white/10 shadow-xl group/card hover:bg-white/15 transition-all">
           <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 group-hover/card:text-emerald-400">Wypłacono</div>
-          <div class="text-3xl font-bold text-white font-serif">0.00 <span class="text-emerald-400 text-lg">PLN</span></div>
+          <div class="text-xl md:text-3xl font-bold text-white font-serif">0.00 <span class="text-emerald-400 text-lg">PLN</span></div>
         </div>
-        <div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/10 shadow-xl group/card hover:bg-white/15 transition-all">
+        <div class="bg-white/10 backdrop-blur-md p-4 md:p-6 rounded-2xl border border-white/10 shadow-xl group/card hover:bg-white/15 transition-all">
           <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 group-hover/card:text-stratton-gold">Do wypłaty</div>
-          <div class="text-3xl font-bold text-white font-serif">{{ totalCommission.toFixed(2) }} <span class="text-stratton-gold text-lg">PLN</span></div>
+          <div class="text-xl md:text-3xl font-bold text-white font-serif">{{ totalCommission.toFixed(2) }} <span class="text-stratton-gold text-lg">PLN</span></div>
         </div>
       </div>
     </div>

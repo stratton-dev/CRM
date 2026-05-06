@@ -527,7 +527,7 @@ onBeforeUnmount(() => {
     <div v-if="showMonthPicker" class="fixed inset-0 z-40 bg-transparent" @click="closeMonthPicker"></div>
 
     <!-- Header Section -->
-    <header class="rounded-card p-8 mb-6 shadow-card-hover border relative overflow-hidden group flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 isolate z-50" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+    <header class="rounded-card p-4 md:p-8 mb-4 md:mb-6 shadow-card-hover border relative overflow-hidden group flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 isolate z-50" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       <!-- Decor Container -->
       <div class="absolute inset-0 overflow-hidden rounded-card pointer-events-none z-0">
          <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
@@ -542,7 +542,7 @@ onBeforeUnmount(() => {
         </RouterLink>
 
         <div>
-          <h1 class="text-3xl font-serif font-bold text-white tracking-tight leading-tight mb-2">Kalendarz Pracy</h1>
+          <h1 class="text-xl md:text-3xl font-serif font-bold text-white tracking-tight leading-tight mb-2">Kalendarz Pracy</h1>
           <p class="text-slate-400 text-sm font-medium">Zarządzaj swoimi spotkaniami.</p>
         </div>
       </div>
@@ -721,8 +721,8 @@ onBeforeUnmount(() => {
     <!-- Modals -->
     <Teleport to="body">
       <!-- Add/Edit Modal -->
-      <div v-if="showModal" class="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" @click.self="closeModal">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md relative animate-fade-in-up border border-white/20">
+      <div v-if="showModal" class="fixed inset-0 z-100 flex items-end md:items-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm transition-all" @click.self="closeModal">
+        <div class="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl p-4 md:p-8 w-full md:max-w-md relative animate-fade-in-up border border-white/20 max-h-[90vh] overflow-y-auto">
           <div class="absolute -top-12 left-1/2 -translate-x-1/2 bg-white rounded-full p-4 shadow-xl border-4 border-slate-50">
              <AppIcon :name="newEvent.id ? 'pencil-square' : 'calendar'" class="w-8 h-8 text-stratton-gold" />
           </div>

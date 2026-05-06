@@ -183,8 +183,8 @@ const closeNewCalcModal = () => {
   <HistoryModal v-if="showHistory" @close="showHistory = false" />
 
   <!-- New Calc Confirmation Modal -->
-  <div v-if="showNewCalcModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click="closeNewCalcModal">
-    <div class="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200" @click.stop>
+  <div v-if="showNewCalcModal" class="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center p-0 md:p-4" @click="closeNewCalcModal">
+    <div class="bg-white rounded-t-xl md:rounded-xl w-full md:max-w-md shadow-2xl overflow-hidden border border-slate-200" @click.stop>
       <!-- Header -->
       <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50">
         <h3 class="text-xs font-black uppercase tracking-widest text-slate-800">Nowa kalkulacja</h3>

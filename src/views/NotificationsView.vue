@@ -153,14 +153,14 @@ const getTypeLabel = (type: string) => {
 </script>
 
 <template>
-  <div class="space-y-6 p-6">
-    <div class="text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+  <div class="space-y-6 p-4 md:p-6">
+    <div class="text-white rounded-card p-4 md:p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="relative z-10 flex items-center gap-6">
             <RouterLink to="/app/dashboard" class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
                 <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             </RouterLink>
             <div>
-                <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Powiadomienia</h1>
+                <h1 class="font-serif font-bold text-2xl md:text-4xl text-white tracking-tight">Powiadomienia</h1>
                 <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Centrum wiadomości</p>
             </div>
         </div>
@@ -233,7 +233,7 @@ const getTypeLabel = (type: string) => {
              <h2 class="text-xl font-bold text-slate-800">Historia wysłanych</h2>
         </div>
         <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
+        <table class="w-full text-left border-collapse min-w-[640px]">
           <thead class="bg-slate-50">
             <tr>
               <th scope="col" class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Data</th>

@@ -85,7 +85,7 @@ const getInitials = (name?: string) => {
   <div class="space-y-6 h-full flex flex-col">
     <div class="flex justify-between items-end border-b border-slate-200 pb-4 shrink-0">
       <div>
-        <h1 class="text-3xl font-serif font-bold text-slate-900">Ranking Sprzedawców</h1>
+        <h1 class="text-xl md:text-3xl font-serif font-bold text-slate-900">Ranking Sprzedawców</h1>
         <p class="text-sm text-slate-500 mt-1 uppercase tracking-wider font-bold">Rywalizacja i Prestiż</p>
       </div>
       <div class="bg-indigo-50 border border-indigo-100 rounded px-4 py-2">
@@ -95,14 +95,15 @@ const getInitials = (name?: string) => {
     </div>
 
     <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-      <div class="bg-slate-900 px-6 py-4 grid grid-cols-12 items-center shrink-0">
+      <div class="overflow-x-auto flex-1 flex flex-col min-w-0">
+      <div class="bg-slate-900 px-6 py-4 grid grid-cols-12 items-center shrink-0 min-w-[480px]">
         <div class="col-span-1 text-center text-[10px] font-bold text-[#B1905E] uppercase tracking-widest">Poz</div>
         <div class="col-span-1 text-center text-[10px] font-bold text-[#B1905E] uppercase tracking-widest">Ranga</div>
         <div class="col-span-5 text-left pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Handlowiec</div>
         <div class="col-span-5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Postęp do kolejnej rangi</div>
       </div>
 
-      <div class="overflow-y-auto flex-1 custom-scrollbar">
+      <div class="overflow-y-auto flex-1 custom-scrollbar min-w-[480px]">
         <!-- Skeleton rows while loading -->
         <template v-if="isLoading">
           <div v-for="i in 8" :key="`lb-sk-${i}`" class="grid grid-cols-12 items-center px-6 py-4 border-b border-slate-100 animate-pulse">
@@ -181,6 +182,7 @@ const getInitials = (name?: string) => {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>

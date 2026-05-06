@@ -763,7 +763,7 @@ onMounted(async () => {
     </template>
 
     <!-- ── STICKY COMMAND BAR (D365 bottom status bar) ───────────── -->
-    <div v-if="summary" class="fixed bottom-0 left-0 right-0 z-40 bg-[#1a1a2e] border-t border-slate-700/60 shadow-2xl">
+    <div v-if="summary" class="hidden md:block fixed bottom-0 left-0 right-0 z-40 bg-[#1a1a2e] border-t border-slate-700/60 shadow-2xl">
       <div class="max-w-screen-2xl mx-auto px-5 py-2.5 flex items-center justify-between gap-4">
         <div class="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
           <AppIcon name="building" class="w-3 h-3 text-slate-600" />
@@ -793,8 +793,8 @@ onMounted(async () => {
     </div>
 
     <!-- ── OFFER MODAL ────────────────────────────────────────────── -->
-    <div v-if="showOfferModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click="showOfferModal = false">
-      <div class="bg-white rounded-xl w-full max-w-sm shadow-2xl overflow-hidden" @click.stop>
+    <div v-if="showOfferModal" class="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center p-0 md:p-4" @click="showOfferModal = false">
+      <div class="bg-white rounded-t-xl md:rounded-xl w-full md:max-w-sm shadow-2xl overflow-hidden" @click.stop>
         <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
           <h3 class="text-sm font-black text-slate-900 uppercase tracking-widest">{{ offerAction === 'preview' ? 'Podgląd oferty' : 'Generowanie oferty' }}</h3>
           <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" @click="showOfferModal = false">
