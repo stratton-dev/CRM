@@ -1151,14 +1151,14 @@ if (route.query.expand) {
 <template>
   <div class="flex flex-col" :class="embedded ? 'h-auto min-h-[600px]' : 'h-[calc(100vh-112px)]'">
 
-    <div class="px-6 pt-6 pb-2" v-if="!embedded">
-       <div class="text-white rounded-card p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-          <div class="relative z-10 flex items-center gap-6">
-              <RouterLink to="/app/sales/start" class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
+    <div class="px-4 pt-4 pb-2 md:px-6 md:pt-6" v-if="!embedded">
+       <div class="text-white rounded-card p-4 md:p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+          <div class="relative z-10 flex items-center gap-4 md:gap-6">
+              <RouterLink to="/app/sales/start" class="hidden md:flex w-12 h-12 rounded-md bg-slate-800 border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
                   <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
               </RouterLink>
               <div>
-                  <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Klienci</h1>
+                  <h1 class="font-serif font-bold text-2xl md:text-4xl text-white tracking-tight">Klienci</h1>
                   <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Twoja baza kontaktów</p>
               </div>
           </div>
@@ -1168,13 +1168,12 @@ if (route.query.expand) {
        </div>
     </div>
     
-    <div class="bg-slate-50 border-b border-slate-200 p-2 flex items-center shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-card' : ''">
+    <div class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap items-center gap-y-2 shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-card' : ''">
       <div class="flex items-center gap-3 ml-4">
         <AppIcon name="users" class="w-5 h-5 text-primary" />
         <h3 class="font-black text-slate-800 text-xl tracking-tight">Klienci w obsłudze</h3>
       </div>
-      
-      <div class="flex-1 flex items-center justify-end px-4 gap-4">
+      <div class="flex-1 flex flex-wrap items-center justify-end px-2 md:px-4 gap-2 md:gap-4">
         <div class="flex items-center space-x-2">
           <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="router.push('/app/sales/start')">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -1197,7 +1196,7 @@ if (route.query.expand) {
           </div>
         </div>
 
-        <div class="w-96 relative">
+        <div class="w-full md:w-96 relative">
           <input v-model="filterText" type="text" placeholder="Szukaj klienta, firmy lub NIP..." class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400" />
           <AppIcon name="search" class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
@@ -1205,7 +1204,63 @@ if (route.query.expand) {
     </div>
 
     <div v-if="viewMode === 'list'" class="flex-1 relative overflow-hidden bg-surface flex flex-col">
-      <div class="flex-1 overflow-auto min-h-0">
+      <!-- Mobile card list -->
+      <div class="md:hidden flex-1 overflow-y-auto divide-y divide-slate-100 bg-white">
+        <div
+          v-for="client in paginatedClients"
+          :key="client.id"
+          class="p-4 cursor-pointer active:bg-slate-50 transition-colors"
+          @click="selectClient(client)"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="font-bold text-slate-800 truncate">{{ client.name }}</div>
+              <div class="text-xs text-slate-400 font-mono mt-0.5">{{ client.nip }}</div>
+            </div>
+            <span
+              class="px-2 py-0.5 inline-flex shrink-0 text-xs leading-4 font-semibold rounded-full"
+              :class="{
+                'bg-yellow-100 text-yellow-800': client.status === 'NEW',
+                'bg-indigo-100 text-indigo-800': client.status === 'IN_TALKS',
+                'bg-amber-100 text-amber-800': client.status === 'OFFER_PREPARING',
+                'bg-purple-100 text-purple-800': client.status === 'OFFER_GENERATED',
+                'bg-blue-100 text-blue-800': client.status === 'CALCULATION_SENT',
+                'bg-pink-100 text-pink-800': client.status === 'SPECIAL_OFFER',
+                'bg-emerald-100 text-emerald-800': client.status === 'SIGNED',
+                'bg-gray-200 text-gray-800': client.status === 'TERMINATED',
+                'bg-red-100 text-red-800': client.status === 'RESIGNED',
+              }"
+            >{{ statusLabel(client.status) }}</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500">{{ client.opiekunName }}</span>
+            <div class="flex items-center gap-1 text-xs text-slate-400">
+              <span v-if="getClientSlaStatus(client) === 'CRITICAL'" class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span>
+              {{ new Date(client.lastActionDate).toLocaleDateString() }}
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between">
+            <span
+              v-if="getRemainingReservationDays(client) !== null && ['IN_TALKS','OFFER_PREPARING','OFFER_GENERATED','CALCULATION_SENT'].includes(client.status) && (getRemainingReservationDays(client) || 0) > 0"
+              class="text-[10px] rounded bg-sky-100 text-sky-700 font-semibold px-2 py-0.5"
+            >do {{ formatReservationDate(client) }}</span>
+            <span v-else></span>
+            <div class="flex items-center gap-1">
+              <button @click.stop="openClientEditModal(client)" class="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 min-w-[36px] min-h-[36px] flex items-center justify-center">
+                <AppIcon name="pencil-square" class="w-4 h-4" />
+              </button>
+              <button @click.stop="handleDeleteClient(client)" class="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 min-w-[36px] min-h-[36px] flex items-center justify-center">
+                <AppIcon name="trash" class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div v-if="displayedClients.length === 0" class="p-8 text-center text-slate-500 text-sm">
+          Brak rekordów spełniających kryteria.
+        </div>
+      </div>
+      <!-- Desktop table -->
+      <div class="flex-1 overflow-auto min-h-0 hidden md:block">
         <table class="w-full divide-y divide-slate-100">
           <thead class="bg-slate-50 sticky top-0 z-10 shadow-sm">
             <tr>
