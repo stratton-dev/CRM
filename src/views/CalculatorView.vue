@@ -229,15 +229,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full max-w-7xl mx-auto px-6 py-8 space-y-8">
-    <div class="rounded-card shadow-card-hover border p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-6">
-        <div class="flex items-center gap-6 self-start md:self-center">
-            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
+  <div class="w-full max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-8 space-y-4 md:space-y-8">
+    <div class="rounded-card shadow-card-hover border p-4 md:p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-4 md:gap-6">
+        <div class="flex items-center gap-4 md:gap-6 self-start md:self-center">
+            <button type="button" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
               <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             </button>
             <div>
-              <h1 class="text-3xl font-serif font-bold text-white flex items-center gap-3">
+              <h1 class="text-xl md:text-3xl font-serif font-bold text-white flex items-center gap-2 md:gap-3">
                 Kalkulator szczegółowy
                 <span class="text-[10px] bg-emerald-500/10 text-emerald-500 font-bold px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider">Aktywny</span>
               </h1>
@@ -304,8 +304,26 @@ onMounted(() => {
     </div>
   </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <aside class="lg:col-span-3 space-y-3">
+    <!-- Mobile step indicator -->
+    <div class="lg:hidden flex items-center gap-1 overflow-x-auto py-1 -mx-1 px-1">
+      <button
+        type="button"
+        class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+        :class="currentStep === -1 ? 'bg-stratton-gold text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-500'"
+        @click="currentStep = -1"
+      >Pulpit</button>
+      <button
+        v-for="step in steps"
+        :key="step.id"
+        type="button"
+        class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+        :class="currentStep === step.id ? 'bg-stratton-gold text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-500'"
+        @click="currentStep = step.id"
+      >{{ step.id + 1 }}</button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
+      <aside class="hidden lg:block lg:col-span-3 space-y-3">
         <button type="button" class="w-full p-4 rounded-xl border-2 text-left transition-all duration-300" :class="currentStep === -1 ? 'border-stratton-gold bg-linear-to-br from-[#D4AF37] to-[#C5A059] text-white shadow-[0_8px_20px_-4px_rgba(197,160,89,0.35)]' : 'border-slate-100 bg-white text-slate-500 hover:border-stratton-gold hover:bg-slate-50'" @click="currentStep = -1">
           <div class="flex items-center gap-3">
             <AppIcon name="dashboard" class="w-5 h-5" />
@@ -334,6 +352,29 @@ onMounted(() => {
         <ResultsSplitStep v-else-if="currentStep === 3" />
         <BusinessCaseStep v-else-if="currentStep === 4" />
         <SummaryStep v-else @backToDashboard="currentStep = -1" />
+
+        <!-- Mobile prev/next nav -->
+        <div v-if="currentStep >= 0" class="lg:hidden flex justify-between gap-3 mt-4 sticky bottom-4">
+          <button
+            type="button"
+            class="flex-1 flex items-center justify-center gap-2 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 shadow-sm min-h-11"
+            @click="currentStep--"
+          >
+            <AppIcon name="chevron-left" class="w-4 h-4" />
+            Wstecz
+          </button>
+          <button
+            v-if="currentStep < steps.length - 1"
+            type="button"
+            :disabled="!canProceed"
+            class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white shadow-sm min-h-11 disabled:opacity-40"
+            style="background: linear-gradient(135deg, #C5A059, #d4b06a);"
+            @click="currentStep++"
+          >
+            Dalej
+            <AppIcon name="chevron-right" class="w-4 h-4" />
+          </button>
+        </div>
       </section>
     </div>
   </div>
