@@ -15,6 +15,7 @@ import AppIcon from '@/components/AppIcon.vue'
 import MailComposeModal from '@/components/MailComposeModal.vue'
 import ChatPanel from '@/components/ChatPanel.vue'
 import AiChatWidget from '@/components/AiChatWidget.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import { useChatStore } from '@/stores/chat'
 import { webPush } from '@/services/webPush'
 import logoUrl from '@/assets/logo.svg'
@@ -278,7 +279,7 @@ onBeforeUnmount(() => {
 
     <aside
       v-if="shouldShowSidebar"
-      class="flex-shrink-0 flex flex-col transition-all duration-300 bg-white border-r border-slate-200"
+      class="hidden md:flex flex-shrink-0 flex-col transition-all duration-300 bg-white border-r border-slate-200"
       :class="isSidebarOpen ? 'w-72' : 'w-20'"
     >
       <div class="h-20 flex items-center justify-center border-b border-slate-200 transition-colors hover:bg-slate-50 cursor-pointer px-4" @click="router.push('/app/dashboard')">
@@ -435,9 +436,9 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <main 
+      <main
         class="flex-1 scroll-smooth crm-form transition-all duration-300 min-h-0"
-        :class="route.meta.fullHeight ? 'overflow-hidden p-0' : 'overflow-y-auto p-2 sm:p-4 lg:p-4'"
+        :class="route.meta.fullHeight ? 'overflow-hidden p-0' : 'overflow-y-auto p-2 sm:p-4 lg:p-4 pb-20 md:pb-4'"
       >
         <RouterView v-slot="{ Component }">
           <Transition name="route" mode="out-in" appear>
@@ -481,6 +482,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
+
+  <MobileBottomNav v-if="showShell" class="md:hidden" />
 
   <div v-else class="min-h-screen">
     <ToastContainer />
