@@ -173,12 +173,23 @@ const moreMenuItems = computed(() => {
 
 <style scoped>
 .mobile-nav-item {
-  @apply flex flex-col items-center gap-1 px-2 py-1 min-w-[52px]
-         text-slate-400 text-[10px] font-medium transition-colors
-         active:text-[#001f3d];
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  min-width: 52px;
+  color: rgb(148 163 184);
+  font-size: 10px;
+  font-weight: 500;
+  transition-property: color, background-color;
+  transition-duration: 150ms;
+}
+.mobile-nav-item:active {
+  color: #001f3d;
 }
 .mobile-nav-item.active {
-  @apply text-[#001f3d];
+  color: #001f3d;
 }
 .mobile-nav-item.active svg {
   stroke: #C5A059;
