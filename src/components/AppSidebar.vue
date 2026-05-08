@@ -198,7 +198,7 @@ const navGroups = computed((): NavGroup[] => {
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto overflow-x-hidden py-2 nav-scroll">
+    <nav class="flex-1 overflow-y-auto overflow-x-hidden py-1 nav-scroll">
 
       <!-- ADMIN expanded: grouped -->
       <template v-if="isAdmin && expanded">
@@ -211,7 +211,7 @@ const navGroups = computed((): NavGroup[] => {
           >
             <p
               class="text-[9px] font-black text-slate-500 uppercase tracking-widest px-5 pb-1"
-              :class="gi > 0 ? 'pt-4 mt-1 border-t border-white/6' : 'pt-2'"
+              :class="gi > 0 ? 'pt-2 mt-1 border-t border-white/6' : 'pt-1'"
             >{{ group.title }}</p>
           </div>
           <RouterLink
@@ -219,7 +219,7 @@ const navGroups = computed((): NavGroup[] => {
             :key="link.path"
             :to="link.path"
             :title="!expanded ? link.label : undefined"
-            class="relative flex items-center h-9 transition-colors duration-150 select-none border-l-2"
+            class="relative flex items-center h-8 transition-colors duration-150 select-none border-l-2"
             :class="route.path.startsWith(link.path)
               ? 'border-stratton-gold bg-stratton-gold/10 text-stratton-gold'
               : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-white/5'"
@@ -242,7 +242,7 @@ const navGroups = computed((): NavGroup[] => {
           :key="link.path"
           :to="link.path"
           :title="!expanded ? link.label : undefined"
-          class="relative flex items-center h-9 transition-colors duration-150 select-none border-l-2"
+          class="relative flex items-center h-8 transition-colors duration-150 select-none border-l-2"
           :class="route.path.startsWith(link.path)
             ? 'border-stratton-gold bg-stratton-gold/10 text-stratton-gold'
             : 'border-transparent text-slate-400 hover:text-slate-100 hover:bg-white/5'"

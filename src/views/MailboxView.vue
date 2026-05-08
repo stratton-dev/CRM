@@ -93,6 +93,8 @@ const attachKbFile = async (file: any) => {
   }
 }
 
+const showMobileDrawer = ref(false)
+
 const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM' | 'STARRED'>('INBOX')
 const starredIds = ref<Set<string>>(new Set(JSON.parse(localStorage.getItem('mailbox_starred') || '[]')))
 const saveStarred = () => localStorage.setItem('mailbox_starred', JSON.stringify([...starredIds.value]))
@@ -464,6 +466,7 @@ const selectFolder = (folder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM' | '
   currentFolder.value = folder
   selectedEmail.value = null
   currentPage.value = 1
+  showMobileDrawer.value = false
   if (folder !== 'STARRED') mailboxStore.fetchEmailsForFolder(folder as any, 1)
 }
 
@@ -693,6 +696,116 @@ watch(searchQuery, () => {
     <!-- Main Content: Refined with Modern Glassmorphism & Structured Layout -->
     <div class="flex-1 bg-white rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border border-slate-200/60 flex overflow-hidden min-h-0 relative">
       
+      <!-- Mobile Drawer (folders) — visible only on mobile via Teleport -->
+      <Teleport to="body">
+        <Transition
+          enter-active-class="transition-all duration-300 ease-out"
+          leave-active-class="transition-all duration-250 ease-in"
+        >
+          <div v-if="showMobileDrawer" class="fixed inset-0 z-200 md:hidden flex">
+            <!-- Backdrop -->
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showMobileDrawer = false"></div>
+            <!-- Drawer panel -->
+            <div class="relative z-10 w-72 max-w-[85vw] h-full bg-white shadow-2xl flex flex-col" style="animation: mailbox-drawer-in 0.25s cubic-bezier(0.25,0.46,0.45,0.94) forwards">
+              <!-- Drawer header -->
+              <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%);">
+                <span class="text-white font-black text-sm uppercase tracking-widest">Skrzynka</span>
+                <button class="text-slate-300 hover:text-white p-1 rounded-lg transition-colors" @click="showMobileDrawer = false">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Compose button -->
+              <div class="px-4 pt-5 pb-3">
+                <button
+                  type="button"
+                  class="w-full bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-black py-3 px-5 rounded-2xl flex items-center justify-center gap-2 text-sm uppercase tracking-wider shadow-lg"
+                  @click="showMobileDrawer = false; openCompose()"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Nowa Wiadomość
+                </button>
+              </div>
+
+              <!-- Folder list -->
+              <nav class="flex-1 overflow-y-auto px-3 pb-6 space-y-1">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 mb-2 mt-2">Foldery</p>
+
+                <a class="group flex justify-between items-center px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-200"
+                  :class="currentFolder === 'INBOX' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-slate-600 hover:bg-slate-100'"
+                  @click="selectFolder('INBOX')">
+                  <div class="flex items-center gap-3">
+                    <div class="p-1.5 rounded-lg" :class="currentFolder === 'INBOX' ? 'bg-[#D4AF37]/20' : 'bg-slate-100'">
+                      <AppIcon name="inbox" class="w-4 h-4" />
+                    </div>
+                    <span class="font-bold text-[14px]">Odebrane</span>
+                  </div>
+                  <div v-if="unreadCount > 0" class="min-w-5 h-5 px-1.5 bg-[#D4AF37] text-white text-[10px] font-black rounded-lg flex items-center justify-center shadow-md">
+                    {{ unreadCount }}
+                  </div>
+                </a>
+
+                <a class="group flex items-center gap-3 px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-200"
+                  :class="currentFolder === 'SENT' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-slate-600 hover:bg-slate-100'"
+                  @click="selectFolder('SENT')">
+                  <div class="p-1.5 rounded-lg" :class="currentFolder === 'SENT' ? 'bg-[#D4AF37]/20' : 'bg-slate-100'">
+                    <AppIcon name="paper-airplane" class="w-4 h-4" />
+                  </div>
+                  <span class="font-bold text-[14px]">Wysłane</span>
+                </a>
+
+                <a class="group flex items-center gap-3 px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-200"
+                  :class="currentFolder === 'DRAFTS' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-slate-600 hover:bg-slate-100'"
+                  @click="selectFolder('DRAFTS')">
+                  <div class="p-1.5 rounded-lg" :class="currentFolder === 'DRAFTS' ? 'bg-[#D4AF37]/20' : 'bg-slate-100'">
+                    <AppIcon name="document-text" class="w-4 h-4" />
+                  </div>
+                  <span class="font-bold text-[14px]">Robocze</span>
+                </a>
+
+                <a class="group flex items-center gap-3 px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-200"
+                  :class="currentFolder === 'TRASH' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-slate-600 hover:bg-slate-100'"
+                  @click="selectFolder('TRASH')">
+                  <div class="p-1.5 rounded-lg" :class="currentFolder === 'TRASH' ? 'bg-[#D4AF37]/20' : 'bg-slate-100'">
+                    <AppIcon name="trash" class="w-4 h-4" />
+                  </div>
+                  <span class="font-bold text-[14px]">Kosz</span>
+                </a>
+
+                <a class="group flex items-center gap-3 px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-200"
+                  :class="currentFolder === 'SPAM' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-slate-600 hover:bg-slate-100'"
+                  @click="selectFolder('SPAM')">
+                  <div class="p-1.5 rounded-lg" :class="currentFolder === 'SPAM' ? 'bg-[#D4AF37]/20' : 'bg-slate-100'">
+                    <AppIcon name="exclamation-circle" class="w-4 h-4" />
+                  </div>
+                  <span class="font-bold text-[14px]">Spam</span>
+                </a>
+
+                <a class="group flex justify-between items-center px-4 py-3.5 rounded-2xl cursor-pointer transition-all duration-200"
+                  :class="currentFolder === 'STARRED' ? 'bg-[#D4AF37]/10 text-[#D4AF37]' : 'text-slate-600 hover:bg-slate-100'"
+                  @click="selectFolder('STARRED')">
+                  <div class="flex items-center gap-3">
+                    <div class="p-1.5 rounded-lg" :class="currentFolder === 'STARRED' ? 'bg-[#D4AF37]/20' : 'bg-slate-100'">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                      </svg>
+                    </div>
+                    <span class="font-bold text-[14px]">Oznaczone</span>
+                  </div>
+                  <div v-if="starredIds.size > 0" class="min-w-5 h-5 px-1.5 bg-amber-400 text-white text-[10px] font-black rounded-lg flex items-center justify-center">
+                    {{ starredIds.size }}
+                  </div>
+                </a>
+              </nav>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
       <!-- Folders Sidebar — hidden on mobile -->
       <div class="hidden md:flex w-52 bg-slate-50/80 border-r border-slate-200/60 p-4 flex-col shrink-0">
         
@@ -823,6 +936,16 @@ watch(searchQuery, () => {
 
         <div class="p-4 border-b border-slate-100 flex items-center justify-between">
            <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+             <!-- Mobile drawer toggle -->
+             <button
+               class="md:hidden p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors mr-1"
+               @click="showMobileDrawer = true"
+               title="Foldery"
+             >
+               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+               </svg>
+             </button>
              <div class="w-1.5 h-4 bg-stratton-gold rounded-full"></div>
              Wiadomości
              <span v-if="hasActiveFilters" class="ml-1 px-2 py-0.5 bg-sky-100 text-sky-600 text-[10px] font-black rounded-full uppercase tracking-wide">filtr</span>
@@ -1278,6 +1401,15 @@ watch(searchQuery, () => {
   animation: shimmer 1.5s infinite;
 }
 
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
 @keyframes pulse-slow {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
@@ -1317,4 +1449,11 @@ h1, h2, h3, .font-serif {
     display: list-item !important;
     margin-bottom: 0.25rem;
   }
+</style>
+
+<style>
+@keyframes mailbox-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
 </style>
