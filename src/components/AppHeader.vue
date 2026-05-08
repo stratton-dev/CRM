@@ -45,7 +45,7 @@ const emit = defineEmits<{
         </div>
 
         <!-- Text -->
-        <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
+        <span class="hidden sm:inline text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
           STRATTON
         </span>
       </div>
@@ -91,7 +91,7 @@ const emit = defineEmits<{
         </div>
 
         <!-- Text -->
-        <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
+        <span class="hidden sm:inline text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
           PRIME
         </span>
       </div>
