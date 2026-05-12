@@ -94,7 +94,7 @@ const isImage = (type: string) => type === 'image' || type?.startsWith('image/')
         <!-- Legacy Hardcoded Support (Fallback) -->
         <template v-else>
            <div v-if="type === 'CASH_FLOW'" class="space-y-6">
-              <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+              <div class="bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-slate-200">
                  <h4 class="font-bold text-lg text-slate-800 mb-4">Analiza Cash Flow</h4>
                  <p class="text-slate-600 leading-relaxed mb-6">
                    Szczegółowa symulacja przepływów finansowych pokazuje potencjalne oszczędności wynikające z wdrożenia modelu.
@@ -107,7 +107,7 @@ const isImage = (type: string) => type === 'image' || type?.startsWith('image/')
            </div>
 
            <div v-else-if="type === 'LEGAL'" class="space-y-6">
-               <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+               <div class="bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-slate-200">
                  <h4 class="font-bold text-lg text-slate-800 mb-4">Podstawy Prawne</h4>
                  <p class="text-slate-600 leading-relaxed mb-4">
                    Nasze rozwiązania opierają się na sprawdzonych modelach prawnych, zgodnych z obowiązującymi przepisami prawa pracy i ustawami podatkowymi.
@@ -130,7 +130,7 @@ const isImage = (type: string) => type === 'image' || type?.startsWith('image/')
            </div>
 
         <div v-else-if="type === 'GRAPHIC'" class="space-y-6">
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+            <div class="bg-white p-4 md:p-8 rounded-2xl shadow-sm border border-slate-200">
                <h4 class="font-bold text-lg text-slate-800 mb-4">Model Współpracy</h4>
                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                   <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center">

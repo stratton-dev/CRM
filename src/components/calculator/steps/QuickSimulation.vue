@@ -514,18 +514,18 @@ const generateQuickOffer = async () => {
 
 <template>
   <div class="animate-fade-in">
-    <div class="space-y-8">
-      
+    <div class="space-y-4 md:space-y-8">
+
       <!-- Top Header Area: Results & Controls (Full Width) -->
-      <div class="rounded-card shadow-card-hover border border-[#003366] p-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-6">
+      <div class="rounded-card shadow-card-hover border border-[#003366] p-4 md:p-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3 md:gap-6">
             <!-- Left: Back Button + Title -->
-            <div class="flex items-center gap-6 self-start md:self-center">
-                <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
+            <div class="flex items-center gap-3 md:gap-6 self-start md:self-center">
+                <button type="button" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
                     <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
                 </button>
                 <div>
-                    <h2 class="font-serif font-bold text-3xl text-white tracking-tight">Wyniki Symulacji</h2>
+                    <h2 class="font-serif font-bold text-xl md:text-3xl text-white tracking-tight">Wyniki Symulacji</h2>
                     <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Podsumowanie Oszczędności</p>
                 </div>
             </div>
@@ -536,7 +536,7 @@ const generateQuickOffer = async () => {
         </div>
 
         <!-- Content: Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
             <!-- Card 1: Monthly Savings (Dark Mode) -->
             <div class="rounded-2xl p-5 border border-[#003366] shadow-sm relative overflow-hidden group transition-colors" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
                 <div class="flex justify-between items-start mb-3">
@@ -550,7 +550,7 @@ const generateQuickOffer = async () => {
                         <AppIcon name="arrow-trending-up" class="w-6 h-6" />
                     </div>
                 </div>
-                <div class="text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
+                <div class="text-2xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
                     {{ formatPLN(simulation.monthlySavings) }}
                 </div>
                  <div v-if="strategy === 'WIN_WIN'" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold border border-blue-500/30">
@@ -572,7 +572,7 @@ const generateQuickOffer = async () => {
                          <AppIcon name="chart-pie" class="w-6 h-6" />
                     </div>
                 </div>
-                <div class="text-4xl lg:text-5xl font-extrabold text-white tracking-tight relative z-10">
+                <div class="text-2xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight relative z-10">
                     {{ formatPLN(simulation.yearlySavings) }}
                 </div>
                 <div class="mt-4 h-1.5 w-full bg-slate-700 rounded-full overflow-hidden relative z-10">
@@ -584,8 +584,8 @@ const generateQuickOffer = async () => {
 
       <!-- Bottom Module: Structure + Comparison -->
       <div class="max-w-screen-2xl mx-auto">
-      <div class="bg-white rounded-card shadow-card border border-slate-200 p-6">
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+      <div class="bg-white rounded-card shadow-card border border-slate-200 p-3 md:p-6">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-8 items-start">
         
         <!-- Left Panel: Structure -->
         <div class="xl:col-span-4 text-white flex flex-col shrink-0 border border-[#003366] rounded-2xl shadow-xl" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
@@ -596,7 +596,7 @@ const generateQuickOffer = async () => {
               </div>
               <span class="font-extrabold uppercase tracking-widest text-xs">Szybka Symulacja v2.8</span>
             </div>
-            <h2 class="text-2xl font-bold text-white leading-tight">Struktura zatrudnienia</h2>
+            <h2 class="text-xl md:text-2xl font-bold text-white leading-tight">Struktura zatrudnienia</h2>
             <p class="text-slate-400 text-sm mt-2 leading-relaxed">Skonfiguruj strukturę zatrudnienia i wybierz model wynagradzania</p>
           </div>
 
@@ -727,9 +727,9 @@ const generateQuickOffer = async () => {
         </div>
 
         <!-- Right Panel: Comparisons & Tables -->
-        <div class="xl:col-span-8 space-y-8">
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <div class="flex items-center justify-between mb-8">
+        <div class="xl:col-span-8 space-y-4 md:space-y-8">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-8">
+            <div class="flex items-center justify-between mb-4 md:mb-8">
               <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
                 <div class="p-1.5 bg-stratton-gold/10 rounded-lg">
                   <AppIcon name="coins" class="text-stratton-gold w-5 h-5" />

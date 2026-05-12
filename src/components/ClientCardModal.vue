@@ -267,7 +267,7 @@ const handleSave = () => {
         </button>
       </div>
 
-      <div class="p-8 space-y-8">
+      <div class="p-4 md:p-8 space-y-4 md:space-y-8">
 
         <!-- Section 1: Osoba Kontaktowa -->
         <div class="space-y-4">
