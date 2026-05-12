@@ -864,11 +864,11 @@ const addUser = async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-between items-center">
+  <div class="space-y-3 md:space-y-6">
+    <div class="flex flex-wrap justify-between items-start gap-2">
       <div v-if="!embedded">
-        <h1 class="text-2xl font-bold text-slate-900">Struktura Organizacji</h1>
-        <p class="text-sm text-slate-500">
+        <h1 class="text-xl md:text-2xl font-bold text-slate-900">Struktura Organizacji</h1>
+        <p class="text-xs md:text-sm text-slate-500">
           <span v-if="currentUser?.role === 'ADMIN'">Widok globalny (Super Admin) - Zarządzaj całą organizacją</span>
           <span v-else>Zarządzaj swoim zespołem i monitoruj strukturę.</span>
         </p>
