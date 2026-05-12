@@ -310,9 +310,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-between items-center mb-2">
-      <h1 class="text-xl font-semibold text-gray-800">Dashboard - Analityka</h1>
+  <div class="space-y-3 md:space-y-6">
+    <div class="flex justify-between items-center mb-1 md:mb-2">
+      <h1 class="text-lg md:text-xl font-semibold text-gray-800">Dashboard - Analityka</h1>
       <span class="text-xs text-gray-500">Ostatnia aktualizacja: Dzisiaj</span>
     </div>
 
@@ -356,24 +356,24 @@ onMounted(() => {
         <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           {{ user?.role === 'SALES' ? 'Moi Klienci' : 'Klienci Zespołu' }}
         </dt>
-        <dd class="mt-2 text-3xl font-light text-gray-900">{{ myClientsCount }}</dd>
+        <dd class="mt-2 text-2xl md:text-3xl font-light text-gray-900">{{ myClientsCount }}</dd>
       </div>
       <div v-if="user?.role !== 'CLIENT_HR'" class="bg-white border border-gray-200 rounded shadow-sm p-4 hover:border-brand-main transition-colors cursor-default">
         <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           {{ user?.role === 'SALES' ? 'Podpisane Umowy' : 'Umowy Zespołu' }}
         </dt>
-        <dd class="mt-2 text-3xl font-light text-gray-900">{{ signedCount }}</dd>
+        <dd class="mt-2 text-2xl md:text-3xl font-light text-gray-900">{{ signedCount }}</dd>
       </div>
       <div v-if="user?.role !== 'CLIENT_HR'" class="bg-white border border-gray-200 rounded shadow-sm p-4 hover:border-brand-main transition-colors cursor-default">
         <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Estymacja (Lejek)</dt>
-        <dd class="mt-2 text-3xl font-light text-gray-900">{{ formatCurrency(funnelEstimate) }}</dd>
+        <dd class="mt-2 text-2xl md:text-3xl font-light text-gray-900">{{ formatCurrency(funnelEstimate) }}</dd>
         <p class="text-xs text-gray-400 mt-1">Ważone wg etapu i wielkości zespołu klienta.</p>
       </div>
       <div v-if="user?.role !== 'CLIENT_HR'" class="bg-white border border-gray-200 rounded shadow-sm p-4 hover:border-brand-main transition-colors cursor-default">
         <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Wymaga uwagi</dt>
-        <dd class="mt-2 text-3xl font-light text-amber-600">{{ criticalNotifications.length }}</dd>
+        <dd class="mt-2 text-2xl md:text-3xl font-light text-amber-600">{{ criticalNotifications.length }}</dd>
       </div>
-      <div v-else class="bg-white border border-gray-200 shadow-sm p-6 col-span-4 rounded">
+      <div v-else class="bg-white border border-gray-200 shadow-sm p-4 col-span-4 rounded">
         <h3 class="text-lg font-semibold text-gray-900">Portal Klienta HR</h3>
         <p class="text-sm text-gray-500 mt-1">Zarządzaj benefitami pracowników w jednym miejscu.</p>
       </div>
