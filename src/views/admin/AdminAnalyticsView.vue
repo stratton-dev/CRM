@@ -52,23 +52,23 @@ const runMonthlyInvoicing = () => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-fade-in view-transition">
-    <div class="flex items-center justify-between mb-4">
-       <h1 class="text-2xl font-bold text-slate-900">Analityka Finansowa</h1>
+  <div class="space-y-4 md:space-y-6 animate-fade-in view-transition">
+    <div class="flex items-center justify-between mb-2 md:mb-4">
+       <h1 class="text-xl md:text-2xl font-bold text-slate-900">Analityka Finansowa</h1>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <div class="bg-linear-to-br from-slate-800 to-slate-900 rounded-xl p-6 text-white shadow-lg relative overflow-hidden">
-        <p class="text-slate-400 text-sm font-bold uppercase tracking-wider">Przychód Całkowity</p>
-        <h3 class="text-3xl font-extrabold mt-2">{{ Math.round(stats.revenue).toLocaleString() }} PLN</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+      <div class="bg-linear-to-br from-slate-800 to-slate-900 rounded-xl p-3 md:p-6 text-white shadow-lg relative overflow-hidden">
+        <p class="text-slate-400 text-xs md:text-sm font-bold uppercase tracking-wider">Przychód Całkowity</p>
+        <h3 class="text-xl md:text-3xl font-extrabold mt-1 md:mt-2">{{ Math.round(stats.revenue).toLocaleString() }} PLN</h3>
         <div class="mt-4 flex items-center text-xs text-green-400">
           <span>▲ +12% m/m</span>
         </div>
       </div>
 
-      <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-indigo-500">
+      <div class="bg-white rounded-xl p-3 md:p-6 shadow-sm border-l-4 border-indigo-500">
         <p class="text-slate-500 text-sm font-bold uppercase tracking-wider">Koszty Prowizji</p>
-        <h3 class="text-3xl font-extrabold text-slate-900 mt-2">{{ Math.round(stats.commission).toLocaleString() }} PLN</h3>
+        <h3 class="text-xl md:text-3xl font-extrabold text-slate-900 mt-1 md:mt-2">{{ Math.round(stats.commission).toLocaleString() }} PLN</h3>
         <div class="mt-4 text-xs text-slate-400">
           Est. marża:
           <span class="text-indigo-600 font-bold">
@@ -77,9 +77,9 @@ const runMonthlyInvoicing = () => {
         </div>
       </div>
 
-      <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-emerald-500">
+      <div class="bg-white rounded-xl p-3 md:p-6 shadow-sm border-l-4 border-emerald-500">
         <p class="text-slate-500 text-sm font-bold uppercase tracking-wider">Aktywne Umowy</p>
-        <h3 class="text-3xl font-extrabold text-slate-900 mt-2">{{ stats.activeContracts }}</h3>
+        <h3 class="text-xl md:text-3xl font-extrabold text-slate-900 mt-1 md:mt-2">{{ stats.activeContracts }}</h3>
         <div class="mt-4 text-xs text-slate-400">
           Średni przychód/umowa:
           <span class="text-emerald-600 font-bold">
@@ -88,9 +88,9 @@ const runMonthlyInvoicing = () => {
         </div>
       </div>
 
-      <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-sky-500">
+      <div class="bg-white rounded-xl p-3 md:p-6 shadow-sm border-l-4 border-sky-500">
         <p class="text-slate-500 text-sm font-bold uppercase tracking-wider">Zespół Sprzedaży</p>
-        <h3 class="text-3xl font-extrabold text-slate-900 mt-2">{{ stats.salesCount }}</h3>
+        <h3 class="text-xl md:text-3xl font-extrabold text-slate-900 mt-1 md:mt-2">{{ stats.salesCount }}</h3>
         <div class="mt-4 text-xs text-slate-400">
           Efektywność: {{ (stats.activeContracts / (stats.salesCount || 1)).toFixed(1) }} umowy/os.
         </div>
@@ -110,8 +110,8 @@ const runMonthlyInvoicing = () => {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-3 md:p-6">
         <h3 class="text-lg font-bold text-slate-800 mb-4">Dynamika Finansowa (Ostatnie 6 miesięcy)</h3>
         <div class="grid grid-cols-2 gap-4">
           <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
