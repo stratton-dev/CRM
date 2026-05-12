@@ -533,17 +533,17 @@ onBeforeUnmount(() => {
          <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
       </div>
 
-      <div class="relative z-10 flex items-center gap-6">
-        <RouterLink 
-          to="/app/dashboard" 
-          class="flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-white hover:border-slate-600 transition-all shadow-sm group/link"
+      <div class="relative z-10 flex items-center gap-3 md:gap-6">
+        <RouterLink
+          to="/app/dashboard"
+          class="hidden md:flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-white hover:border-slate-600 transition-all shadow-sm group/link"
         >
            <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover/link:-translate-x-1" />
         </RouterLink>
 
         <div>
-          <h1 class="text-xl md:text-3xl font-serif font-bold text-white tracking-tight leading-tight mb-2">Kalendarz Pracy</h1>
-          <p class="text-slate-400 text-sm font-medium">Zarządzaj swoimi spotkaniami.</p>
+          <h1 class="text-xl md:text-3xl font-serif font-bold text-white tracking-tight leading-tight mb-1 md:mb-2">Kalendarz Pracy</h1>
+          <p class="text-slate-400 text-xs md:text-sm font-medium">Zarządzaj swoimi spotkaniami.</p>
         </div>
       </div>
     
@@ -795,8 +795,8 @@ onBeforeUnmount(() => {
 
       <!-- Day Details Modal -->
       <div v-if="selectedDay" class="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-all" @click.self="closeDayDetails">
-        <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg relative animate-fade-in-up md:min-w-[500px]">
-          <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+        <div class="bg-white rounded-xl md:rounded-3xl shadow-2xl p-4 md:p-8 w-full max-w-lg relative animate-fade-in-up md:min-w-[500px]">
+          <div class="flex items-center justify-between mb-4 md:mb-8 pb-3 md:pb-4 border-b border-slate-100">
             <div>
               <h3 class="text-2xl font-serif font-bold text-slate-800">Zdarzenia dnia</h3>
               <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">{{ selectedDay.date.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
