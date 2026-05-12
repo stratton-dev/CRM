@@ -1172,8 +1172,8 @@ watch(
 </script>
 
 <template>
-  <div class="space-y-6">
-    <h2 class="text-2xl font-semibold textstratton700">Ustawienia</h2>
+  <div class="space-y-3 md:space-y-6">
+    <h2 class="text-xl md:text-2xl font-semibold textstratton700">Ustawienia</h2>
 
     <div class="bg-white rounded shadow p-4">
       <div class="flex items-center gap-4 border-b border-gray-200 pb-3">
