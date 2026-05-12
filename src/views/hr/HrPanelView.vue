@@ -190,7 +190,7 @@ const parseCsv = (file: File) => {
 </script>
 
 <template>
-  <div class="space-y-8">
+  <div class="space-y-4 md:space-y-8">
     <RouterLink to="/app/calculator" class="flex items-center justify-between bg-slate-900 text-white rounded-2xl p-6 shadow-lg hover:bg-slate-800 transition">
       <div>
         <h2 class="text-lg font-bold">Kalkulator kosztow zatrudnienia</h2>
@@ -210,11 +210,11 @@ const parseCsv = (file: File) => {
       <div class="flex flex-col md:flex-row items-center justify-between bg-sky-50 p-4 rounded border border-sky-100 relative z-10">
         <div class="mb-4 md:mb-0">
           <p class="text-sm text-sky-700">Liczba pracowników na liście</p>
-          <p class="text-2xl font-bold text-sky-900">{{ myEmployees.length }}</p>
+          <p class="text-xl md:text-2xl font-bold text-sky-900">{{ myEmployees.length }}</p>
         </div>
         <div class="mb-4 md:mb-0">
           <p class="text-sm text-sky-700">Suma świadczeń (Netto)</p>
-          <p class="text-2xl font-bold text-sky-900">{{ totalAmount.toFixed(2) }} PLN</p>
+          <p class="text-xl md:text-2xl font-bold text-sky-900">{{ totalAmount.toFixed(2) }} PLN</p>
         </div>
         <button type="button" class="bg-sky-600 text-white px-6 py-3 rounded-lg hover:bg-sky-700 shadow-lg font-bold disabled:opacity-50 transition" :disabled="myEmployees.length === 0" @click="placeOrder">
           Złóż Zamówienie

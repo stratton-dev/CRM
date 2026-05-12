@@ -469,7 +469,7 @@ watch(
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 mb-10 px-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-8 mb-6 md:mb-10 px-4">
         <div @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Dashboard" />
@@ -731,20 +731,20 @@ watch(
       </div>
     </div>
 
-    <div v-else class="space-y-8 max-w-7xl mx-auto pt-6">
-      <div class="rounded-card shadow-card-hover border p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 pb-8 border-b border-slate-800 gap-6">
-          <div class="flex items-center gap-6">
-            <button type="button" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="viewMode = 'hub'">
+    <div v-else class="space-y-4 md:space-y-8 max-w-7xl mx-auto pt-3 md:pt-6">
+      <div class="rounded-card shadow-card-hover border p-4 md:p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-8 pb-4 md:pb-8 border-b border-slate-800 gap-3 md:gap-6">
+          <div class="flex items-center gap-3 md:gap-6">
+            <button type="button" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="viewMode = 'hub'">
               <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
             </button>
             <div>
-              <h2 class="font-serif font-bold text-4xl text-white tracking-tight">Dashboard</h2>
+              <h2 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight">Dashboard</h2>
               <p class="text-xs text-slate-500 cursor-pointer hover:text-primary mt-1 uppercase tracking-widest font-bold" @click="toggleRole">Widok: {{ roleDisplayName }}</p>
             </div>
           </div>
-          
-          <div class="flex flex-wrap items-center gap-6 w-full md:w-auto">
+
+          <div class="flex flex-wrap items-center gap-3 md:gap-6 w-full md:w-auto">
             <div class="relative w-full md:w-48">
               <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Od</label>
               <input v-model="dateFrom" type="date" :max="maxDate" class="w-full bg-slate-800 border border-slate-700 text-white py-2 px-4 rounded-lg text-sm font-bold focus:outline-none focus:border-primary cursor-pointer transition hover:bg-slate-750" />
@@ -776,7 +776,7 @@ watch(
         <div class="flex items-center gap-4 flex-wrap">
         <button 
           @click="showKPIsTab = !showKPIsTab"
-          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          class="px-2 md:px-3 py-1.5 md:py-2.5 rounded-lg font-bold text-sm md:text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-32 md:w-44 h-10 md:h-14"
           :class="showKPIsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="chart-pie" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showKPIsTab ? 'text-white' : 'text-slate-500'" />
@@ -784,7 +784,7 @@ watch(
         </button>
         <button 
           @click="showClientsTab = !showClientsTab"
-          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          class="px-2 md:px-3 py-1.5 md:py-2.5 rounded-lg font-bold text-sm md:text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-32 md:w-44 h-10 md:h-14"
           :class="showClientsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="address-book" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showClientsTab ? 'text-white' : 'text-slate-500'" />
@@ -792,7 +792,7 @@ watch(
         </button>
         <button 
           @click="showMeetingsTab = !showMeetingsTab"
-          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          class="px-2 md:px-3 py-1.5 md:py-2.5 rounded-lg font-bold text-sm md:text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-32 md:w-44 h-10 md:h-14"
           :class="showMeetingsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="calendar" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showMeetingsTab ? 'text-white' : 'text-slate-500'" />
@@ -800,7 +800,7 @@ watch(
         </button>
         <button 
           @click="showTeamTab = !showTeamTab"
-          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          class="px-2 md:px-3 py-1.5 md:py-2.5 rounded-lg font-bold text-sm md:text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-32 md:w-44 h-10 md:h-14"
           :class="showTeamTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="people-group" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showTeamTab ? 'text-white' : 'text-slate-500'" />
@@ -808,7 +808,7 @@ watch(
         </button>
         <button 
           @click="showArrearsTab = !showArrearsTab"
-          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          class="px-2 md:px-3 py-1.5 md:py-2.5 rounded-lg font-bold text-sm md:text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-32 md:w-44 h-10 md:h-14"
           :class="showArrearsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="file-invoice-dollar" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showArrearsTab ? 'text-white' : 'text-slate-500'" />
@@ -816,7 +816,7 @@ watch(
         </button>
         <button 
           @click="showCalculationsTab = !showCalculationsTab"
-          class="px-3 py-2.5 rounded-lg font-bold text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-44 h-14"
+          class="px-2 md:px-3 py-1.5 md:py-2.5 rounded-lg font-bold text-sm md:text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-32 md:w-44 h-10 md:h-14"
           :class="showCalculationsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
         >
           <AppIcon name="stopwatch" class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" :class="showCalculationsTab ? 'text-white' : 'text-slate-500'" />
@@ -850,21 +850,21 @@ watch(
       </div>
 
       <!-- Injected Clients View (Stats Mode) -->
-      <div v-if="showClientsTab" class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-8 animate-fade-in-down">
+      <div v-if="showClientsTab" class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-4 md:mb-8 animate-fade-in-down">
         <ClientsView :embedded="true" :date-from="dateFrom" :date-to="dateTo" />
       </div>
 
       <!-- Injected Meetings View (Stats Mode) -->
-      <div v-if="showMeetingsTab" class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-8 animate-fade-in-down">
+      <div v-if="showMeetingsTab" class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-4 md:mb-8 animate-fade-in-down">
         <MeetingsManagementView :embedded="true" />
       </div>
 
       <!-- Injected Team View (Stats Mode) -->
-      <div v-if="showTeamTab" class="bg-surface rounded-card shadow-card border border-slate-100 p-6 mb-8 animate-fade-in-down">
+      <div v-if="showTeamTab" class="bg-surface rounded-card shadow-card border border-slate-100 p-4 md:p-6 mb-4 md:mb-8 animate-fade-in-down">
         <StructureView :embedded="true" />
       </div>
 
-      <div class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-8" v-if="showCalculationsTab">
+      <div class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-4 md:mb-8" v-if="showCalculationsTab">
         <div class="bg-slate-50 border-b border-slate-100 p-2 flex items-center shadow-sm shrink-0">
           <div class="flex items-center gap-3 ml-4 flex-1">
             <AppIcon name="stopwatch" class="w-5 h-5 text-primary" />
@@ -1007,20 +1007,20 @@ watch(
     <!-- News Modal -->
     <Teleport to="body">
       <div v-if="isNewsModalOpen && selectedNews" class="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm" @click.self="closeNewsModal">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all p-8 relative">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all p-4 md:p-8 relative">
           <button @click="closeNewsModal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-2 rounded-full hover:bg-slate-100 transition">
             <AppIcon name="xmark" class="w-6 h-6" />
             <span class="sr-only">Zamknij</span>
           </button>
-          
-          <div class="flex items-center gap-4 mb-6">
+
+          <div class="flex items-center gap-3 md:gap-4 mb-4 md:mb-6">
              <span class="text-xs font-bold px-3 py-1 rounded text-white shadow-sm" :class="selectedNews.color">
                 {{ selectedNews.tag }}
              </span>
              <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">{{ selectedNews.date }}</span>
           </div>
-          
-          <h2 class="font-serif font-bold text-3xl text-slate-900 mb-6 leading-tight">{{ selectedNews.title }}</h2>
+
+          <h2 class="font-serif font-bold text-xl md:text-3xl text-slate-900 mb-4 md:mb-6 leading-tight">{{ selectedNews.title }}</h2>
           
           <div class="prose prose-slate max-w-none text-slate-700 leading-relaxed max-h-[60vh] overflow-y-auto mb-6" v-html="selectedNews.content || '<i>Brak treści</i>'"></div>
           
