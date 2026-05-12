@@ -295,10 +295,10 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col h-[calc(100vh-112px)]">
-    <header class="mb-6 flex items-start justify-between gap-4">
+    <header class="mb-3 md:mb-6 flex items-start justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Progi Prowizyjne</h1>
-        <p class="text-sm text-gray-500">Zarządzaj indywidualnymi stawkami prowizji dla struktury sprzedażowej.</p>
+        <h1 class="text-xl md:text-2xl font-bold text-gray-900">Progi Prowizyjne</h1>
+        <p class="text-xs md:text-sm text-gray-500">Zarządzaj indywidualnymi stawkami prowizji dla struktury sprzedażowej.</p>
       </div>
       <div v-if="teamThresholdsLoading" class="text-xs text-gray-500 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
@@ -306,11 +306,11 @@ onMounted(() => {
       </div>
     </header>
 
-    <div class="bg-white rounded-lg shadow border border-gray-200 mb-6">
-      <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+    <div class="bg-white rounded-lg shadow border border-gray-200 mb-4 md:mb-6">
+      <div class="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 bg-gray-50">
         <h3 class="font-bold text-gray-700">Konfiguracja Prowizji (Globalna)</h3>
       </div>
-      <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1">Prowizja Handlowca (Umowa &lt;= 14 dni)</label>
           <div class="flex items-center">

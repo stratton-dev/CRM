@@ -156,11 +156,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4">
+  <div class="space-y-3 md:space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 md:gap-4">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Faktury (Admin)</h1>
-        <p class="text-sm text-gray-500">Zarządzaj wystawianiem i korektami faktur powiązanych z API.</p>
+        <h1 class="text-xl md:text-2xl font-bold text-gray-900">Faktury (Admin)</h1>
+        <p class="text-xs md:text-sm text-gray-500">Zarządzaj wystawianiem i korektami faktur powiązanych z API.</p>
       </div>
       <button type="button" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold shadow hover:bg-indigo-700" @click="openCreate">
         Wystaw nową fakturę

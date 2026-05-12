@@ -617,12 +617,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-3 md:space-y-6">
     <header>
-      <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="flex flex-wrap items-start justify-between gap-3 md:gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Panel Integracji Autenti</h1>
-          <p class="text-sm text-gray-500">{{ auth.enabled ? 'Zarządzaj realnymi procesami podpisu z Autenti.' : 'Symuluj i zarządzaj procesem podpisywania dokumentów dla nowych członków zespołu.' }}</p>
+          <h1 class="text-xl md:text-2xl font-bold text-gray-900">Panel Integracji Autenti</h1>
+          <p class="text-xs md:text-sm text-gray-500">{{ auth.enabled ? 'Zarządzaj realnymi procesami podpisu z Autenti.' : 'Symuluj i zarządzaj procesem podpisywania dokumentów dla nowych członków zespołu.' }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs text-gray-500">Status:</span>

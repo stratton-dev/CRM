@@ -109,9 +109,9 @@ function statusColor(status: string): string {
 </script>
 
 <template>
-  <div class="p-6 max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Baza Wiedzy AI</h1>
-    <p class="text-gray-600 mb-6">
+  <div class="p-3 md:p-6 max-w-4xl mx-auto">
+    <h1 class="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-6">Baza Wiedzy AI</h1>
+    <p class="text-sm text-gray-600 mb-3 md:mb-6">
       Dokumenty PDF załadowane tutaj będą używane przez asystenta AI do odpowiadania na pytania
       handlowców i klientów. Tylko administratorzy mogą zarządzać bazą wiedzy.
     </p>
