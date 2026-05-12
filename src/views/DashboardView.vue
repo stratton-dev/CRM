@@ -460,11 +460,11 @@ watch(
         <div class="flex gap-3 self-stretch md:self-auto">
           <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-3 md:p-4 flex-1 md:w-32 flex flex-col items-center justify-center min-h-[72px] md:h-24">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Leady Nowe</span>
-            <span class="text-2xl font-bold text-primary">{{ leadCount }}</span>
+            <span class="text-xl md:text-2xl font-bold text-primary">{{ leadCount }}</span>
           </div>
           <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-3 md:p-4 flex-1 md:w-32 flex flex-col items-center justify-center min-h-[72px] md:h-24">
             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Spotkania</span>
-            <span class="text-2xl font-bold text-primary">{{ todaysMeetings }}</span>
+            <span class="text-xl md:text-2xl font-bold text-primary">{{ todaysMeetings }}</span>
           </div>
         </div>
       </div>

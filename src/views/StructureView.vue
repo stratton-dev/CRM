@@ -1223,7 +1223,7 @@ const addUser = async () => {
           <button type="button" class="text-slate-400 hover:text-white text-2xl" @click="showAddModal = false">✕</button>
         </div>
 
-        <form class="p-6 space-y-8" @submit.prevent="addUser">
+        <form class="p-4 md:p-6 space-y-4 md:space-y-8" @submit.prevent="addUser">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase mb-3">Typ Podmiotu</label>
             <div class="grid grid-cols-3 gap-4">

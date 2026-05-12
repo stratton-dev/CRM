@@ -1905,7 +1905,7 @@ onMounted(() => {
             />
           </div>
 
-          <div v-else-if="step === 3" class="space-y-8 animate-fade-in-up">
+          <div v-else-if="step === 3" class="space-y-4 md:space-y-8 animate-fade-in-up">
             
             <!-- Section 1: Dane i Potencjał -->
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-6">
@@ -2154,10 +2154,10 @@ onMounted(() => {
 
           </div>
 
-          <div v-else class="space-y-6 animate-fade-in-up">
-            <div class="text-center mb-8">
-               <h3 class="text-2xl font-serif font-bold text-slate-800 mb-2">Prezentacja Rozwiązania</h3>
-               <p class="text-slate-500 max-w-lg mx-auto">Zapoznaj się z kluczowymi aspektami naszego modelu współpracy.</p>
+          <div v-else class="space-y-4 md:space-y-6 animate-fade-in-up">
+            <div class="text-center mb-4 md:mb-8">
+               <h3 class="text-xl md:text-2xl font-serif font-bold text-slate-800 mb-2">Prezentacja Rozwiązania</h3>
+               <p class="text-sm text-slate-500 max-w-lg mx-auto">Zapoznaj się z kluczowymi aspektami naszego modelu współpracy.</p>
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">

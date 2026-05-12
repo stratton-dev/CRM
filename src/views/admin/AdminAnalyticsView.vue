@@ -116,11 +116,11 @@ const runMonthlyInvoicing = () => {
         <div class="grid grid-cols-2 gap-4">
           <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
             <p class="text-xs text-slate-500 uppercase">Przychód</p>
-            <p class="text-2xl font-bold text-slate-800">{{ Math.round(stats.revenue).toLocaleString() }} PLN</p>
+            <p class="text-xl md:text-2xl font-bold text-slate-800">{{ Math.round(stats.revenue).toLocaleString() }} PLN</p>
           </div>
           <div class="p-4 border border-slate-200 rounded-lg bg-slate-50">
             <p class="text-xs text-slate-500 uppercase">Prowizje</p>
-            <p class="text-2xl font-bold text-slate-800">{{ Math.round(stats.commission).toLocaleString() }} PLN</p>
+            <p class="text-xl md:text-2xl font-bold text-slate-800">{{ Math.round(stats.commission).toLocaleString() }} PLN</p>
           </div>
         </div>
       </div>

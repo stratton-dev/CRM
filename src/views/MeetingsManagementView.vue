@@ -639,32 +639,32 @@ const exportToCsv = () => {
 </script>
 
 <template>
-  <div class="p-6 max-w-[1600px] mx-auto space-y-8" :class="{ 'p-0! max-w-none! space-y-0!': embedded }">
+  <div class="p-3 md:p-6 max-w-[1600px] mx-auto space-y-4 md:space-y-8" :class="{ 'p-0! max-w-none! space-y-0!': embedded }">
     <!-- Header -->
-    <div v-if="!embedded" class="text-white rounded-card p-8 shadow-card-hover border flex justify-between items-center relative overflow-hidden mb-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      
-      <div class="relative z-10 flex items-center gap-6">
-          <button 
+    <div v-if="!embedded" class="text-white rounded-card p-4 md:p-8 shadow-card-hover border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden mb-3 md:mb-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+
+      <div class="relative z-10 flex items-center gap-3 md:gap-6">
+          <button
             @click="router.push('/app/dashboard')"
-             class="w-12 h-12 rounded-md bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group"
+            class="hidden md:flex w-12 h-12 rounded-md bg-slate-800 border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group"
             title="Powrót do Dashboardu"
           >
             <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           </button>
-          
+
           <div>
-            <h1 class="text-3xl md:text-4xl font-serif font-bold text-white tracking-tight">Zarządzanie Spotkaniami</h1>
-            <p class="text-stratton-100 mt-1 font-medium opacity-90">Planuj kontakty i zarządzaj bazą klientów</p>
+            <h1 class="text-xl md:text-4xl font-serif font-bold text-white tracking-tight">Zarządzanie Spotkaniami</h1>
+            <p class="text-stratton-100 mt-1 text-xs md:text-sm font-medium opacity-90">Planuj kontakty i zarządzaj bazą klientów</p>
           </div>
         </div>
 
-        <button 
+        <button
           type="button"
           @click="openAddModal"
-          class="bg-linear-to-r from-[#D4AF37] to-stratton-gold hover:brightness-110 text-white px-6 py-3 rounded-md font-bold transition-all flex items-center gap-3 shadow-md group hover:-translate-y-0.5 relative z-20"
+          class="bg-linear-to-r from-[#D4AF37] to-stratton-gold hover:brightness-110 text-white px-4 md:px-6 py-2 md:py-3 rounded-md font-bold transition-all flex items-center gap-2 md:gap-3 shadow-md group hover:-translate-y-0.5 relative z-20 text-sm self-start md:self-auto"
         >
-          <div class="w-5 h-5 rounded bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-            <AppIcon name="plus" class="w-3.5 h-3.5" />
+          <div class="w-4 h-4 md:w-5 md:h-5 rounded bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+            <AppIcon name="plus" class="w-3 h-3 md:w-3.5 md:h-3.5" />
           </div>
           Dodaj Spotkanie
         </button>
@@ -991,7 +991,7 @@ const exportToCsv = () => {
           </button>
         </div>
 
-        <div class="p-8 space-y-8">
+        <div class="p-4 md:p-8 space-y-4 md:space-y-8">
           <!-- Section: Contact Person -->
           <div class="space-y-4">
             <h3 class="flex items-center gap-2 text-lg font-bold text-slate-800">
@@ -1187,17 +1187,17 @@ const exportToCsv = () => {
     <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showEditModal = false"></div>
       <div class="relative bg-white w-full md:max-w-4xl max-h-[90vh] overflow-y-auto rounded-t-3xl md:rounded-3xl shadow-2xl flex flex-col animate-in fade-in zoom-in duration-300">
-        <div class="p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
+        <div class="p-4 md:p-8 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
           <div>
-            <h2 class="text-2xl font-bold text-slate-900">Edycja Klienta</h2>
-            <p class="text-slate-500 mt-1">Popraw dane w bazie CRM</p>
+            <h2 class="text-xl md:text-2xl font-bold text-slate-900">Edycja Klienta</h2>
+            <p class="text-sm text-slate-500 mt-1">Popraw dane w bazie CRM</p>
           </div>
           <button @click="showEditModal = false" class="text-slate-400 hover:text-slate-600 transition-colors">
-            <AppIcon name="xmark" class="w-8 h-8" />
+            <AppIcon name="xmark" class="w-6 md:w-8 h-6 md:h-8" />
           </button>
         </div>
 
-        <div class="p-8 space-y-8">
+        <div class="p-4 md:p-8 space-y-4 md:space-y-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-4">
                     <h3 class="text-slate-800 font-bold uppercase text-xs tracking-widest border-l-4 border-blue-500 pl-3">Dane Osobowe</h3>

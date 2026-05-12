@@ -286,7 +286,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-[1920px] mx-auto space-y-8">
+  <div class="p-3 md:p-6 max-w-[1920px] mx-auto space-y-4 md:space-y-8">
     <!-- Header -->
     <div class="text-white rounded-card p-4 md:p-8 shadow-card-hover border relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
 
@@ -297,18 +297,18 @@ onMounted(() => {
           </button>
           
           <div>
-            <h1 class="text-3xl md:text-4xl font-serif font-bold text-white tracking-tight">Leady Sprzedażowe</h1>
-            <p class="text-slate-400 mt-2 font-medium opacity-90">Etap 1: Kwalifikacja i wstępny kontakt</p>
+            <h1 class="text-xl md:text-4xl font-serif font-bold text-white tracking-tight">Leady Sprzedażowe</h1>
+            <p class="text-slate-400 mt-1 md:mt-2 text-xs md:text-base font-medium opacity-90">Etap 1: Kwalifikacja i wstępny kontakt</p>
           </div>
         </div>
 
         <div class="flex flex-wrap gap-3">
-           <button v-if="canAddLeads" @click="showImportModal = true" class="px-6 py-3 rounded-md bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 backdrop-blur-sm transition-all flex items-center gap-2 group">
-             <AppIcon name="arrow-down-tray" class="w-5 h-5 text-indigo-400 group-hover:text-indigo-300" />
+           <button v-if="canAddLeads" @click="showImportModal = true" class="px-4 md:px-6 py-2 md:py-3 rounded-md bg-white/5 hover:bg-white/10 text-white text-sm font-bold border border-white/10 backdrop-blur-sm transition-all flex items-center gap-2 group">
+             <AppIcon name="arrow-down-tray" class="w-4 md:w-5 h-4 md:h-5 text-indigo-400 group-hover:text-indigo-300" />
              Importuj
            </button>
-           <button v-if="canAddLeads" @click="openAddModal" class="px-6 py-3 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2">
-             <AppIcon name="plus" class="w-5 h-5" />
+           <button v-if="canAddLeads" @click="openAddModal" class="px-4 md:px-6 py-2 md:py-3 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2">
+             <AppIcon name="plus" class="w-4 md:w-5 h-4 md:h-5" />
              Dodaj Leada
            </button>
         </div>
@@ -520,12 +520,12 @@ onMounted(() => {
                 <AppIcon name="x-mark" class="w-6 h-6" />
             </button>
             
-             <div class="p-10 text-center">
-                 <div class="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-                     <AppIcon name="arrow-down-tray" class="w-10 h-10" />
+             <div class="p-5 md:p-10 text-center">
+                 <div class="w-16 md:w-20 h-16 md:h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-sm">
+                     <AppIcon name="arrow-down-tray" class="w-8 md:w-10 h-8 md:h-10" />
                  </div>
-                 <h3 class="text-2xl font-bold text-slate-900 mb-2">Import masowy</h3>
-                 <p class="text-slate-500 mb-8 max-w-xs mx-auto">Przeciągnij i upuść plik Excel (.xlsx) lub wybierz go z dysku.</p>
+                 <h3 class="text-xl md:text-2xl font-bold text-slate-900 mb-2">Import masowy</h3>
+                 <p class="text-sm text-slate-500 mb-4 md:mb-8 max-w-xs mx-auto">Przeciągnij i upuść plik Excel (.xlsx) lub wybierz go z dysku.</p>
             
                  <div 
                     class="border-3 border-dashed rounded-3xl p-10 text-center cursor-pointer relative transition-all duration-300 group"

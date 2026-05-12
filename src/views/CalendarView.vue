@@ -727,8 +727,8 @@ onBeforeUnmount(() => {
              <AppIcon :name="newEvent.id ? 'pencil-square' : 'calendar'" class="w-8 h-8 text-stratton-gold" />
           </div>
 
-          <div class="text-center mt-6 mb-8">
-            <h3 class="text-2xl font-serif font-bold text-slate-800">{{ newEvent.id ? 'Edytuj Zdarzenie' : 'Nowe Zdarzenie' }}</h3>
+          <div class="text-center mt-4 md:mt-6 mb-4 md:mb-8">
+            <h3 class="text-xl md:text-2xl font-serif font-bold text-slate-800">{{ newEvent.id ? 'Edytuj Zdarzenie' : 'Nowe Zdarzenie' }}</h3>
             <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">{{ selectedDate?.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
           </div>
 
@@ -798,7 +798,7 @@ onBeforeUnmount(() => {
         <div class="bg-white rounded-xl md:rounded-3xl shadow-2xl p-4 md:p-8 w-full max-w-lg relative animate-fade-in-up md:min-w-[500px]">
           <div class="flex items-center justify-between mb-4 md:mb-8 pb-3 md:pb-4 border-b border-slate-100">
             <div>
-              <h3 class="text-2xl font-serif font-bold text-slate-800">Zdarzenia dnia</h3>
+              <h3 class="text-xl md:text-2xl font-serif font-bold text-slate-800">Zdarzenia dnia</h3>
               <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">{{ selectedDay.date.toLocaleDateString('pl-PL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
             </div>
             <button type="button" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition" @click="closeDayDetails">
