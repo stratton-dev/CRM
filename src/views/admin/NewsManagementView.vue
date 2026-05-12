@@ -183,9 +183,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-4 max-w-7xl mx-auto space-y-6">
+  <div class="p-3 md:p-4 max-w-7xl mx-auto space-y-3 md:space-y-6">
     <!-- Premium Header -->
-    <div class="bg-slate-900 rounded-[2rem] shadow-xl border border-slate-800 p-6 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden group isolate">
+    <div class="bg-slate-900 rounded-xl md:rounded-[2rem] shadow-xl border border-slate-800 p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6 relative overflow-hidden group isolate">
       <!-- Background Decor -->
       <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
          <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-gold rounded-full mix-blend-overlay filter blur-3xl opacity-10 -translate-y-1/2 translate-x-1/2 group-hover:opacity-20 transition-opacity duration-1000"></div>
@@ -197,7 +197,7 @@ onMounted(() => {
           <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover/btn:-translate-x-1" />
         </button>
         <div>
-          <h1 class="font-serif font-bold text-3xl text-white tracking-tight leading-none">Zarządzanie Aktualnościami</h1>
+          <h1 class="font-serif font-bold text-xl md:text-3xl text-white tracking-tight leading-none">Zarządzanie Aktualnościami</h1>
           <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">Personalizacja komunikatów systemowych</p>
         </div>
       </div>
@@ -215,8 +215,8 @@ onMounted(() => {
     </div>
 
     <!-- Editor Mode (Glassmorphism) -->
-    <div v-if="isEditing" class="bg-white/90 backdrop-blur-md rounded-[2rem] shadow-xl border border-white/50 p-8 animate-fade-in-up">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+    <div v-if="isEditing" class="bg-white/90 backdrop-blur-md rounded-xl md:rounded-[2rem] shadow-xl border border-white/50 p-4 md:p-8 animate-fade-in-up">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 md:mb-8">
         <div class="col-span-2">
             <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Tytuł ogłoszenia</label>
             <input v-model="form.title" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold transition-all" placeholder="Np. Nowy konkurs sprzedażowy..." />

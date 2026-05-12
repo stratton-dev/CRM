@@ -338,13 +338,13 @@ onBeforeUnmount(() => {
 
     <div class="flex-1 flex flex-col min-w-0 relative bg-slate-50">
       <header v-if="shouldShowSidebar" class="relative w-full overflow-hidden pb-0 bg-slate-50 shrink-0 border-b border-gray-200">
-        <div class="flex items-center justify-between w-full px-4 h-16">
+        <div class="flex items-center justify-between w-full px-3 md:px-4 h-12 md:h-16">
           
           <!-- Left Wing -->
           <div class="flex-1 flex flex-col items-end relative h-full justify-center">
              <!-- Search Bar (Compact) -->
-             <div 
-               class="absolute left-0 bottom-1.5 bg-white/90 hover:bg-white border border-slate-100 rounded-lg px-3 py-1.5 flex items-center cursor-text transition group shadow-sm z-30 w-40 sm:w-56 backdrop-blur-md overflow-hidden h-9"
+             <div
+               class="absolute left-0 bottom-1 bg-white/90 hover:bg-white border border-slate-100 rounded-lg px-2 md:px-3 py-1.5 flex items-center cursor-text transition group shadow-sm z-30 w-32 sm:w-44 md:w-56 backdrop-blur-md overflow-hidden h-8 md:h-9"
                @click="toggleCommandPalette"
              >
                <AppIcon name="search" class="w-4 h-4 text-slate-400 mr-2 group-hover:text-stratton-gold transition shrink-0" />
@@ -352,26 +352,26 @@ onBeforeUnmount(() => {
              </div>
 
              <!-- Lines -->
-             <div class="absolute right-0 top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
+             <div class="absolute right-0 top-2 md:top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
                <div class="h-px bg-[#0f172a] w-full"></div>
                <div class="h-[2px] bg-[#0f172a] w-full"></div>
              </div>
-             
+
              <!-- Text -->
-             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
+             <span class="hidden lg:inline text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
               STRATTON
              </span>
           </div>
 
           <!-- Center Logo -->
-          <div class="px-2 relative z-20 shrink-0">
-            <img :src="logoUrl" class="h-16 w-auto filter drop-shadow-md" alt="Stratton Prime" />
+          <div class="px-1 md:px-2 relative z-20 shrink-0">
+            <img :src="logoUrl" class="h-10 md:h-14 w-auto filter drop-shadow-md" alt="Stratton Prime" />
           </div>
 
           <!-- Right Wing -->
           <div class="flex-1 flex flex-col items-start relative h-full justify-center">
              <!-- Controls -->
-             <div class="absolute right-0 bottom-1.5 flex items-center space-x-2 z-30 bg-white/90 backdrop-blur-md px-3 rounded-lg border border-slate-100 shadow-sm h-9">
+             <div class="absolute right-0 bottom-1 flex items-center space-x-1 md:space-x-2 z-30 bg-white/90 backdrop-blur-md px-2 md:px-3 rounded-lg border border-slate-100 shadow-sm h-8 md:h-9">
                <!-- Chat icon -->
                <div class="relative cursor-pointer group" @click="chatStore.toggle()">
                  <div class="relative w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full transition">
@@ -406,20 +406,20 @@ onBeforeUnmount(() => {
                  </button>
                </template>
                <div class="h-4 w-px bg-slate-200 mx-1"></div>
-               <button type="button" class="flex items-center gap-1.5 text-slate-400 hover:text-slate-800 transition text-[11px] font-bold uppercase tracking-wide group" @click="logout">
-                 <span class="group-hover:underline">Wyloguj</span>
+               <button type="button" class="flex items-center gap-1 text-slate-400 hover:text-slate-800 transition text-[11px] font-bold uppercase tracking-wide group" @click="logout">
+                 <span class="hidden sm:inline group-hover:underline">Wyloguj</span>
                  <AppIcon name="logout" class="w-4 h-4" />
                </button>
              </div>
 
              <!-- Lines -->
-             <div class="absolute left-0 top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
+             <div class="absolute left-0 top-2 md:top-3 w-[200%] flex flex-col gap-1 pointer-events-none">
                <div class="h-px bg-[#0f172a] w-full"></div>
                <div class="h-[2px] bg-[#0f172a] w-full"></div>
              </div>
-             
+
              <!-- Text -->
-             <span class="text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
+             <span class="hidden lg:inline text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
               PRIME
              </span>
           </div>

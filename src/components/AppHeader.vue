@@ -45,7 +45,7 @@ const emit = defineEmits<{
         </div>
 
         <!-- Text -->
-        <span class="hidden lg:inline text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
+        <span class="brand-text text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
           STRATTON
         </span>
       </div>
@@ -91,7 +91,7 @@ const emit = defineEmits<{
         </div>
 
         <!-- Text -->
-        <span class="hidden lg:inline text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
+        <span class="brand-text text-base font-bold text-[#0f172a] tracking-[0.25em] ml-2 mt-1 relative z-10 font-cinzel">
           PRIME
         </span>
       </div>
@@ -101,6 +101,15 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
+.brand-text {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .brand-text {
+    display: inline;
+  }
+}
+
 @keyframes bell-pulse {
   0%   { transform: scale(1);   box-shadow: 0 0 0 0   rgba(234, 179, 8, 0.7); }
   70%  { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0);   }

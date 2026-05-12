@@ -185,19 +185,19 @@ const signedContractsWithDetails = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="rounded-card p-4 md:p-8 mb-4 md:mb-8 shadow-card-hover border relative overflow-hidden group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+  <div class="space-y-3 md:space-y-6">
+    <div class="rounded-card p-4 md:p-8 mb-3 md:mb-8 shadow-card-hover border relative overflow-hidden group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
       <!-- Decor -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-      
-      <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div class="flex items-center gap-6">
-          <RouterLink to="/app/dashboard" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
+
+      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6">
+        <div class="flex items-center gap-3 md:gap-6">
+          <RouterLink to="/app/dashboard" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
              <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           </RouterLink>
 
           <div>
-            <h1 class="text-2xl md:text-4xl font-serif font-bold text-white tracking-wide leading-tight">Rozliczenia i Prowizje</h1>
+            <h1 class="text-xl md:text-4xl font-serif font-bold text-white tracking-wide leading-tight">Rozliczenia i Prowizje</h1>
             <div v-if="isManagerView && selectedRep" class="mt-2 flex items-center">
               <button
                 type="button"
@@ -208,18 +208,18 @@ const signedContractsWithDetails = computed(() => {
                 Wróć do podsumowania zespołu
               </button>
             </div>
-            <p v-else class="text-slate-400 max-w-xl text-lg mt-1 tracking-tight">Przeglądaj swoje wynagrodzenia i prowizje.</p>
+            <p v-else class="text-slate-400 max-w-xl text-xs md:text-lg mt-1 tracking-tight">Przeglądaj swoje wynagrodzenia i prowizje.</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-4">
-          <button 
-            type="button" 
-            class="flex items-center gap-2 px-6 py-2.5 bg-green-600/90 hover:bg-green-600 text-white rounded-xl transition-all font-bold shadow-lg shadow-green-900/20 hover:scale-105 active:scale-95"
+        <div class="flex items-center gap-4 self-start md:self-auto">
+          <button
+            type="button"
+            class="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 text-sm bg-green-600/90 hover:bg-green-600 text-white rounded-xl transition-all font-bold shadow-lg shadow-green-900/20 hover:scale-105 active:scale-95"
             @click="exportToCsv"
           >
             <AppIcon name="file-invoice" class="w-4 h-4" />
-            <span>Eksportuj do CSV</span>
+            <span>Eksportuj CSV</span>
           </button>
         </div>
       </div>

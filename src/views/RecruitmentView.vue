@@ -414,24 +414,24 @@ const sendMissingDocuments = () => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col p-6">
-    <div class="bg-stratton-900 rounded-3xl p-8 mb-8 shadow-2xl relative overflow-hidden group">
+  <div class="h-full flex flex-col p-3 md:p-6">
+    <div class="bg-stratton-900 rounded-3xl p-4 md:p-8 mb-4 md:mb-8 shadow-2xl relative overflow-hidden group">
       <!-- Decor -->
       <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-      
-      <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div class="flex items-center gap-6">
-          <RouterLink to="/app/dashboard" class="inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
+
+      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6">
+        <div class="flex items-center gap-3 md:gap-6">
+          <RouterLink to="/app/dashboard" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
              <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
           </RouterLink>
 
           <div>
-            <h1 class="text-4xl font-serif font-bold text-white tracking-wide leading-tight">Rekrutacja</h1>
-            <p class="text-slate-400 max-w-xl text-lg mt-1">Zarządzaj procesem rekrutacji handlowców.</p>
+            <h1 class="text-xl md:text-4xl font-serif font-bold text-white tracking-wide leading-tight">Rekrutacja</h1>
+            <p class="text-slate-400 max-w-xl text-sm md:text-lg mt-1">Zarządzaj procesem rekrutacji handlowców.</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-4 bg-slate-800/50 p-1.5 rounded-2xl border border-slate-700/50 backdrop-blur-sm">
+        <div class="flex flex-wrap items-center gap-3 md:gap-4 bg-slate-800/50 p-1.5 rounded-2xl border border-slate-700/50 backdrop-blur-sm w-full md:w-auto overflow-x-auto">
             <div class="flex items-center bg-slate-900 rounded-xl p-1 border border-slate-800">
                 <button
                     type="button"
@@ -460,14 +460,14 @@ const sendMissingDocuments = () => {
                     v-model="searchQuery" 
                     type="text" 
                     placeholder="Szukaj handlowca..." 
-                    class="w-64 pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold/50 transition-all text-lg font-bold text-right"
+                    class="w-36 md:w-64 pl-10 pr-4 py-2 md:py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold/50 transition-all text-sm md:text-lg font-bold text-right"
                 />
                 <AppIcon name="search" class="absolute left-3 top-4 w-4 h-4 text-slate-500 group-focus-within/search:text-stratton-gold transition-colors" />
             </div>
 
             <button 
                 @click="openWizard"
-                class="flex items-center gap-2 px-6 py-2.5 bg-white text-slate-900 rounded-xl hover:bg-blue-50 transition-all font-bold shadow-lg shadow-white/5 hover:scale-105 active:scale-95"
+                class="flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 bg-white text-slate-900 text-sm rounded-xl hover:bg-blue-50 transition-all font-bold shadow-lg shadow-white/5 hover:scale-105 active:scale-95 shrink-0"
             >
                 <AppIcon name="user-plus" class="w-5 h-5 text-stratton-gold" />
                 <span>Dodaj Handlowca</span>
