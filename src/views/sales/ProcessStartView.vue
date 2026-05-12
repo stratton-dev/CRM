@@ -1495,22 +1495,22 @@ onMounted(() => {
 
 
 <template>
-  <div v-if="!isProcessActive" class="view-transition pb-20 space-y-8">
-    <div class="w-full pt-6">
-      <div class="rounded-3xl shadow-xl border p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+  <div v-if="!isProcessActive" class="view-transition pb-20 space-y-4 md:space-y-8">
+    <div class="w-full pt-3 md:pt-6">
+      <div class="rounded-3xl shadow-xl border p-4 md:p-8 mb-4 md:mb-8 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="flex-1">
-          <div class="flex items-center gap-4 mb-3">
-             <RouterLink to="/app/dashboard" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm">
+          <div class="flex items-center gap-3 md:gap-4 mb-2 md:mb-3">
+             <RouterLink to="/app/dashboard" class="hidden md:flex w-10 h-10 rounded-full bg-white border border-slate-200 items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm">
                 <AppIcon name="arrow-left" class="w-5 h-5" />
              </RouterLink>
-             <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Dzień dobry, {{ userName }}</h1>
+             <h1 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight">Dzień dobry, {{ userName }}</h1>
           </div>
-          <p class="text-slate-400 font-medium ml-14">Panel Procesu Sprzedażowego</p>
+          <p class="text-slate-400 text-sm md:text-base font-medium md:ml-14">Panel Procesu Sprzedażowego</p>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-12">
-        <RouterLink to="/app/leads" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+      <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mb-8 md:mb-12">
+        <RouterLink to="/app/leads" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Leady" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/95 via-slate-100/50 to-transparent"></div>
@@ -1526,7 +1526,7 @@ onMounted(() => {
           </div>
         </RouterLink>
 
-        <RouterLink v-if="canViewMeetings" to="/app/meetings" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink v-if="canViewMeetings" to="/app/meetings" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Spotkania" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/95 via-slate-100/50 to-transparent"></div>
@@ -1576,7 +1576,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/clients" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Klienci w obsłudze" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/95 via-slate-100/50 to-transparent"></div>
@@ -1609,7 +1609,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/quick-calculator" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Szybka Kalkulacja" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/95 via-slate-100/50 to-transparent"></div>
@@ -1625,7 +1625,7 @@ onMounted(() => {
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/calculator" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=2426&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Szczegółowa Kalkulacja" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/95 via-slate-100/50 to-transparent"></div>
@@ -1641,7 +1641,7 @@ onMounted(() => {
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/knowledge-base" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/95 via-slate-100/50 to-transparent"></div>
@@ -1665,17 +1665,17 @@ onMounted(() => {
   </div>
 
 
-  <div v-else class="view-transition pb-20 space-y-8">
-    <div class="w-full pt-6">
-      <div class="rounded-3xl shadow-xl border p-8 mb-8 flex flex-col md:flex-row justify-between items-center gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+  <div v-else class="view-transition pb-20 space-y-4 md:space-y-8">
+    <div class="w-full pt-3 md:pt-6">
+      <div class="rounded-3xl shadow-xl border p-4 md:p-8 mb-4 md:mb-8 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
         <div class="flex-1">
-          <div class="flex items-center gap-4 mb-3">
-             <button @click="goBack" class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm">
+          <div class="flex items-center gap-3 md:gap-4 mb-2 md:mb-3">
+             <button @click="goBack" class="hidden md:flex w-10 h-10 rounded-full bg-white border border-slate-200 items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm">
                 <AppIcon name="arrow-left" class="w-5 h-5" />
              </button>
-             <h1 class="font-serif font-bold text-4xl text-white tracking-tight">Nowa Sprzedaż</h1>
+             <h1 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight">Nowa Sprzedaż</h1>
           </div>
-          <div class="ml-14 flex items-center gap-3">
+          <div class="md:ml-14 flex flex-wrap items-center gap-2 md:gap-3">
               <span class="text-slate-400 font-medium">Panel Procesu Sprzedażowego</span>
               <span class="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/30 uppercase tracking-wider">Sesja Aktywna</span>
               <span class="text-xs text-slate-500 font-mono">ID: {{ sessionId }}</span>
@@ -1686,13 +1686,13 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-      <div class="lg:col-span-4 space-y-6 sticky top-8">
-        <div class="text-white p-8 rounded-2xl shadow-xl relative overflow-hidden" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%);">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 items-start">
+      <div class="lg:col-span-4 space-y-4 md:space-y-6 sticky top-4 md:top-8">
+        <div class="text-white p-4 md:p-8 rounded-2xl shadow-xl relative overflow-hidden" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%);">
           <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full"></div>
           <span class="text-stratton-gold font-bold text-9xl font-serif absolute -bottom-4 right-4 drop-shadow-lg">{{ step }}</span>
-          <h2 class="text-2xl font-bold font-serif mb-2 relative z-10">{{ getCurrentStepName }}</h2>
-          <p class="text-slate-400 text-sm relative z-10 mb-8 leading-relaxed">Wprowadź wymagane informacje, aby przejść do kolejnego etapu procesu sprzedażowego.</p>
+          <h2 class="text-xl md:text-2xl font-bold font-serif mb-2 relative z-10">{{ getCurrentStepName }}</h2>
+          <p class="text-slate-400 text-sm relative z-10 mb-4 md:mb-8 leading-relaxed">Wprowadź wymagane informacje, aby przejść do kolejnego etapu procesu sprzedażowego.</p>
           <div class="space-y-4 relative z-10">
             <div class="flex items-center gap-3 text-sm">
               <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-stratton-gold">
@@ -1722,17 +1722,17 @@ onMounted(() => {
       </div>
 
       <div class="lg:col-span-8">
-        <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-8 md:p-10 min-h-[500px] relative">
-          <div v-if="step === 1" class="space-y-8 animate-fade-in-up">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 class="font-serif font-bold text-xl text-slate-800">Dane Rejestrowe</h3>
+        <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 md:p-8 min-h-[400px] md:min-h-[500px] relative">
+          <div v-if="step === 1" class="space-y-4 md:space-y-8 animate-fade-in-up">
+            <div class="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 md:pb-4 gap-2">
+              <h3 class="font-serif font-bold text-lg md:text-xl text-slate-800">Dane Rejestrowe</h3>
               <button @click="showFetchMeetingModal = true" class="text-[10px] font-bold text-stratton-gold border border-stratton-gold/30 bg-stratton-gold/5 px-3 py-1.5 rounded-lg hover:bg-stratton-gold hover:text-stratton-900 transition uppercase tracking-wide flex items-center gap-2">
                 <AppIcon name="refresh" class="w-3.5 h-3.5" />
                 POBIERZ DANE KLIENTA ZE SPOTKANIA
               </button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+              <div class="space-y-4 md:space-y-6">
                 <div>
                   <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Numer NIP</label>
                   <div class="flex">
@@ -1759,7 +1759,7 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
-              <div class="space-y-6">
+              <div class="space-y-4 md:space-y-6">
                 <div>
                   <label class="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Ulica i numer</label>
                   <input v-model="companyData.street" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-800 font-bold focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold outline-none transition-all" />
