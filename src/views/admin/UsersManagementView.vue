@@ -56,16 +56,16 @@ const saveConfig = () => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-fade-in view-transition">
-    <div class="flex items-center justify-between mb-4">
-       <h1 class="text-2xl font-bold text-slate-900">Zarządzanie Użytkownikami</h1>
+  <div class="space-y-3 md:space-y-6 animate-fade-in view-transition">
+    <div class="flex items-center justify-between mb-2 md:mb-4">
+       <h1 class="text-xl md:text-2xl font-bold text-slate-900">Zarządzanie Użytkownikami</h1>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
       <div class="lg:col-span-2 crm-card">
         <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
           <h3 class="font-bold text-slate-700">Użytkownicy Systemu</h3>
-          <input v-model="userSearchQuery" type="text" placeholder="Filtruj użytkowników..." class="w-64 crm-input" />
+          <input v-model="userSearchQuery" type="text" placeholder="Filtruj użytkowników..." class="w-full md:w-64 crm-input" />
         </div>
         <div class="max-h-[600px] overflow-y-auto">
           <table class="crm-table divide-y divide-slate-200">
@@ -100,7 +100,7 @@ const saveConfig = () => {
         <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
           <h3 class="font-bold text-slate-700">Konfiguracja Prowizji (Globalna)</h3>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-4 md:p-6 space-y-4">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Prowizja Handlowca (Umowa &lt;= 14 dni)</label>
             <div class="flex items-center">
@@ -143,8 +143,8 @@ const saveConfig = () => {
           </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-8 space-y-6">
-          <div class="bg-slate-50/50 p-6 border border-slate-200 rounded-xl space-y-5">
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6">
+          <div class="bg-slate-50/50 p-4 md:p-6 border border-slate-200 rounded-xl space-y-4 md:space-y-5">
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imię i Nazwisko</label>
               <input v-model="selectedUserForEdit.name" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />

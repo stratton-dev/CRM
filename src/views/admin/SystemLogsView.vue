@@ -12,9 +12,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-fade-in view-transition">
-    <div class="flex items-center justify-between mb-4">
-       <h1 class="text-2xl font-bold text-slate-900">Logi Systemowe</h1>
+  <div class="space-y-3 md:space-y-6 animate-fade-in view-transition">
+    <div class="flex items-center justify-between mb-2 md:mb-4">
+       <h1 class="text-xl md:text-2xl font-bold text-slate-900">Logi Systemowe</h1>
     </div>
 
     <div class="crm-card animate-fade-in">
