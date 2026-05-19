@@ -7,6 +7,8 @@ import { useSessionStore } from '@/stores/session'
 import { useToastStore } from '@/stores/toast'
 import type { User } from '@/types/models'
 
+const opiekunRoles = ['SALES', 'MANAGER', 'DIRECTOR', 'ADMIN']
+
 const structure = useStructureStore()
 const finance = useFinanceStore()
 const session = useSessionStore()
@@ -25,6 +27,11 @@ const filteredUsers = computed(() => {
   const userList = Array.isArray(users.value) ? users.value : []
   if (!query) return userList
   return userList.filter((user) => user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query))
+})
+
+const opiekunList = computed(() => {
+  const userList = Array.isArray(users.value) ? users.value : []
+  return userList.filter((u) => opiekunRoles.includes(u.role ?? ''))
 })
 
 const editUser = (user: User) => {
@@ -157,8 +164,40 @@ const saveConfig = () => {
                 <option value="DIRECTOR">Dyrektor</option>
                 <option value="ADMIN">Admin</option>
                 <option value="CLIENT_HR">Klient HR</option>
+                <option value="LEADOWIEC">Leadowiec</option>
               </select>
             </div>
+
+            <!-- Opiekun dropdown — only for LEADOWIEC -->
+            <template v-if="selectedUserForEdit.role === 'LEADOWIEC'">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Przypisany Opiekun</label>
+                <select
+                  v-model="selectedUserForEdit.leadowiecOpiekunId"
+                  class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold cursor-pointer bg-white"
+                >
+                  <option :value="null">— brak opiekuna —</option>
+                  <option v-for="op in opiekunList" :key="op.id" :value="Number(op.id)">
+                    {{ op.name }} ({{ op.role }})
+                  </option>
+                </select>
+                <p class="text-xs text-slate-400 mt-1">Handlowiec, menedżer lub dyrektor obsługujący leadowca.</p>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Stawka prowizji (%)</label>
+                <input
+                  v-model.number="selectedUserForEdit.leadowiecCommissionRate"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.001"
+                  placeholder="0.030 = 3%"
+                  class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold"
+                />
+                <p class="text-xs text-slate-400 mt-1">Wartość dziesiętna: 0.030 = 3%, 0.05 = 5%.</p>
+              </div>
+            </template>
+
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon</label>
               <input v-model="selectedUserForEdit.phone" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />

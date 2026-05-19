@@ -111,6 +111,12 @@ export const useSessionStore = defineStore('session', () => {
     return role ? roles.includes(role) : false
   }
 
+  const isLeadowiec = computed(() => currentUser.value?.role === 'LEADOWIEC')
+
+  const isOpiekunOrAbove = computed(() =>
+    ['SALES', 'MANAGER', 'DIRECTOR', 'ADMIN'].includes(currentUser.value?.role ?? '')
+  )
+
   watch(currentUserId, (value) => {
     if (value) localStorage.setItem(CURRENT_USER_KEY, value)
     else localStorage.removeItem(CURRENT_USER_KEY)
@@ -151,5 +157,7 @@ export const useSessionStore = defineStore('session', () => {
     resolveUserFromAuth,
     impersonatedUser: computed(() => (auth.enabled && originalUserId.value ? apiUser.value : null)),
     isRole,
+    isLeadowiec,
+    isOpiekunOrAbove,
   }
 })

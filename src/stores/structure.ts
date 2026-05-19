@@ -344,6 +344,12 @@ export const useStructureStore = defineStore('structure', () => {
       if (partial.overrideCommissionRate !== undefined) {
         payload.override_commission_rate = partial.overrideCommissionRate
       }
+      if (partial.leadowiecOpiekunId !== undefined) {
+        payload.leadowiec_opiekun_id = partial.leadowiecOpiekunId
+      }
+      if (partial.leadowiecCommissionRate !== undefined) {
+        payload.leadowiec_commission_rate = partial.leadowiecCommissionRate
+      }
       const { data: updated } = await api.patch(`/v1/users/${userId}`, payload)
       upsertApiUser(updated)
       return

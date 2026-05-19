@@ -39,6 +39,10 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
   { path: '/app/meetings', name: 'meetings', component: () => import('@/views/MeetingsManagementView.vue'), meta: { requiresAuth: true } },
   { path: '/app/admin/knowledge-base', name: 'admin-knowledge-base', component: () => import('@/views/admin/KnowledgeBaseView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/leadowiec', redirect: '/app/leadowiec/clients' },
+  { path: '/app/leadowiec/clients', name: 'leadowiec-clients', component: () => import('@/views/LeadowiecClientsView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/leadowiec/calendar', name: 'leadowiec-calendar', component: () => import('@/views/LeadowiecCalendarView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/leadowiec/settlements', name: 'leadowiec-settlements', component: () => import('@/views/LeadowiecSettlementsView.vue'), meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({
@@ -77,6 +81,12 @@ router.beforeEach(async (to) => {
   if (String(to.name || '') === 'admin-knowledge-base' && role === 'ADMIN') {
     return true
   }
+
+  // LEADOWIEC: redirect to their start page when accessing non-allowed routes
+  if (role === 'LEADOWIEC' && !viewPermissions.isViewAllowed(String(to.name || ''), role)) {
+    return { path: '/app/leadowiec/clients' }
+  }
+
   if (!viewPermissions.isViewAllowed(String(to.name || ''), role)) {
     return { path: '/app/dashboard' }
   }

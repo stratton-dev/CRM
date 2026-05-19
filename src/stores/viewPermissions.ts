@@ -45,13 +45,16 @@ export type CrmViewKey =
   | 'news-management'
   | 'leads'
   | 'payroll'
+  | 'leadowiec-clients'
+  | 'leadowiec-calendar'
+  | 'leadowiec-settlements'
 
 export type ViewPermissionEntry = {
   view_key: CrmViewKey
   roles: UserRole[]
 }
 
-const ALL_ROLES: UserRole[] = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
+const ALL_ROLES: UserRole[] = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR', 'LEADOWIEC']
 
 const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'dashboard', label: 'Centrum Zarządzania' },
@@ -94,6 +97,9 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'news-management', label: 'Zarządzanie Aktualnościami' },
   { key: 'leads', label: 'Zarządzanie Leadami' },
   { key: 'payroll', label: 'Lista Płac' },
+  { key: 'leadowiec-clients', label: 'Leadowiec: Moi Klienci' },
+  { key: 'leadowiec-calendar', label: 'Leadowiec: Kalendarz' },
+  { key: 'leadowiec-settlements', label: 'Leadowiec: Rozliczenia' },
 ]
 
 const SETTINGS_TAB_KEYS: CrmViewKey[] = [
@@ -148,6 +154,9 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'news-management': ['ADMIN'],
   leads: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   payroll: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
+  'leadowiec-clients': ['LEADOWIEC'],
+  'leadowiec-calendar': ['LEADOWIEC'],
+  'leadowiec-settlements': ['LEADOWIEC'],
 }
 
 const toMap = (entries: ViewPermissionEntry[]) => {

@@ -38,7 +38,7 @@ watch(() => route.path, () => {
 
 const authRole = computed(() => {
   const roles = auth.user?.roles || []
-  const allowed = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR']
+  const allowed = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR', 'LEADOWIEC']
   return roles.find((role) => allowed.includes(role))
 })
 
@@ -110,6 +110,12 @@ const navLinks = computed((): NavLink[] => {
       { label: 'Szybka Oferta', path: '/app/quick-calculator', icon: 'calculator', viewKey: 'quick-calculator' },
       { label: 'Moje Prowizje', path: '/app/settlements', icon: 'hand-holding-dollar', viewKey: 'settlements' },
       { label: 'Ranking', path: '/app/leaderboard', icon: 'award', viewKey: 'leaderboard' }
+    )
+  } else if (role === 'LEADOWIEC') {
+    links.push(
+      { label: 'Moi Klienci',  path: '/app/leadowiec/clients',     icon: 'users',                viewKey: 'leadowiec-clients'     },
+      { label: 'Kalendarz',    path: '/app/leadowiec/calendar',    icon: 'calendar',             viewKey: 'leadowiec-calendar'    },
+      { label: 'Rozliczenia',  path: '/app/leadowiec/settlements', icon: 'hand-holding-dollar',  viewKey: 'leadowiec-settlements' },
     )
   }
 

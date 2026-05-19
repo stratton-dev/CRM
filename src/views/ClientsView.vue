@@ -60,6 +60,33 @@ const filterText = ref('')
 const sortField = ref<keyof Client | 'opiekunDisplay' | ''>('lastActionDate')
 const sortDir = ref<'asc' | 'desc'>('desc')
 
+// Leady od moich leadowców — widoczne dla SALES/MANAGER/DIRECTOR/ADMIN
+const fromMyLeadowcy = ref(false)
+const leadowcyClients = ref<any[]>([])
+const loadingLeadowcy = ref(false)
+
+const isOpiekunOrAbove = computed(() =>
+  ['SALES', 'MANAGER', 'DIRECTOR', 'ADMIN'].includes(currentUser.value?.role ?? '')
+)
+
+const fetchLeadowcyClients = async () => {
+  if (!auth.enabled) return
+  loadingLeadowcy.value = true
+  try {
+    const { data } = await api.get('/v1/clients', { params: { from_my_leadowcy: 1, per_page: 100 } })
+    leadowcyClients.value = Array.isArray(data) ? data : data.data ?? []
+  } catch {
+    leadowcyClients.value = []
+  } finally {
+    loadingLeadowcy.value = false
+  }
+}
+
+const toggleLeadowcy = () => {
+  fromMyLeadowcy.value = !fromMyLeadowcy.value
+  if (fromMyLeadowcy.value) fetchLeadowcyClients()
+}
+
 const draggedClientId = ref<string | null>(null)
 const expandedClientId = ref<string | null>(null)
 const selectedActivityType = ref('CALL')
@@ -1196,9 +1223,45 @@ if (route.query.expand) {
           </div>
         </div>
 
-        <div class="w-full md:w-96 relative">
-          <input v-model="filterText" type="text" placeholder="Szukaj klienta, firmy lub NIP..." class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400" />
-          <AppIcon name="search" class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <!-- Leady od moich leadowców toggle — only for opiekun roles -->
+          <button
+            v-if="isOpiekunOrAbove && auth.enabled"
+            type="button"
+            @click="toggleLeadowcy"
+            class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors whitespace-nowrap"
+            :class="fromMyLeadowcy ? 'bg-[#001f3d] text-white border-[#001f3d]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+          >
+            <AppIcon name="users" class="w-3.5 h-3.5" />
+            Leady od moich leadowców
+          </button>
+          <div class="w-full md:w-96 relative">
+            <input v-model="filterText" type="text" placeholder="Szukaj klienta, firmy lub NIP..." class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400" />
+            <AppIcon name="search" class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leady od moich leadowców — panel -->
+    <div v-if="fromMyLeadowcy && isOpiekunOrAbove" class="mx-4 mb-4 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-slate-700">Leady od moich leadowców</h3>
+        <span class="text-xs text-slate-400">{{ leadowcyClients.length }} klientów</span>
+      </div>
+      <div v-if="loadingLeadowcy" class="py-8 flex items-center justify-center">
+        <div class="w-6 h-6 border-2 border-slate-300 border-t-[#C5A059] rounded-full animate-spin" />
+      </div>
+      <div v-else-if="!leadowcyClients.length" class="py-6 text-center text-sm text-slate-400">
+        Brak leadów od Twoich leadowców.
+      </div>
+      <div v-else class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+        <div v-for="c in leadowcyClients" :key="c.id" class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+          <div>
+            <p class="text-sm font-semibold text-slate-800">{{ c.name }}</p>
+            <p class="text-xs text-slate-400">{{ [c.nip ? 'NIP: ' + c.nip : null, c.city].filter(Boolean).join(' · ') }}</p>
+          </div>
+          <span class="text-[10px] px-2 py-1 bg-green-100 text-green-700 rounded-full font-medium">Nowy lead</span>
         </div>
       </div>
     </div>
