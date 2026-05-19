@@ -176,6 +176,12 @@ class AppServiceProvider extends ServiceProvider
             'metrics.create',
             'metrics.update',
             'metrics.delete',
+            'client-notes.view',
+            'client-notes.create',
+            'client-notes.update',
+            'client-notes.delete',
+            'leadowiec.opiekun.view',
+            'leadowiec.settlements.view',
         ] as $ability) {
             Gate::define($ability, function (User $user) use ($ability): bool {
                 if (!$user->role) {

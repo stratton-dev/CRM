@@ -41,6 +41,11 @@ return [
     'gus'=>[
         'bir'  => env('GUS_BIR'),
         'env'  => env('GUS_ENV', 'test'),
-    ]
+    ],
+
+    'fakturownia' => [
+        'api_token' => env('FAKTUROWNIA_API_TOKEN'),
+        'domain'    => env('FAKTUROWNIA_DOMAIN'),
+    ],
 
 ];

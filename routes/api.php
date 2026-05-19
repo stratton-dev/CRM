@@ -36,6 +36,7 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
     require __DIR__ . '/api/push.php';
     require __DIR__ . '/api/ai.php';
     require __DIR__ . '/api/pdf.php';
+    require __DIR__ . '/api/leadowiec.php';
 });
 
 Route::options('/{any}', function () {

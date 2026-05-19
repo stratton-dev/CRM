@@ -14,6 +14,7 @@ class Company extends Model
 
     protected $fillable = [
         'organization_id',
+        'added_by_user_id',
         'name','nip','regon','krs','address_json',
         'address_line1','address_line2','postal_code','city','country',
         'email','phone','website','notes',
@@ -25,6 +26,16 @@ class Company extends Model
         'employee_count' => 'integer',
         'benefits_enabled' => 'boolean',
     ];
+
+    public function addedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'added_by_user_id');
+    }
+
+    public function notes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\ClientNote::class);
+    }
 
     public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

@@ -38,6 +38,8 @@ return [
         'SALES'      => 'SALES',
         'client_hr'  => 'CLIENT_HR',
         'CLIENT_HR'  => 'CLIENT_HR',
+        'leadowiec'  => 'LEADOWIEC',
+        'LEADOWIEC'  => 'LEADOWIEC',
     ],
 
     /*
@@ -49,5 +51,6 @@ return [
         'MANAGER',
         'SALES',
         'CLIENT_HR',
+        'LEADOWIEC',
     ],
 ];

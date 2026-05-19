@@ -16,10 +16,17 @@ class MeetingsController extends Controller
 
     public function index(Request $request, TokenContext $context, StructureService $structure)
     {
+        $authUser = $request->user();
         $q = Meeting::query()->with(['client:id,name', 'user:id,name,supabase_id']);
         $role = $context->primaryRole();
         $userIds = [];
-        if ($role !== 'ADMIN') {
+
+        // LEADOWIEC: widzi tylko spotkania z klientami których sam dodał
+        if ($authUser && $authUser->role_cached === 'LEADOWIEC') {
+            $q->whereHas('client', function ($clientQuery) use ($authUser) {
+                $clientQuery->where('added_by_user_id', $authUser->id);
+            });
+        } elseif ($role !== 'ADMIN') {
             $userIds = $structure->listUsers($context)->pluck('id')->all();
             if (!$userIds) {
                 $q->whereRaw('1 = 0');

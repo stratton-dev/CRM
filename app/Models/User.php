@@ -20,6 +20,8 @@ class User extends Authenticatable
     protected $fillable = [
         'organization_id',
         'role_id',
+        'leadowiec_opiekun_id',
+        'leadowiec_commission_rate',
         'parent_id',
         'parent_supabase_id',
         'hierarchical_id',
@@ -77,6 +79,7 @@ class User extends Authenticatable
         'is_blocked' => 'boolean',
         'renewal_commission_rate' => 'decimal:4',
         'override_commission_rate' => 'decimal:4',
+        'leadowiec_commission_rate' => 'decimal:4',
     ];
     }
 
@@ -108,6 +111,21 @@ class User extends Authenticatable
     public function metrics(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Metric::class);
+    }
+
+    public function opiekun(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'leadowiec_opiekun_id');
+    }
+
+    public function leadowcy(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(User::class, 'leadowiec_opiekun_id');
+    }
+
+    public function addedCompanies(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Company::class, 'added_by_user_id');
     }
 
     public function crmMailConfig(): \Illuminate\Database\Eloquent\Relations\HasOne

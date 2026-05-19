@@ -66,6 +66,8 @@ class UsersController extends Controller
             'renewal_commission_rate' => 'nullable|numeric|min:0|max:1',
             'override_commission_rate' => 'nullable|numeric|min:0|max:1',
             'active' => 'nullable|boolean',
+            'leadowiec_opiekun_id'      => 'nullable|exists:users,id',
+            'leadowiec_commission_rate' => 'nullable|numeric|min:0|max:1',
         ]);
 
         if (!isset($data['role_id']) && isset($data['role'])) {
@@ -127,6 +129,8 @@ class UsersController extends Controller
                 'renewal_commission_rate'     => 'nullable|numeric|min:0|max:1',
                 'override_commission_rate'    => 'nullable|numeric|min:0|max:1',
                 'active'                      => 'nullable|boolean',
+                'leadowiec_opiekun_id'        => 'nullable|exists:users,id',
+                'leadowiec_commission_rate'   => 'nullable|numeric|min:0|max:1',
             ]);
 
             if (!isset($data['role_id']) && isset($data['role'])) {
@@ -141,6 +145,15 @@ class UsersController extends Controller
             }
 
             unset($data['role']);
+
+            // Validate opiekun role when assigning leadowiec_opiekun_id
+            if (array_key_exists('leadowiec_opiekun_id', $data) && $data['leadowiec_opiekun_id']) {
+                $opiekun = User::find($data['leadowiec_opiekun_id']);
+                $allowedRoles = ['SALES', 'MANAGER', 'DIRECTOR', 'ADMIN'];
+                if (!$opiekun || !in_array($opiekun->role_cached, $allowedRoles, true)) {
+                    return response()->json(['message' => 'Opiekun musi być handlowcem lub menedżerem.'], 422);
+                }
+            }
         } else {
             // Non-admins may only update basic profile fields — no role, status, or financial fields.
             $data = $request->validate([
@@ -197,6 +210,8 @@ class UsersController extends Controller
             'phone' => $user->phone,
             'active' => (bool) $user->active,
             'teamGroupPath' => $user->team_group_path,
+            'leadowiecOpiekunId' => $user->leadowiec_opiekun_id,
+            'leadowiecCommissionRate' => $user->leadowiec_commission_rate,
         ];
     }
 
