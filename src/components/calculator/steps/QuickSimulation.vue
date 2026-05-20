@@ -5,6 +5,7 @@ import AppIcon from '@/components/AppIcon.vue';
 import { formatPLN } from '../utils/formatters';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useMailboxStore } from '@/stores/mailbox';
+import { useSessionStore } from '@/stores/session';
 import { obliczWariantPodzial, obliczWariantStandard } from '../tax-engine';
 import { Pracownik } from '../models/employee';
 import { usePdfGenerator } from '@/composables/usePdfGenerator';
@@ -38,7 +39,9 @@ const emit = defineEmits<{ (event: 'transfer'): void }>();
 
 const store = useCalculatorStore();
 const mailboxStore = useMailboxStore();
+const session = useSessionStore();
 const router = useRouter();
+const isLeadowiec = computed(() => String(session.currentUser?.role || '').toUpperCase() === 'LEADOWIEC');
 const route = useRoute();
 const pdfGen = usePdfGenerator();
 
@@ -863,6 +866,7 @@ const generateQuickOffer = async () => {
               <span class="text-[12px]">{{ hasClientContext ? 'Wyślij ofertę szacunkową' : 'Drukuj / PDF' }}</span>
             </button>
             <button
+              v-if="!isLeadowiec"
               type="button"
               class="flex-1 h-12 bg-linear-to-r from-[#D4AF37] to-stratton-gold text-white font-extrabold uppercase tracking-widest rounded-xl shadow-[0_12px_24px_-8px_rgba(197,160,89,0.5)] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:shadow-none border border-white/20 hover:brightness-110 active:scale-95"
               :disabled="!isCountValid"
