@@ -82,9 +82,15 @@ router.beforeEach(async (to) => {
     return true
   }
 
-  // LEADOWIEC: redirect to their start page when accessing non-allowed routes
-  if (role === 'LEADOWIEC' && !viewPermissions.isViewAllowed(String(to.name || ''), role)) {
-    return { path: '/app/leadowiec/clients' }
+  // LEADOWIEC: redirect to their equivalent page when accessing non-allowed routes
+  const LEADOWIEC_ROUTE_MAP: Record<string, string> = {
+    'clients': '/app/leadowiec/clients',
+    'calendar': '/app/leadowiec/calendar',
+    'settlements': '/app/leadowiec/settlements',
+  }
+  if (String(role || '').toUpperCase() === 'LEADOWIEC' && !viewPermissions.isViewAllowed(String(to.name || ''), role)) {
+    const redirect = LEADOWIEC_ROUTE_MAP[String(to.name || '')] ?? '/app/leadowiec/clients'
+    return { path: redirect }
   }
 
   if (!viewPermissions.isViewAllowed(String(to.name || ''), role)) {

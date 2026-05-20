@@ -39,7 +39,7 @@ watch(() => route.path, () => {
 const authRole = computed(() => {
   const roles = auth.user?.roles || []
   const allowed = ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR', 'LEADOWIEC']
-  return roles.find((role) => allowed.includes(role))
+  return roles.find((role) => allowed.includes(String(role).toUpperCase()))
 })
 
 const sidebarUser = computed(() => {
@@ -63,12 +63,13 @@ const sidebarInitials = computed(() => {
 const isAdmin = computed(() => {
   const fallbackRole = !auth.enabled ? (localStorage.getItem('stratton_dev_role') || undefined) : undefined
   const role = currentUser.value?.role || authRole.value || fallbackRole
-  return role === 'ADMIN'
+  return String(role || '').toUpperCase() === 'ADMIN'
 })
 
 const navLinks = computed((): NavLink[] => {
   const fallbackRole = !auth.enabled ? (localStorage.getItem('stratton_dev_role') || undefined) : undefined
-  const role = currentUser.value?.role || authRole.value || fallbackRole
+  const rawRole = currentUser.value?.role || authRole.value || fallbackRole
+  const role = String(rawRole || '').toUpperCase()
   const links: Array<{ label: string; path: string; icon: string; viewKey: string }> = []
 
   links.push({ label: 'Główny Pulpit', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
@@ -116,6 +117,8 @@ const navLinks = computed((): NavLink[] => {
       { label: 'Moi Klienci',  path: '/app/leadowiec/clients',     icon: 'users',                viewKey: 'leadowiec-clients'     },
       { label: 'Kalendarz',    path: '/app/leadowiec/calendar',    icon: 'calendar',             viewKey: 'leadowiec-calendar'    },
       { label: 'Rozliczenia',  path: '/app/leadowiec/settlements', icon: 'hand-holding-dollar',  viewKey: 'leadowiec-settlements' },
+      { label: 'Rekrutacja',   path: '/app/recruitment',           icon: 'people-group',         viewKey: 'recruitment'           },
+      { label: 'Kalkulator',   path: '/app/quick-calculator',      icon: 'calculator',           viewKey: 'quick-calculator'      },
     )
   }
 

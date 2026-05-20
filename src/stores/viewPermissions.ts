@@ -114,7 +114,7 @@ const SETTINGS_TAB_KEYS: CrmViewKey[] = [
 ]
 
 const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
-  dashboard: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
+  dashboard: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR', 'LEADOWIEC'],
   'sales-start': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   'sales-email-compose': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   analytics: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
@@ -137,8 +137,8 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   calendar: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   mailbox: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'knowledge-base': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
-  recruitment: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
-  'quick-calculator': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
+  recruitment: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR', 'LEADOWIEC'],
+  'quick-calculator': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'LEADOWIEC'],
   calculator: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   meetings: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   leaderboard: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],

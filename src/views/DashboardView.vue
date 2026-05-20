@@ -14,7 +14,7 @@ import StructureView from '@/views/StructureView.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import GaugeChart from '@/components/GaugeChart.vue'
 
-type UserRole = 'SALES' | 'MANAGER' | 'DIRECTOR' | 'ADMIN' | 'CLIENT_HR'
+type UserRole = 'SALES' | 'MANAGER' | 'DIRECTOR' | 'ADMIN' | 'CLIENT_HR' | 'LEADOWIEC'
 
 const session = useSessionStore()
 const router = useRouter()
@@ -29,6 +29,7 @@ const { emails: mailboxEmails } = storeToRefs(mailboxStore)
 const userRole = ref<UserRole>('SALES')
 const viewMode = ref<'hub' | 'stats'>('hub')
 const firstName = computed(() => session.currentUser?.name?.split(' ')[0] || 'Użytkowniku')
+const isLeadowiec = computed(() => String(session.currentUser?.role || '').toUpperCase() === 'LEADOWIEC')
 
 const roleDisplayName = computed(() => {
   const mapping: Record<string, string> = {
@@ -486,7 +487,7 @@ watch(
           </div>
         </div>
         
-        <div v-if="canAddClient" @click="handleAddClientClick" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <div v-if="canAddClient && !isLeadowiec" @click="handleAddClientClick" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Strefa Klienta" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -502,7 +503,7 @@ watch(
           </div>
         </div>
         
-        <div v-else @click="handleAddClientClick" class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-100 border border-slate-200">
+        <div v-else-if="!isLeadowiec" @click="handleAddClientClick" class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-10" alt="Strefa Klienta" />
              <div class="absolute inset-0 bg-slate-100/80"></div>
@@ -536,7 +537,7 @@ watch(
 
         <!-- Removed duplicate Payroll Link -->
 
-        <RouterLink to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink v-if="!isLeadowiec" to="/app/knowledge-base" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1481627834876-b7833e8f5570?q=80&w=2428&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Baza Wiedzy" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -552,7 +553,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/settlements" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink :to="isLeadowiec ? '/app/leadowiec/settlements' : '/app/settlements'" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1580519542036-c47de6196ba5?q=80&w=2671&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Moje rozliczenia" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -568,7 +569,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink :to="isLeadowiec ? '/app/leadowiec/clients' : '/app/clients'" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Klienci" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -584,7 +585,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink v-if="userRole !== 'SALES'" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink v-if="userRole !== 'SALES' || isLeadowiec" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Rekrutacja" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -600,7 +601,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/mailbox" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink v-if="!isLeadowiec" to="/app/mailbox" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1596526131083-e8c633c948d2?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Poczta" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -616,7 +617,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink to="/app/calendar" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink :to="isLeadowiec ? '/app/leadowiec/calendar' : '/app/calendar'" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=80&w=2668&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Kalendarz" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
@@ -663,7 +664,7 @@ watch(
             </div>
 
             <div class="mt-4 text-center">
-              <RouterLink to="/app/calendar" class="text-[10px] font-bold text-primary hover:text-slate-800 uppercase tracking-widest transition group/link inline-flex items-center relative z-10">
+              <RouterLink :to="isLeadowiec ? '/app/leadowiec/calendar' : '/app/calendar'" class="text-[10px] font-bold text-primary hover:text-slate-800 uppercase tracking-widest transition group/link inline-flex items-center relative z-10">
                 Pełny Kalendarz <span class="ml-1 group-hover/link:translate-x-1 transition-transform">→</span>
               </RouterLink>
             </div>
