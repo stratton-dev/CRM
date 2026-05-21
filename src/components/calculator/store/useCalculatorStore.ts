@@ -858,6 +858,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
 
   const fetchConfigFromApi = async () => {
     if (!auth.enabled) return;
+    if (session.isLeadowiec) return;
     configLoading.value = true;
     configError.value = null;
     try {

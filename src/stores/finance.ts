@@ -4,6 +4,7 @@ import { useDataStore } from '@/stores/data'
 import { useStructureStore } from '@/stores/structure'
 import { useNotificationStore } from '@/stores/notification'
 import { useAuthStore } from '@/stores/auth'
+import { useSessionStore } from '@/stores/session'
 import { api } from '@/api/client'
 import type { Invoice, User } from '@/types/models'
 
@@ -26,6 +27,7 @@ export interface SettlementRow {
 
 export const useFinanceStore = defineStore('finance', () => {
   const auth = useAuthStore()
+  const session = useSessionStore()
   const data = useDataStore()
   const structure = useStructureStore()
   const notify = useNotificationStore()
@@ -132,11 +134,16 @@ export const useFinanceStore = defineStore('finance', () => {
 
   const fetchApiCommissionConfig = async () => {
     if (!auth.enabled) return
-    const { data } = await api.get('/v1/crm-commission-config')
-    apiCommissionConfig.value = {
-      salesCommissionFirstMonthLt14: Number(data.sales_commission_first_month_lt14 ?? 0),
-      salesCommissionFirstMonthGt14: Number(data.sales_commission_first_month_gt14 ?? 0),
-      salesCommissionRenewal: Number(data.sales_commission_renewal ?? 0),
+    if (session.isLeadowiec) return
+    try {
+      const { data } = await api.get('/v1/crm-commission-config')
+      apiCommissionConfig.value = {
+        salesCommissionFirstMonthLt14: Number(data.sales_commission_first_month_lt14 ?? 0),
+        salesCommissionFirstMonthGt14: Number(data.sales_commission_first_month_gt14 ?? 0),
+        salesCommissionRenewal: Number(data.sales_commission_renewal ?? 0),
+      }
+    } catch {
+      // Not accessible for this role — skip silently
     }
   }
 
