@@ -51,8 +51,10 @@ export const useNotificationStore = defineStore('notification', () => {
       })
       const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
       notifications.value = list.map(mapApiNotification)
-    } catch {
-      // Silent fail — will retry on next polling cycle
+    } catch (e: any) {
+      if (e?.response?.status === 403 || e?.response?.status === 401) {
+        stopPolling()
+      }
     }
   }
 
