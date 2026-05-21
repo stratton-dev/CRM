@@ -36,12 +36,20 @@ class ClientsController extends Controller
                     if (empty($userIds)) {
                         $q->whereRaw('1 = 0');
                     } else {
-                        $q->where(function ($query) use ($userIds) {
+                        // Find LEADOWIECs assigned to any user in the structure
+                        $leadowcyIds = User::where('role_cached', 'LEADOWIEC')
+                            ->whereIn('leadowiec_opiekun_id', $userIds)
+                            ->pluck('id');
+
+                        $q->where(function ($query) use ($userIds, $leadowcyIds) {
                             $query->whereHas('crmProfile', function ($p) use ($userIds) {
                                 $p->whereIn('owner_user_id', $userIds);
                             })->orWhereHas('meetings', function ($m) use ($userIds) {
                                 $m->whereIn('user_id', $userIds);
                             });
+                            if ($leadowcyIds->isNotEmpty()) {
+                                $query->orWhereIn('added_by_user_id', $leadowcyIds);
+                            }
                         });
                     }
                 }
