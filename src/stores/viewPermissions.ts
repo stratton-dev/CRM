@@ -250,6 +250,12 @@ export const useViewPermissionsStore = defineStore('view-permissions', () => {
       if (baseRoles.includes(normalizedRole)) return true
     }
 
+    // Hardcoded bypass for LEADOWIEC — API permissions may override defaults with empty arrays
+    if (normalizedRole === 'LEADOWIEC') {
+      const leadowiecBaseViews = ['leadowiec-clients', 'leadowiec-calendar', 'leadowiec-settlements', 'recruitment', 'quick-calculator', 'dashboard']
+      if (leadowiecBaseViews.includes(viewKey)) return true
+    }
+
     const roles = resolvedPermissions.value[viewKey] || []
     return roles.some(r => String(r).toUpperCase() === normalizedRole)
   }
