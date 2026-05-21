@@ -13,8 +13,8 @@ class FakturowniaService
 
     public function __construct()
     {
-        $this->apiToken = config('services.fakturownia.api_token', '');
-        $this->domain   = config('services.fakturownia.domain', '');
+        $this->apiToken = (string) config('services.fakturownia.api_token', '');
+        $this->domain   = (string) config('services.fakturownia.domain', '');
     }
 
     /**

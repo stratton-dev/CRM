@@ -44,8 +44,8 @@ return [
     ],
 
     'fakturownia' => [
-        'api_token' => env('FAKTUROWNIA_API_TOKEN'),
-        'domain'    => env('FAKTUROWNIA_DOMAIN'),
+        'api_token' => env('FAKTUROWNIA_API_TOKEN', ''),
+        'domain'    => env('FAKTUROWNIA_DOMAIN', ''),
     ],
 
 ];
