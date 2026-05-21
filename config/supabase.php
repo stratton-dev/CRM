@@ -39,6 +39,7 @@ return [
         'client_hr'  => 'CLIENT_HR',
         'CLIENT_HR'  => 'CLIENT_HR',
         'leadowiec'  => 'LEADOWIEC',
+        'Leadowiec'  => 'LEADOWIEC',
         'LEADOWIEC'  => 'LEADOWIEC',
     ],
 
