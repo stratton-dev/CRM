@@ -38,9 +38,12 @@ return [
         'SALES'      => 'SALES',
         'client_hr'  => 'CLIENT_HR',
         'CLIENT_HR'  => 'CLIENT_HR',
-        'leadowiec'  => 'LEADOWIEC',
-        'Leadowiec'  => 'LEADOWIEC',
-        'LEADOWIEC'  => 'LEADOWIEC',
+        'leadowiec'              => 'LEADOWIEC',
+        'Leadowiec'              => 'LEADOWIEC',
+        'LEADOWIEC'              => 'LEADOWIEC',
+        'LEADOWIEC / Leadowiec'  => 'LEADOWIEC',
+        'LEADOWIEC / LEADOWIEC'  => 'LEADOWIEC',
+        'leadowiec / leadowiec'  => 'LEADOWIEC',
     ],
 
     /*
