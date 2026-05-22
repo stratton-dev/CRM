@@ -33,7 +33,7 @@
 
       <!-- Kalkulator — przycisk centralny -->
       <RouterLink
-        to="/app/calculator"
+        to="/app/quick-calculator"
         class="mobile-nav-item mobile-nav-center"
         :class="{ active: route.path.startsWith('/app/calculator') || route.path.startsWith('/app/quick-calculator') }"
       >
