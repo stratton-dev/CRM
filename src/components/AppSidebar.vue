@@ -125,9 +125,13 @@ const navLinks = computed((): NavLink[] => {
   links.push(
     { label: 'Kalendarz', path: '/app/calendar', icon: 'calendar', viewKey: 'calendar' },
     { label: 'Powiadomienia', path: '/app/notifications', icon: 'bell', viewKey: 'notifications' },
-    { label: 'Poczta', path: '/app/mailbox', icon: 'envelope', viewKey: 'mailbox' },
-    { label: 'Baza Wiedzy', path: '/app/knowledge-base', icon: 'book-open', viewKey: 'knowledge-base' }
   )
+  if (role !== 'LEADOWIEC') {
+    links.push(
+      { label: 'Poczta', path: '/app/mailbox', icon: 'envelope', viewKey: 'mailbox' },
+      { label: 'Baza Wiedzy', path: '/app/knowledge-base', icon: 'book-open', viewKey: 'knowledge-base' },
+    )
+  }
 
   if (role === 'ADMIN') {
     links.push({ label: 'Aktualności', path: '/app/news-management', icon: 'document-text', viewKey: 'news-management' })

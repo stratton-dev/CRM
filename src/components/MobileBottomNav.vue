@@ -149,6 +149,7 @@ function toggleAiChat() {
 
 const moreMenuItems = computed(() => {
   const role = currentUser.value?.role
+  const leadowiecHidden = new Set(['/app/mailbox', '/app/knowledge-base', '/app/leaderboard'])
   const items = [
     { path: '/app/calendar', label: 'Kalendarz', emoji: '📅' },
     { path: '/app/mailbox', label: 'Skrzynka', emoji: '✉️' },
@@ -158,7 +159,7 @@ const moreMenuItems = computed(() => {
     { path: '/app/leaderboard', label: 'Ranking', emoji: '🏆' },
     { path: '/app/settlements', label: 'Rozliczenia', emoji: '💰' },
     { path: '/app/quick-calculator', label: 'Szybki kalk.', emoji: '⚡' },
-  ]
+  ].filter(item => role !== 'LEADOWIEC' || !leadowiecHidden.has(item.path))
   if (role === 'ADMIN' || role === 'DIRECTOR' || role === 'MANAGER') {
     items.push({ path: '/app/structure', label: 'Struktura', emoji: '🏢' })
     items.push({ path: '/app/analytics', label: 'Analityka', emoji: '📊' })
