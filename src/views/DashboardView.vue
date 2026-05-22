@@ -471,7 +471,7 @@ watch(
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-8 mb-6 md:mb-10 px-4">
-        <div @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
+        <div v-if="!isLeadowiec" @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Dashboard" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
