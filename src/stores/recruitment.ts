@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/api/client'
+import { useAuthStore } from '@/stores/auth'
+import { useSessionStore } from '@/stores/session'
 
 export interface CandidateAddress {
   street: string
@@ -35,11 +37,14 @@ export interface Candidate {
 }
 
 export const useRecruitmentStore = defineStore('recruitment', () => {
+  const auth = useAuthStore()
+  const session = useSessionStore()
   const candidates = ref<Candidate[]>([])
   const loading = ref(false)
   const gusLoading = ref(false)
 
   const fetchCandidates = async () => {
+    if (session.isLeadowiec || auth.user?.role === 'LEADOWIEC') return
     loading.value = true
     try {
       const { data } = await api.get('/v1/candidates')

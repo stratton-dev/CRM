@@ -134,7 +134,7 @@ export const useFinanceStore = defineStore('finance', () => {
 
   const fetchApiCommissionConfig = async () => {
     if (!auth.enabled) return
-    if (session.isLeadowiec) return
+    if (session.isLeadowiec || auth.user?.role === 'LEADOWIEC') return
     try {
       const { data } = await api.get('/v1/crm-commission-config')
       apiCommissionConfig.value = {
