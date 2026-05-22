@@ -7,9 +7,9 @@
 
       <!-- Dashboard / Start -->
       <RouterLink
-        :to="currentUser?.role === 'LEADOWIEC' ? '/app/leadowiec/clients' : '/app/dashboard'"
+        to="/app/dashboard"
         class="mobile-nav-item"
-        :class="{ active: route.path === '/app/dashboard' || route.path.startsWith('/app/leadowiec') }"
+        :class="{ active: route.path === '/app/dashboard' }"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
