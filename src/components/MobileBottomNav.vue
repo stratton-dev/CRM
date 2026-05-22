@@ -5,12 +5,11 @@
   >
     <div class="flex items-center justify-around h-16">
 
-      <!-- Dashboard -->
+      <!-- Dashboard / Start -->
       <RouterLink
-        v-if="currentUser?.role !== 'LEADOWIEC'"
-        to="/app/dashboard"
+        :to="currentUser?.role === 'LEADOWIEC' ? '/app/leadowiec/clients' : '/app/dashboard'"
         class="mobile-nav-item"
-        :class="{ active: route.path === '/app/dashboard' }"
+        :class="{ active: route.path === '/app/dashboard' || route.path.startsWith('/app/leadowiec') }"
       >
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
