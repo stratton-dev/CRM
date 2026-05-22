@@ -38,6 +38,12 @@ const emit = defineEmits<{
           <span class="text-slate-500 text-[10px] font-bold truncate uppercase tracking-wider flex-1 text-right">Szukaj (Ctrl+F)</span>
         </div>
 
+        <!-- Lines (desktop only) -->
+        <div class="hidden lg:flex absolute right-0 top-3 w-[200%] flex-col gap-1 pointer-events-none overflow-hidden">
+          <div class="h-px bg-[#0f172a] w-full"></div>
+          <div class="h-0.5 bg-[#0f172a] w-full"></div>
+        </div>
+
         <!-- Text -->
         <span class="brand-text text-base font-bold text-[#0f172a] tracking-[0.25em] mr-2 mt-1 relative z-10 font-cinzel">
           STRATTON
@@ -76,6 +82,12 @@ const emit = defineEmits<{
             <span class="group-hover:underline">Wyloguj</span>
             <AppIcon name="logout" class="w-4 h-4" />
           </button>
+        </div>
+
+        <!-- Lines (desktop only) -->
+        <div class="hidden lg:flex absolute left-0 top-3 w-[200%] flex-col gap-1 pointer-events-none overflow-hidden">
+          <div class="h-px bg-[#0f172a] w-full"></div>
+          <div class="h-0.5 bg-[#0f172a] w-full"></div>
         </div>
 
         <!-- Text -->
