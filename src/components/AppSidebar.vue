@@ -72,7 +72,9 @@ const navLinks = computed((): NavLink[] => {
   const role = String(rawRole || '').toUpperCase()
   const links: Array<{ label: string; path: string; icon: string; viewKey: string }> = []
 
-  links.push({ label: 'Główny Pulpit', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
+  if (role !== 'LEADOWIEC') {
+    links.push({ label: 'Główny Pulpit', path: '/app/dashboard', icon: 'dashboard', viewKey: 'dashboard' })
+  }
 
   if (role === 'ADMIN') {
     links.push(

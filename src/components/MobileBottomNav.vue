@@ -7,6 +7,7 @@
 
       <!-- Dashboard -->
       <RouterLink
+        v-if="currentUser?.role !== 'LEADOWIEC'"
         to="/app/dashboard"
         class="mobile-nav-item"
         :class="{ active: route.path === '/app/dashboard' }"
