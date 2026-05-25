@@ -230,12 +230,10 @@ class StructureService
         $this->ensureNoCycle($user, $newParent);
 
         $targetTeamPath = $newParent?->team_group_path ?? $newTeamGroupPath ?? $user->team_group_path;
-        if (!$targetTeamPath) {
-            throw ValidationException::withMessages([
-                'new_team_group_path' => ['Missing team group path for move.'],
-            ]);
-        }
-        if ($newParent && $newParent->team_group_path !== $targetTeamPath) {
+
+        // Only validate team-path mismatch when both sides actually have a team.
+        if ($newParent && $newParent->team_group_path && $targetTeamPath
+            && $newParent->team_group_path !== $targetTeamPath) {
             throw ValidationException::withMessages([
                 'new_team_group_path' => ['Parent team does not match target team.'],
             ]);
@@ -245,9 +243,11 @@ class StructureService
 
         $previousTeamId = $user->team_id;
         $previousParentSupabaseId = $user->parent_supabase_id;
-        $teamId = $this->extractTeamId($targetTeamPath);
+        $teamId = $targetTeamPath ? $this->extractTeamId($targetTeamPath) : null;
         $parentCode = $newParent?->hierarchical_code;
-        $newCode = $this->codes->generate($targetTeamPath, $parentCode, $this->initialsFromName($user->name));
+        $newCode = $targetTeamPath
+            ? $this->codes->generate($targetTeamPath, $parentCode, $this->initialsFromName($user->name))
+            : null;
 
         if ($targetTeamPath !== $user->team_group_path) {
             // team_group_path is updated in DB only (no external sync needed)
@@ -404,10 +404,10 @@ class StructureService
 
     private function updateSubtreeCodes(
         User $user,
-        string $teamGroupPath,
+        ?string $teamGroupPath,
         ?string $teamId,
         ?string $newParentSupabaseId,
-        string $newCode
+        ?string $newCode
     ): void {
         $user->fill([
             'parent_supabase_id' => $newParentSupabaseId,
@@ -422,7 +422,9 @@ class StructureService
             ->get();
 
         foreach ($children as $child) {
-            $childCode = $this->codes->generate($teamGroupPath, $newCode, $this->initialsFromName($child->name));
+            $childCode = ($teamGroupPath && $newCode)
+                ? $this->codes->generate($teamGroupPath, $newCode, $this->initialsFromName($child->name))
+                : null;
             $this->updateSubtreeCodes($child, $teamGroupPath, $teamId, $user->supabase_id, $childCode);
         }
     }

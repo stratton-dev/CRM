@@ -47,13 +47,14 @@ class StructureAuthorization
             return false;
         }
 
+        // ADMIN can move anyone, regardless of team configuration.
+        if ($actorRole === 'ADMIN') {
+            return true;
+        }
+
         $targetTeamPath = $targetTeamPath ?: $target->team_group_path;
         if (!$targetTeamPath) {
             return false;
-        }
-
-        if ($actorRole === 'ADMIN') {
-            return true;
         }
 
         if ($actorRole === 'DIRECTOR' && $targetRole === 'SALES' && !$newParent) {
