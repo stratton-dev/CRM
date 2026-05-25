@@ -1,6 +1,6 @@
 export type UserRole = 'SALES' | 'MANAGER' | 'DIRECTOR' | 'ADMIN' | 'CLIENT_HR' | 'LEADOWIEC'
 export type Rank = 'JUNIOR' | 'REGULAR' | 'SENIOR' | 'MASTER' | 'LEGEND'
-export type EntityType = 'PRIVATE' | 'B2B' | 'COMPANY'
+export type EntityType = 'PRIVATE' | 'B2B' | 'COMPANY' | 'LEADOWIEC'
 export type ContractStatus = 'DRAFT' | 'SENT_TO_AUTENTI' | 'SIGNED' | 'REJECTED'
 
 export interface UserPermissions {

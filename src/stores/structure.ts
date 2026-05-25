@@ -418,6 +418,11 @@ export const useStructureStore = defineStore('structure', () => {
   }
 
   const canAddUnder = (currentUser: User, targetNode: User) => {
+    // SALES (handlowiec) can add Leadowiec under themselves only
+    if (currentUser.role === 'SALES') {
+      return targetNode.id === currentUser.id
+    }
+    // Nobody else can add under a SALES node
     if (targetNode.role === 'SALES') return false
     if (currentUser.role === 'ADMIN') {
       if (targetNode.role === 'CLIENT_HR') {

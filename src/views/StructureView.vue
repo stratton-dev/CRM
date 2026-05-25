@@ -248,6 +248,17 @@ const canAddGlobal = computed(() => currentUser.value?.role === 'ADMIN')
 const roleOptions: UserRole[] = ['DIRECTOR', 'MANAGER', 'SALES']
 const roleOverrides = ref<Record<string, UserRole>>({})
 
+watch(
+  () => newUserData.type,
+  (type) => {
+    if (type === 'LEADOWIEC') {
+      newUserData.role = 'LEADOWIEC'
+    } else if (newUserData.role === 'LEADOWIEC') {
+      newUserData.role = availableRoles.value[0]?.val as UserRole || 'SALES'
+    }
+  }
+)
+
 const isExpanded = (id: string) => expandedNodes.value.has(id)
 
 const toggleNode = (id: string) => {
@@ -685,7 +696,7 @@ const restoreUser = async (node: User) => {
 }
 
 const updateFullName = () => {
-  if (newUserData.type !== 'PRIVATE') return
+  if (newUserData.type !== 'PRIVATE' && newUserData.type !== 'LEADOWIEC') return
   newUserData.name = `${newUserData.firstName} ${newUserData.lastName}`.trim()
 }
 
@@ -695,7 +706,7 @@ const generatedId = computed(() => {
   }
   const parentCode = targetParent.value?.hierarchicalCode || targetParent.value?.hierarchicalId
   const nameForInitials =
-    newUserData.type === 'PRIVATE'
+    newUserData.type === 'PRIVATE' || newUserData.type === 'LEADOWIEC'
       ? `${newUserData.firstName} ${newUserData.lastName}`.trim()
       : newUserData.name.trim()
   const initials = getInitials(nameForInitials) || 'XX'
@@ -714,12 +725,14 @@ const generatedId = computed(() => {
 })
 
 const availableRoles = computed(() => {
+  if (newUserData.type === 'LEADOWIEC') return [{ val: 'LEADOWIEC', label: 'Leadowiec' }]
   if (!targetParent.value || isTeamNode(targetParent.value)) {
     return [{ val: 'DIRECTOR', label: 'Dyrektor' }]
   }
   if (targetParent.value.role === 'ADMIN') return [{ val: 'ADMIN', label: 'Super Admin' }]
   if (targetParent.value.role === 'DIRECTOR') return [{ val: 'MANAGER', label: 'Manager' }]
   if (targetParent.value.role === 'MANAGER') return [{ val: 'SALES', label: 'Handlowiec' }]
+  if (targetParent.value.role === 'SALES') return [{ val: 'LEADOWIEC', label: 'Leadowiec' }]
   return []
 })
 
@@ -793,8 +806,9 @@ const addUser = async () => {
     return
   }
 
-  const name = newUserData.type === 'PRIVATE' ? `${newUserData.firstName} ${newUserData.lastName}`.trim() : newUserData.name.trim()
-  if (!name || !newUserData.email || !newUserData.address.city) {
+  const name = newUserData.type === 'PRIVATE' || newUserData.type === 'LEADOWIEC' ? `${newUserData.firstName} ${newUserData.lastName}`.trim() : newUserData.name.trim()
+  const cityRequired = newUserData.type !== 'LEADOWIEC'
+  if (!name || !newUserData.email || (cityRequired && !newUserData.address.city)) {
     toast.warning('Uzupełnij wymagane pola.')
     return
   }
@@ -1226,21 +1240,26 @@ const addUser = async () => {
         <form class="p-4 md:p-6 space-y-4 md:space-y-8" @submit.prevent="addUser">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase mb-3">Typ Podmiotu</label>
-            <div class="grid grid-cols-3 gap-4">
-              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'PRIVATE' ? 'border-primary bg-sky-50' : 'border-slate-200'">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <label class="cursor-pointer border-2 rounded-lg p-3 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'PRIVATE' ? 'border-primary bg-sky-50' : 'border-slate-200'">
                 <input v-model="newUserData.type" type="radio" name="etype" value="PRIVATE" class="hidden" />
                 <AppIcon name="user" class="w-6 h-6 mb-1 text-slate-600" />
                 <span class="font-bold text-sm">Osoba Prywatna</span>
               </label>
-              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'B2B' ? 'border-primary bg-sky-50' : 'border-slate-200'">
+              <label class="cursor-pointer border-2 rounded-lg p-3 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'B2B' ? 'border-primary bg-sky-50' : 'border-slate-200'">
                 <input v-model="newUserData.type" type="radio" name="etype" value="B2B" class="hidden" />
                 <AppIcon name="briefcase" class="w-6 h-6 mb-1 text-slate-600" />
                 <span class="font-bold text-sm">Działalność (JDG)</span>
               </label>
-              <label class="cursor-pointer border-2 rounded-lg p-4 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'COMPANY' ? 'border-primary bg-sky-50' : 'border-slate-200'">
+              <label class="cursor-pointer border-2 rounded-lg p-3 flex flex-col items-center hover:bg-slate-50 transition" :class="newUserData.type === 'COMPANY' ? 'border-primary bg-sky-50' : 'border-slate-200'">
                 <input v-model="newUserData.type" type="radio" name="etype" value="COMPANY" class="hidden" />
                 <AppIcon name="building" class="w-6 h-6 mb-1 text-slate-600" />
                 <span class="font-bold text-sm">Spółka</span>
+              </label>
+              <label class="cursor-pointer border-2 rounded-lg p-3 flex flex-col items-center hover:bg-amber-50 transition" :class="newUserData.type === 'LEADOWIEC' ? 'border-amber-500 bg-amber-50' : 'border-slate-200'">
+                <input v-model="newUserData.type" type="radio" name="etype" value="LEADOWIEC" class="hidden" @change="newUserData.role = 'LEADOWIEC'" />
+                <AppIcon name="user-group" class="w-6 h-6 mb-1 text-amber-600" />
+                <span class="font-bold text-sm text-amber-700">Leadowiec</span>
               </label>
             </div>
           </div>
@@ -1260,6 +1279,16 @@ const addUser = async () => {
                 <div class="md:col-span-2">
                   <label class="block text-xs font-bold text-slate-500 uppercase mb-1">PESEL</label>
                   <input v-model="newUserData.pesel" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />
+                </div>
+              </template>
+              <template v-else-if="newUserData.type === 'LEADOWIEC'">
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Imię</label>
+                  <input v-model="newUserData.firstName" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-colors text-sm bg-white" @input="updateFullName" />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nazwisko</label>
+                  <input v-model="newUserData.lastName" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-colors text-sm bg-white" @input="updateFullName" />
                 </div>
               </template>
               <template v-else>
@@ -1336,7 +1365,7 @@ const addUser = async () => {
             </div>
           </div>
 
-          <div class="bg-indigo-50 p-6 rounded-card border border-indigo-200">
+          <div v-if="newUserData.type !== 'LEADOWIEC'" class="bg-indigo-50 p-6 rounded-card border border-indigo-200">
             <h4 class="text-sm font-bold text-indigo-900 uppercase border-b border-indigo-200 pb-2 mb-4 flex items-center">
               <AppIcon name="pencil-square" class="mr-2 h-4 w-4 text-indigo-800" />
               Dokumenty do wygenerowania (Autenti)
@@ -1375,7 +1404,7 @@ const addUser = async () => {
             <button
               type="submit"
               class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark shadow-lg font-bold flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isSending || !newUserData.email || !newUserData.address.city"
+              :disabled="isSending || !newUserData.email || (newUserData.type !== 'LEADOWIEC' && !newUserData.address.city)"
             >
               <AppIcon v-if="isSending" name="refresh" class="h-4 w-4 animate-spin mr-2" />
               <span>{{ isSending ? 'Przetwarzanie...' : 'Wyślij przez Autenti i Zapisz' }}</span>
