@@ -704,6 +704,9 @@ const generatedId = computed(() => {
   if (newUserData.role === 'ADMIN') {
     return 'ROOT'
   }
+  if (newUserData.type === 'LEADOWIEC') {
+    return null
+  }
   const parentCode = targetParent.value?.hierarchicalCode || targetParent.value?.hierarchicalId
   const nameForInitials =
     newUserData.type === 'PRIVATE' || newUserData.type === 'LEADOWIEC'
@@ -801,7 +804,7 @@ const addUser = async () => {
   if (!actor) return
 
   const teamPath = isTeamNode(targetParent.value) ? targetParent.value?.teamGroupPath : targetParent.value?.teamGroupPath || currentUser.value?.teamGroupPath
-  if (actor.role === 'ADMIN' && newUserData.role !== 'ADMIN' && !teamPath) {
+  if (actor.role === 'ADMIN' && newUserData.role === 'DIRECTOR' && !teamPath) {
     toast.warning('Wybierz zespół dla nowego dyrektora.')
     return
   }
@@ -1353,9 +1356,13 @@ const addUser = async () => {
           </div>
 
           <div class="bg-slate-100 p-4 rounded-lg border border-slate-200 flex items-center justify-between">
-            <div>
+            <div v-if="newUserData.type !== 'LEADOWIEC'">
               <label class="block text-[10px] font-bold text-slate-500 uppercase">Automatyczne ID Hierarchiczne</label>
               <input :value="generatedId" type="text" readonly class="bg-transparent text-xl font-mono font-bold text-slate-800 border-none p-0 w-full focus:ring-0" />
+            </div>
+            <div v-else>
+              <label class="block text-[10px] font-bold text-slate-500 uppercase">Typ</label>
+              <span class="text-xl font-bold text-amber-700">Leadowiec</span>
             </div>
             <div class="text-right">
               <label class="block text-[10px] font-bold text-slate-500 uppercase">Rola</label>
