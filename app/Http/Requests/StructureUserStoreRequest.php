@@ -27,7 +27,7 @@ class StructureUserStoreRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:255',
-            'role' => 'required|string|in:ADMIN,DIRECTOR,MANAGER,SALES',
+            'role' => 'required|string|in:ADMIN,DIRECTOR,MANAGER,SALES,LEADOWIEC',
             'parent_supabase_id' => 'nullable|string|max:255',
             'team_group_path' => 'nullable|string|max:255',
             'contract_status' => 'nullable|string|max:255',

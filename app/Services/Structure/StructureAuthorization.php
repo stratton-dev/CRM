@@ -103,6 +103,10 @@ class StructureAuthorization
 
     private function isAllowedCreateRole(string $actorRole, string $targetRole): bool
     {
+        // Any hierarchy role can add a Leadowiec
+        if ($targetRole === 'LEADOWIEC') {
+            return in_array($actorRole, ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'], true);
+        }
         if ($actorRole === 'ADMIN') {
             return in_array($targetRole, ['DIRECTOR', 'MANAGER', 'SALES'], true);
         }
@@ -161,6 +165,14 @@ class StructureAuthorization
             return $parentRole === 'MANAGER' && $parent->team_group_path === $targetTeamPath;
         }
 
+        if ($targetRole === 'LEADOWIEC') {
+            if (!$parent) {
+                return (bool) $targetTeamPath;
+            }
+            return in_array($parentRole, ['SALES', 'MANAGER', 'DIRECTOR'], true)
+                && $parent->team_group_path === $targetTeamPath;
+        }
+
         return false;
     }
 
@@ -171,6 +183,12 @@ class StructureAuthorization
         }
 
         $upper = Str::upper($role);
-        return array_key_exists($upper, self::ROLE_LEVELS) ? $upper : null;
+        if (array_key_exists($upper, self::ROLE_LEVELS)) {
+            return $upper;
+        }
+        if ($upper === 'LEADOWIEC') {
+            return 'LEADOWIEC';
+        }
+        return null;
     }
 }
