@@ -88,14 +88,22 @@ class StructureService
             }
         }
 
-        $teamPath = $this->resolveTeamPath($context, $parent, $data);
         $role = $data['role'];
-        $teamId = $this->extractTeamId($teamPath);
 
-        Gate::authorize('structure.create', [$parent, $role, $teamPath]);
+        // Leadowiec bypasses the standard team-path + hierarchical-code pipeline.
+        if ($role === 'LEADOWIEC') {
+            $teamPath = $parent?->team_group_path ?? '';
+            $teamId   = $parent?->team_id ?? null;
+            Gate::authorize('structure.create', [$parent, $role, $teamPath]);
+            $hierarchicalCode = null;
+        } else {
+            $teamPath = $this->resolveTeamPath($context, $parent, $data);
+            $teamId   = $this->extractTeamId($teamPath);
+            Gate::authorize('structure.create', [$parent, $role, $teamPath]);
+            $parentCode       = $parent?->hierarchical_code;
+            $hierarchicalCode = $this->codes->generate($teamPath, $parentCode, $this->initialsFromName($data['name'] ?? null));
+        }
 
-        $parentCode = $parent?->hierarchical_code;
-        $hierarchicalCode = $this->codes->generate($teamPath, $parentCode, $this->initialsFromName($data['name'] ?? null));
         $supabaseUuid = $data['supabase_id'] ?? Str::uuid()->toString();
         $inviteSent = null;
         $inviteError = null;
@@ -104,7 +112,7 @@ class StructureService
             'supabase_id' => $supabaseUuid,
             'parent_supabase_id' => $data['parent_supabase_id'] ?? null,
             'team_id' => $teamId,
-            'team_group_path' => $teamPath,
+            'team_group_path' => $teamPath ?: null,
             'role_cached' => $role,
             'hierarchical_code' => $hierarchicalCode,
             'hierarchical_id' => $hierarchicalCode,

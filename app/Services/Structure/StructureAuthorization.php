@@ -166,11 +166,11 @@ class StructureAuthorization
         }
 
         if ($targetRole === 'LEADOWIEC') {
+            // Leadowiec only requires a parent of the right role; no team-path match needed.
             if (!$parent) {
-                return (bool) $targetTeamPath;
+                return false;
             }
-            return in_array($parentRole, ['SALES', 'MANAGER', 'DIRECTOR'], true)
-                && $parent->team_group_path === $targetTeamPath;
+            return in_array($parentRole, ['SALES', 'MANAGER', 'DIRECTOR'], true);
         }
 
         return false;
