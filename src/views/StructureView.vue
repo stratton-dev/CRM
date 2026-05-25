@@ -247,6 +247,57 @@ watch(
 const canAddGlobal = computed(() => currentUser.value?.role === 'ADMIN')
 const roleOptions: UserRole[] = ['DIRECTOR', 'MANAGER', 'SALES']
 const roleOverrides = ref<Record<string, UserRole>>({})
+const parentOverrides = ref<Record<string, string | null | undefined>>({})
+const movingNodeId = ref<string | null>(null)
+
+const getParentValue = (node: User): string =>
+  node.id in parentOverrides.value
+    ? (parentOverrides.value[node.id] ?? '')
+    : (node.parentSupabaseId ?? '')
+
+const setParentValue = (node: User, val: string) => {
+  parentOverrides.value = { ...parentOverrides.value, [node.id]: val || null }
+}
+
+const validParentsFor = (node: User): User[] => {
+  const allUsers = Array.isArray(users.value) ? users.value : []
+  const descendants = new Set(structure.getSubtreeUserIds(node.id))
+  const roleMap: Record<string, UserRole[]> = {
+    MANAGER: ['DIRECTOR'],
+    SALES: ['MANAGER'],
+    LEADOWIEC: ['SALES', 'MANAGER', 'DIRECTOR'],
+  }
+  const allowed = roleMap[node.role] ?? []
+  return allUsers.filter(
+    (u) => allowed.includes(u.role as UserRole) && u.id !== node.id && !descendants.has(u.id)
+  )
+}
+
+const moveToParent = async (node: User) => {
+  if (!currentUser.value || movingNodeId.value) return
+  const newParentId = getParentValue(node) || null
+  if (newParentId === (node.parentSupabaseId ?? null)) {
+    toast.warning('Wybierz innego przełożonego.')
+    return
+  }
+  movingNodeId.value = node.id
+  try {
+    await structure.moveUser(node.id, newParentId, currentUser.value.id)
+    toast.success(`Przeniesiono ${node.name} pod nowego przełożonego.`)
+    delete parentOverrides.value[node.id]
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || ''
+    if (msg.toLowerCase().includes('parent team does not match')) {
+      toast.error('Przełożony jest z innego zespołu.')
+    } else if (msg.toLowerCase().includes('403') || e?.response?.status === 403) {
+      toast.error('Brak uprawnień do przeniesienia.')
+    } else {
+      toast.error('Nie udało się przenieść użytkownika.')
+    }
+  } finally {
+    movingNodeId.value = null
+  }
+}
 
 watch(
   () => newUserData.type,
@@ -1111,6 +1162,29 @@ const addUser = async () => {
                       @click.stop="saveRole(node)"
                     >
                       Zapisz
+                    </button>
+                  </div>
+                </div>
+                <div v-if="currentUser?.role === 'ADMIN' && node.role !== 'ADMIN' && node.role !== 'DIRECTOR'">
+                  <span class="font-bold block text-slate-400 uppercase text-[10px]">Przełożony</span>
+                  <div class="flex items-center gap-2 mt-1">
+                    <select
+                      class="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:border-primary max-w-[200px]"
+                      :value="getParentValue(node)"
+                      @change.stop="setParentValue(node, ($event.target as HTMLSelectElement).value)"
+                    >
+                      <option value="">— Brak (ROOT) —</option>
+                      <option v-for="p in validParentsFor(node)" :key="p.id" :value="p.id">
+                        {{ p.name || p.email }}
+                      </option>
+                    </select>
+                    <button
+                      type="button"
+                      class="px-2 py-1 text-xs font-bold bg-primary text-white rounded hover:opacity-90 transition disabled:opacity-50"
+                      :disabled="movingNodeId === node.id"
+                      @click.stop="moveToParent(node)"
+                    >
+                      {{ movingNodeId === node.id ? '...' : 'Przenieś' }}
                     </button>
                   </div>
                 </div>
