@@ -13,6 +13,8 @@ export const useStructureStore = defineStore('structure', () => {
 
   const { users: localUsers } = storeToRefs(data)
   const apiUsers = ref<User[]>([])
+  const isLoading = ref(false)
+  const fetchError = ref(false)
   const normalizedLocalUsers = computed<User[]>(() =>
     (Array.isArray(localUsers.value) ? localUsers.value : []).map((user) => ({
       ...user,
@@ -31,6 +33,8 @@ export const useStructureStore = defineStore('structure', () => {
 
   const fetchStructure = async (options?: { sync?: boolean }) => {
     if (!auth.enabled) return
+    isLoading.value = true
+    fetchError.value = false
     try {
       const params = options?.sync ? { sync: 1 } : undefined
       const { data } = await api.get('/v1/structure', { params })
@@ -42,9 +46,12 @@ export const useStructureStore = defineStore('structure', () => {
       }
     } catch (error) {
       apiUsers.value = []
+      fetchError.value = true
       if (options?.sync) {
         throw error
       }
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -463,6 +470,8 @@ export const useStructureStore = defineStore('structure', () => {
   return {
     users,
     teamGroups,
+    isLoading,
+    fetchError,
     fetchStructure,
     syncUsers,
     fetchTeams,

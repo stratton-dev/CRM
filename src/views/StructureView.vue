@@ -121,7 +121,7 @@ const newUserData = reactive({
   },
 })
 
-const { users, teamGroups } = storeToRefs(structure)
+const { users, teamGroups, isLoading: isStructureFetching, fetchError: structureFetchError } = storeToRefs(structure)
 const { currentUser } = storeToRefs(session)
 
 const isTeamNode = (node?: User | null) => Boolean(node && (node as TreeNode).isTeamNode)
@@ -1290,7 +1290,26 @@ const addUser = async () => {
           <p class="text-sm mt-1">Nie znaleziono osób pasujących do wyszukiwania.</p>
         </div>
 
-        <div v-if="visibleNodes.length === 0 && !searchQuery" class="p-12 text-center text-slate-500 bg-slate-50/50">
+        <div v-if="isStructureFetching && visibleNodes.length === 0" class="p-12 text-center text-slate-500 bg-slate-50/50">
+          <AppIcon name="refresh" class="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+          <p class="text-lg font-medium">Ładowanie struktury...</p>
+          <p class="text-sm mt-1">Pobieranie danych organizacji.</p>
+        </div>
+
+        <div v-if="structureFetchError && visibleNodes.length === 0 && !isStructureFetching" class="p-12 text-center text-slate-500 bg-slate-50/50">
+          <AppIcon name="xmark" class="h-8 w-8 text-red-400 mx-auto mb-3" />
+          <p class="text-lg font-medium text-red-600">Błąd ładowania struktury</p>
+          <p class="text-sm mt-1">Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie.</p>
+          <button
+            type="button"
+            class="mt-4 px-4 py-2 text-sm font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition"
+            @click="structure.fetchStructure()"
+          >
+            Spróbuj ponownie
+          </button>
+        </div>
+
+        <div v-if="visibleNodes.length === 0 && !searchQuery && !isStructureFetching && !structureFetchError" class="p-12 text-center text-slate-500 bg-slate-50/50">
           <p class="text-lg font-medium">Struktura jest pusta</p>
           <p class="text-sm mt-1">Rozpocznij od dodania pierwszego Dyrektora Handlowego.</p>
         </div>
