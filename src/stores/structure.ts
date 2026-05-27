@@ -425,6 +425,11 @@ export const useStructureStore = defineStore('structure', () => {
   }
 
   const canAddUnder = (currentUser: User, targetNode: User) => {
+    // Anyone with a structure role can recruit another Leadowiec under an existing Leadowiec
+    // (chain extends indefinitely).
+    if (targetNode.role === 'LEADOWIEC') {
+      return ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'LEADOWIEC'].includes(currentUser.role)
+    }
     // SALES (handlowiec) can add Leadowiec under themselves only
     if (currentUser.role === 'SALES') {
       return targetNode.id === currentUser.id

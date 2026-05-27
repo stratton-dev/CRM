@@ -7,8 +7,6 @@ import { useSessionStore } from '@/stores/session'
 import { useNotificationStore } from '@/stores/notification'
 import { useMailboxStore } from '@/stores/mailbox'
 import { useToastStore } from '@/stores/toast'
-import { useAuthStore } from '@/stores/auth'
-import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
 import StructureChartView from '@/components/StructureChartView.vue'
 import type { EntityType, User, UserRole } from '@/types/models'
@@ -25,7 +23,6 @@ const session = useSessionStore()
 const notify = useNotificationStore()
 const mailbox = useMailboxStore()
 const toast = useToastStore()
-const auth = useAuthStore()
 
 const viewMode = ref<'list' | 'chart'>('list')
 const searchQuery = ref('')
@@ -111,13 +108,6 @@ const newUserData = reactive({
     aptNr: '',
     zipCode: '',
     city: '',
-  },
-  docs: {
-    nda: true,
-    cooperationAgreement: true,
-    careerPath: true,
-    otherFileName: '',
-    otherTemplateId: '',
   },
 })
 
@@ -597,10 +587,6 @@ const resetForm = () => {
   newUserData.address.aptNr = ''
   newUserData.address.zipCode = ''
   newUserData.address.city = ''
-  newUserData.docs.nda = true
-  newUserData.docs.cooperationAgreement = true
-  newUserData.docs.careerPath = true
-  newUserData.docs.otherFileName = ''
 }
 
 const openAddModal = (parent?: User) => {
@@ -828,28 +814,6 @@ const fetchGus = async () => {
   }
 }
 
-const handleFile = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  newUserData.docs.otherFileName = file?.name || ''
-  newUserData.docs.otherTemplateId = ''
-
-  if (!auth.enabled || !file) return
-
-  try {
-    const form = new FormData()
-    form.append('name', file.name)
-    form.append('file', file)
-    const { data } = await api.post('/v1/document-templates', form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    newUserData.docs.otherTemplateId = data.slug
-    toast.success('Plik dodany do szablonów dokumentów.')
-  } catch {
-    toast.error('Nie udało się dodać pliku jako szablonu.')
-  }
-}
-
 const addUser = async () => {
   const actor = currentUser.value
   if (!actor) return
@@ -892,17 +856,10 @@ const addUser = async () => {
           zipCode: newUserData.address.zipCode,
           city: newUserData.address.city,
         },
-        documents: {
-          nda: newUserData.docs.nda,
-          cooperationAgreement: newUserData.docs.cooperationAgreement,
-          careerPath: newUserData.docs.careerPath,
-          otherFileName: newUserData.docs.otherFileName || undefined,
-          otherTemplateId: newUserData.docs.otherTemplateId || undefined,
-        },
       },
       actor.id
     )
-    toast.success('Dodano użytkownika i uruchomiono proces Autenti.')
+    toast.success('Dodano użytkownika.')
     if (created.inviteSent === false) {
       const detail = created.inviteError ? ` (${created.inviteError})` : ''
       toast.warning(`Użytkownik został utworzony, ale nie udało się wysłać zaproszenia email.${detail}`)
@@ -1465,40 +1422,6 @@ const addUser = async () => {
             </div>
           </div>
 
-          <div v-if="newUserData.type !== 'LEADOWIEC'" class="bg-indigo-50 p-6 rounded-card border border-indigo-200">
-            <h4 class="text-sm font-bold text-indigo-900 uppercase border-b border-indigo-200 pb-2 mb-4 flex items-center">
-              <AppIcon name="pencil-square" class="mr-2 h-4 w-4 text-indigo-800" />
-              Dokumenty do wygenerowania (Autenti)
-            </h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <label class="flex items-center space-x-3 p-3 bg-white rounded border border-indigo-100 shadow-sm cursor-pointer">
-                <input v-model="newUserData.docs.nda" type="checkbox" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5" />
-                <span class="font-medium text-slate-700">Umowa NDA</span>
-              </label>
-              <label class="flex items-center space-x-3 p-3 bg-white rounded border border-indigo-100 shadow-sm cursor-pointer">
-                <input v-model="newUserData.docs.cooperationAgreement" type="checkbox" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5" />
-                <span class="font-medium text-slate-700">Umowa Współpracy</span>
-              </label>
-              <label class="flex items-center space-x-3 p-3 bg-white rounded border border-indigo-100 shadow-sm cursor-pointer">
-                <input v-model="newUserData.docs.careerPath" type="checkbox" class="text-indigo-600 focus:ring-indigo-500 h-5 w-5" />
-                <span class="font-medium text-slate-700">Ścieżka Kariery</span>
-              </label>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-indigo-800 uppercase mb-2">Inny plik (z dysku)</label>
-              <div class="flex items-center space-x-2">
-                <label class="cursor-pointer bg-white text-indigo-600 border border-indigo-300 px-4 py-2 rounded text-sm font-bold hover:bg-indigo-50">
-                  Wybierz plik
-                  <input type="file" class="hidden" @change="handleFile" />
-                </label>
-                <span class="text-sm text-slate-600 italic">{{ newUserData.docs.otherFileName || 'Brak pliku' }}</span>
-              </div>
-            </div>
-            <p class="text-[10px] text-indigo-600 mt-4">
-              * Wybrane dokumenty zostaną automatycznie wysłane do kandydata poprzez platformę Autenti.
-            </p>
-          </div>
-
           <div class="pt-4 border-t border-slate-100 flex justify-end space-x-3 sticky bottom-0 bg-white p-4 -mx-6 -mb-6 shadow-up">
             <button type="button" class="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition" @click="showAddModal = false">Anuluj</button>
             <button
@@ -1507,7 +1430,7 @@ const addUser = async () => {
               :disabled="isSending || !newUserData.email || (newUserData.type !== 'LEADOWIEC' && !newUserData.address.city)"
             >
               <AppIcon v-if="isSending" name="refresh" class="h-4 w-4 animate-spin mr-2" />
-              <span>{{ isSending ? 'Przetwarzanie...' : 'Wyślij przez Autenti i Zapisz' }}</span>
+              <span>{{ isSending ? 'Zapisywanie...' : 'Zapisz' }}</span>
             </button>
           </div>
         </form>
