@@ -71,7 +71,7 @@ RUN echo 'server { \n\
         if ($request_method = OPTIONS) { \n\
             add_header Access-Control-Allow-Origin * always; \n\
             add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always; \n\
-            add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With" always; \n\
+            add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With, Idempotency-Key" always; \n\
             add_header Content-Length 0; \n\
             add_header Content-Type text/plain; \n\
             return 204; \n\
@@ -89,7 +89,7 @@ RUN echo 'server { \n\
         fastcgi_hide_header Access-Control-Allow-Credentials; \n\
         add_header Access-Control-Allow-Origin * always; \n\
         add_header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" always; \n\
-        add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With" always; \n\
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With, Idempotency-Key" always; \n\
     } \n\
     location ~ /\.(?!well-known).* { deny all; } \n\
     client_max_body_size 50m; \n\
