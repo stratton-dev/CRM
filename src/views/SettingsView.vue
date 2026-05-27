@@ -1626,11 +1626,11 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
         </div>
 
         <div v-else class="border border-gray-200 rounded-lg overflow-hidden">
-          <div class="grid grid-cols-[minmax(140px,1fr)_repeat(5,120px)] bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <div class="grid grid-cols-[minmax(140px,1fr)_repeat(6,110px)] bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
             <div class="px-3 py-2">Widok</div>
             <div v-for="role in viewPermissions.roles" :key="role" class="px-3 py-2 text-center">{{ role }}</div>
           </div>
-          <div v-for="view in viewPermissions.viewOptions" :key="view.key" class="grid grid-cols-[minmax(140px,1fr)_repeat(5,120px)] border-t border-gray-200 text-sm">
+          <div v-for="view in viewPermissions.viewOptions" :key="view.key" class="grid grid-cols-[minmax(140px,1fr)_repeat(6,110px)] border-t border-gray-200 text-sm">
             <div class="px-3 py-2 font-medium text-gray-700">{{ view.label }}</div>
             <label v-for="role in viewPermissions.roles" :key="`${view.key}-${role}`" class="flex items-center justify-center px-3 py-2">
               <input

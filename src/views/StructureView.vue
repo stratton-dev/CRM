@@ -48,6 +48,7 @@ const teamToDelete = ref<User | null>(null)
 const isSending = ref(false)
 const isFetchingGus = ref(false)
 const isCreatingTeam = ref(false)
+const selectedDirectorTeam = ref('')
 const isSyncing = ref(false)
 const isRegenerating = ref(false)
 const hasSynced = ref(false)
@@ -587,10 +588,12 @@ const resetForm = () => {
   newUserData.address.aptNr = ''
   newUserData.address.zipCode = ''
   newUserData.address.city = ''
+  selectedDirectorTeam.value = isTeamNode(targetParent.value) ? targetParent.value?.teamGroupPath ?? '' : ''
 }
 
 const openAddModal = (parent?: User) => {
   targetParent.value = parent || null
+  void structure.fetchTeams()
   resetForm()
   showAddModal.value = true
 }
@@ -754,7 +757,7 @@ const generatedId = computed(() => {
     return `${parentCode}/${initials}???`
   }
 
-  const teamPath = targetParent.value?.teamGroupPath || currentUser.value?.teamGroupPath
+  const teamPath = targetParent.value?.teamGroupPath || selectedDirectorTeam.value || currentUser.value?.teamGroupPath
   if (!teamPath) return `TEAM???/${initials}???`
 
   const parts = teamPath.split('/').filter(Boolean)
@@ -818,7 +821,11 @@ const addUser = async () => {
   const actor = currentUser.value
   if (!actor) return
 
-  const teamPath = isTeamNode(targetParent.value) ? targetParent.value?.teamGroupPath : targetParent.value?.teamGroupPath || currentUser.value?.teamGroupPath
+  const inferredTeamPath = isTeamNode(targetParent.value)
+    ? targetParent.value?.teamGroupPath
+    : targetParent.value?.teamGroupPath || currentUser.value?.teamGroupPath
+  const teamPath = inferredTeamPath || (selectedDirectorTeam.value || undefined)
+
   if (actor.role === 'ADMIN' && newUserData.role === 'DIRECTOR' && !teamPath) {
     toast.warning('Wybierz zespół dla nowego dyrektora.')
     return
@@ -1405,6 +1412,22 @@ const addUser = async () => {
             </div>
           </div>
 
+          <div
+            v-if="currentUser?.role === 'ADMIN' && newUserData.role === 'DIRECTOR' && !targetParent?.teamGroupPath"
+            class="bg-amber-50 p-4 rounded-lg border border-amber-200"
+          >
+            <label class="block text-[10px] font-bold text-amber-800 uppercase mb-2">Zespół dyrektora <span class="text-rose-500">*</span></label>
+            <select
+              v-model="selectedDirectorTeam"
+              required
+              class="w-full bg-white border border-amber-300 p-2.5 rounded-input text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+            >
+              <option value="" disabled>— wybierz zespół —</option>
+              <option v-for="path in teamGroups" :key="path" :value="path">{{ path }}</option>
+            </select>
+            <p class="text-[11px] text-amber-700 mt-1">Nowy dyrektor potrzebuje przypisanego zespołu (generuje ID hierarchiczne).</p>
+          </div>
+
           <div class="bg-slate-100 p-4 rounded-lg border border-slate-200 flex items-center justify-between">
             <div v-if="newUserData.type !== 'LEADOWIEC'">
               <label class="block text-[10px] font-bold text-slate-500 uppercase">Automatyczne ID Hierarchiczne</label>
@@ -1427,7 +1450,12 @@ const addUser = async () => {
             <button
               type="submit"
               class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark shadow-lg font-bold flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isSending || !newUserData.email || (newUserData.type !== 'LEADOWIEC' && !newUserData.address.city)"
+              :disabled="
+                isSending
+                  || !newUserData.email
+                  || (newUserData.type !== 'LEADOWIEC' && !newUserData.address.city)
+                  || (currentUser?.role === 'ADMIN' && newUserData.role === 'DIRECTOR' && !targetParent?.teamGroupPath && !selectedDirectorTeam)
+              "
             >
               <AppIcon v-if="isSending" name="refresh" class="h-4 w-4 animate-spin mr-2" />
               <span>{{ isSending ? 'Zapisywanie...' : 'Zapisz' }}</span>
