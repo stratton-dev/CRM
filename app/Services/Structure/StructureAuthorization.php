@@ -24,7 +24,7 @@ class StructureAuthorization
             return false;
         }
 
-        if ($actorRole !== 'ADMIN') {
+        if ($actorRole !== 'ADMIN' && $targetRole !== 'LEADOWIEC') {
             $actorTeam = $context->teamGroupPath();
             if (!$actorTeam || $actorTeam !== $targetTeamPath) {
                 return false;
@@ -104,9 +104,9 @@ class StructureAuthorization
 
     private function isAllowedCreateRole(string $actorRole, string $targetRole): bool
     {
-        // Any hierarchy role can add a Leadowiec
+        // Any hierarchy role can add a Leadowiec — including another Leadowiec (infinite chain).
         if ($targetRole === 'LEADOWIEC') {
-            return in_array($actorRole, ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'], true);
+            return in_array($actorRole, ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'LEADOWIEC'], true);
         }
         if ($actorRole === 'ADMIN') {
             return in_array($targetRole, ['DIRECTOR', 'MANAGER', 'SALES'], true);
@@ -168,10 +168,11 @@ class StructureAuthorization
 
         if ($targetRole === 'LEADOWIEC') {
             // Leadowiec only requires a parent of the right role; no team-path match needed.
+            // LEADOWIEC parent is allowed so the chain can extend infinitely.
             if (!$parent) {
                 return false;
             }
-            return in_array($parentRole, ['SALES', 'MANAGER', 'DIRECTOR'], true);
+            return in_array($parentRole, ['SALES', 'MANAGER', 'DIRECTOR', 'LEADOWIEC'], true);
         }
 
         return false;
