@@ -35,7 +35,10 @@ class Company extends Model
 
     public function notes(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(\App\Models\ClientNote::class);
+        // Explicit FK — Client extends Company, so Eloquent's auto-guess
+        // would resolve to client_id (from the instance class basename),
+        // but the client_notes table column is company_id.
+        return $this->hasMany(\App\Models\ClientNote::class, 'company_id');
     }
 
     public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
