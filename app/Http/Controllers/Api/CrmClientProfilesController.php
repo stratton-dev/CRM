@@ -79,7 +79,7 @@ class CrmClientProfilesController extends Controller
         $rules = [
             'client_id' => ($partial ? 'sometimes|' : '') . 'required|exists:companies,id',
             'owner_user_id' => 'nullable',
-            'status' => 'nullable|in:NEW,IN_TALKS,OFFER_PREPARING,OFFER_GENERATED,CALCULATION_SENT,SPECIAL_OFFER,RESIGNED,SIGNED,TERMINATED',
+            'status' => 'nullable|in:NEW,IN_TALKS,RESIGNED,SIGNED,TERMINATED',
             'contact_name' => 'nullable|string|max:255',
             'contact_phone' => 'nullable|string|max:64',
             'contact_email' => 'nullable|email|max:255',

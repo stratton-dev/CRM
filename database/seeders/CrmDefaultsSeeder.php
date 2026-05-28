@@ -14,10 +14,6 @@ class CrmDefaultsSeeder extends Seeder
         $statusDefaults = [
             ['key' => 'NEW', 'label' => 'Nowy', 'sort_order' => 10],
             ['key' => 'IN_TALKS', 'label' => 'W rozmowach', 'sort_order' => 20],
-            ['key' => 'OFFER_PREPARING', 'label' => 'Przygotowanie oferty', 'sort_order' => 30],
-            ['key' => 'OFFER_GENERATED', 'label' => 'Oferta wygenerowana', 'sort_order' => 40],
-            ['key' => 'CALCULATION_SENT', 'label' => 'Wysłano ofertę', 'sort_order' => 50],
-            ['key' => 'SPECIAL_OFFER', 'label' => 'Oferta specjalna', 'sort_order' => 60],
             ['key' => 'RESIGNED', 'label' => 'Rezygnacja', 'sort_order' => 70],
             ['key' => 'SIGNED', 'label' => 'Podpisany', 'sort_order' => 80],
             ['key' => 'TERMINATED', 'label' => 'Umowa rozwiązana', 'sort_order' => 90],

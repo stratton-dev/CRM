@@ -28,7 +28,7 @@ class LeadowiecController extends Controller
 
         $clients = $leadowiec->addedCompanies()
             ->whereHas('crmProfile', function ($q) {
-                $q->whereIn('status', ['SIGNED', 'IN_TALKS', 'OFFER_GENERATED']);
+                $q->whereIn('status', ['SIGNED', 'IN_TALKS']);
             })
             ->select('id', 'name', 'nip')
             ->get();
