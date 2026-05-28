@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { api } from '@/api/client'
 import { useToastStore } from '@/stores/toast'
+import { useSessionStore } from '@/stores/session'
+import { useClientStore } from '@/stores/client'
 
-type Note = {
+type Activity = {
   id: number
-  content: string
-  created_at: string
-  user_id: number
-  author?: { id: number; name?: string }
+  description: string
+  occurred_at: string
+  type: string
+  user_id?: number
+  user?: { id: number; name?: string }
 }
 
 const props = defineProps<{
@@ -18,19 +22,23 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'added', note: Note): void
+  (e: 'added', activity: Activity): void
 }>()
 
 const toast = useToastStore()
-const notes = ref<Note[]>([])
+const session = useSessionStore()
+const clientStore = useClientStore()
+const { currentUser } = storeToRefs(session)
+
+const notes = ref<Activity[]>([])
 const isLoading = ref(false)
 const isSaving = ref(false)
 const draft = ref('')
 
 const sortedNotes = computed(() => {
   return [...notes.value].sort((a, b) => {
-    const ta = a.created_at ? new Date(a.created_at).getTime() : 0
-    const tb = b.created_at ? new Date(b.created_at).getTime() : 0
+    const ta = a.occurred_at ? new Date(a.occurred_at).getTime() : 0
+    const tb = b.occurred_at ? new Date(b.occurred_at).getTime() : 0
     return ta - tb
   })
 })
@@ -53,8 +61,11 @@ const fetchNotes = async () => {
   }
   isLoading.value = true
   try {
-    const { data } = await api.get(`/v1/clients/${props.clientId}/notes`)
-    notes.value = Array.isArray(data) ? data : []
+    const { data } = await api.get('/v1/crm-client-activities', {
+      params: { client_id: props.clientId, type: 'NOTE', per_page: 500 },
+    })
+    const rows = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+    notes.value = rows as Activity[]
   } catch (error: any) {
     const status = error?.response?.status
     if (status === 403) {
@@ -71,19 +82,33 @@ const fetchNotes = async () => {
 const submit = async () => {
   const content = draft.value.trim()
   if (!content || !props.clientId) return
+  const author = currentUser.value
+  if (!author?.id) {
+    toast.error('Brak zalogowanego użytkownika.')
+    return
+  }
   isSaving.value = true
   try {
-    const { data } = await api.post(`/v1/clients/${props.clientId}/notes`, { content })
-    notes.value = [...notes.value, data as Note]
+    const { data } = await api.post('/v1/crm-client-activities', {
+      client_id: props.clientId,
+      user_id: author.id,
+      type: 'NOTE',
+      description: content,
+      occurred_at: new Date().toISOString(),
+    })
+    notes.value = [...notes.value, data as Activity]
     draft.value = ''
     toast.success('Notatka zapisana.')
-    emit('added', data as Note)
+    // Refresh the central activity cache so the client side-panel
+    // (Aktywności tab + Notatki list) sees the new entry too.
+    void clientStore.refreshApiData()
+    emit('added', data as Activity)
   } catch (error: any) {
     const status = error?.response?.status
     if (status === 403) {
       toast.error('Brak uprawnień do dodawania notatek.')
     } else if (status === 422) {
-      toast.error('Treść notatki jest wymagana (max 5000 znaków).')
+      toast.error('Treść notatki jest wymagana.')
     } else {
       toast.error('Nie udało się zapisać notatki.')
     }
@@ -132,10 +157,10 @@ watch(() => props.clientId, (id) => {
         <ul v-else class="divide-y divide-slate-100">
           <li v-for="note in sortedNotes" :key="note.id" class="p-3">
             <div class="flex items-start justify-between gap-2 mb-1">
-              <span class="text-xs font-bold text-indigo-700">{{ note.author?.name || 'Użytkownik' }}</span>
-              <span class="text-[10px] text-slate-400 font-mono shrink-0">{{ formatTimestamp(note.created_at) }}</span>
+              <span class="text-xs font-bold text-indigo-700">{{ note.user?.name || 'Użytkownik' }}</span>
+              <span class="text-[10px] text-slate-400 font-mono shrink-0">{{ formatTimestamp(note.occurred_at) }}</span>
             </div>
-            <p class="text-xs text-slate-700 whitespace-pre-wrap break-words">{{ note.content }}</p>
+            <p class="text-xs text-slate-700 whitespace-pre-wrap break-words">{{ note.description }}</p>
           </li>
         </ul>
       </div>
