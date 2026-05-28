@@ -52,7 +52,16 @@ const { users: dataUsers } = storeToRefs(structure)
 const { users: structureUsers } = storeToRefs(structure)
 const { currentUser, isReadOnly } = storeToRefs(session)
 
-const viewMode = ref<'list' | 'kanban'>('list')
+const VIEW_MODE_STORAGE_KEY = 'clients-view-mode'
+const isAdmin = computed(() => currentUser.value?.role === 'ADMIN')
+const initialViewMode = ((): 'list' | 'kanban' => {
+  try {
+    const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+    if (saved === 'list' || saved === 'kanban') return saved
+  } catch {}
+  return 'kanban'
+})()
+const viewMode = ref<'list' | 'kanban'>(initialViewMode)
 const selectedClient = ref<Client | null>(null)
 const activePanelTab = ref<'details' | 'contacts' | 'activity' | 'finance' | 'offers'>('details')
 
@@ -316,8 +325,16 @@ onMounted(() => {
 })
 
 const setViewMode = (mode: 'list' | 'kanban') => {
+  if (!isAdmin.value && mode === 'list') return
   viewMode.value = mode
+  if (isAdmin.value) {
+    try { localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode) } catch {}
+  }
 }
+
+watch(isAdmin, (admin) => {
+  if (!admin && viewMode.value === 'list') viewMode.value = 'kanban'
+}, { immediate: true })
 
 const selectClient = (client: Client) => {
   selectedClient.value = client
@@ -1205,17 +1222,19 @@ if (route.query.expand) {
             <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Eksportuj</span>
           </button>
-          <div class="h-5 w-px bg-slate-200 mx-2"></div>
-          <div class="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
-            <button type="button" class="px-2 py-1 rounded-md text-sm flex items-center transition-all" :class="viewMode === 'list' ? 'bg-white shadow-sm text-slate-800 font-bold' : 'text-slate-500 hover:text-slate-700'" @click="setViewMode('list')">
-              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-              Lista
-            </button>
-            <button type="button" class="px-2 py-1 rounded-md text-sm flex items-center transition-all" :class="viewMode === 'kanban' ? 'bg-white shadow-sm text-slate-800 font-bold' : 'text-slate-500 hover:text-slate-700'" @click="setViewMode('kanban')">
-              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
-              Kanban
-            </button>
-          </div>
+          <template v-if="isAdmin">
+            <div class="h-5 w-px bg-slate-200 mx-2"></div>
+            <div class="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+              <button type="button" class="px-2 py-1 rounded-md text-sm flex items-center transition-all" :class="viewMode === 'list' ? 'bg-white shadow-sm text-slate-800 font-bold' : 'text-slate-500 hover:text-slate-700'" @click="setViewMode('list')">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                Lista
+              </button>
+              <button type="button" class="px-2 py-1 rounded-md text-sm flex items-center transition-all" :class="viewMode === 'kanban' ? 'bg-white shadow-sm text-slate-800 font-bold' : 'text-slate-500 hover:text-slate-700'" @click="setViewMode('kanban')">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                Kanban
+              </button>
+            </div>
+          </template>
         </div>
 
         <div class="flex items-center gap-2 w-full md:w-auto">
