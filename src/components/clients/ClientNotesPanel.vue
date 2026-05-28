@@ -6,11 +6,13 @@ import { useToastStore } from '@/stores/toast'
 import { useSessionStore } from '@/stores/session'
 import { useClientStore } from '@/stores/client'
 
+type ActivityType = 'NOTE' | 'CALL' | 'EMAIL' | 'MEETING'
+
 type Activity = {
   id: number
   description: string
   occurred_at: string
-  type: string
+  type: ActivityType
   user_id?: number
   user?: { id: number; name?: string }
 }
@@ -30,10 +32,31 @@ const session = useSessionStore()
 const clientStore = useClientStore()
 const { currentUser } = storeToRefs(session)
 
+const ACTIVITY_TYPES: Array<{ value: ActivityType; label: string }> = [
+  { value: 'NOTE', label: 'Notatka' },
+  { value: 'CALL', label: 'Telefon' },
+  { value: 'EMAIL', label: 'Email' },
+]
+
+const TYPE_LABELS: Record<ActivityType, string> = {
+  NOTE: 'Notatka',
+  CALL: 'Telefon',
+  EMAIL: 'Email',
+  MEETING: 'Spotkanie',
+}
+
+const TYPE_BADGE: Record<ActivityType, string> = {
+  NOTE: 'bg-amber-100 text-amber-800',
+  CALL: 'bg-emerald-100 text-emerald-800',
+  EMAIL: 'bg-violet-100 text-violet-800',
+  MEETING: 'bg-blue-100 text-blue-800',
+}
+
 const notes = ref<Activity[]>([])
 const isLoading = ref(false)
 const isSaving = ref(false)
 const draft = ref('')
+const draftType = ref<ActivityType>('NOTE')
 
 const sortedNotes = computed(() => {
   return [...notes.value].sort((a, b) => {
@@ -62,16 +85,16 @@ const fetchNotes = async () => {
   isLoading.value = true
   try {
     const { data } = await api.get('/v1/crm-client-activities', {
-      params: { client_id: props.clientId, type: 'NOTE', per_page: 500 },
+      params: { client_id: props.clientId, per_page: 500 },
     })
     const rows = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
     notes.value = rows as Activity[]
   } catch (error: any) {
     const status = error?.response?.status
     if (status === 403) {
-      toast.error('Brak uprawnień do notatek tego klienta.')
+      toast.error('Brak uprawnień do aktywności tego klienta.')
     } else {
-      toast.error('Nie udało się pobrać notatek.')
+      toast.error('Nie udało się pobrać aktywności.')
     }
     notes.value = []
   } finally {
@@ -92,25 +115,23 @@ const submit = async () => {
     const { data } = await api.post('/v1/crm-client-activities', {
       client_id: props.clientId,
       user_id: author.id,
-      type: 'NOTE',
+      type: draftType.value,
       description: content,
       occurred_at: new Date().toISOString(),
     })
     notes.value = [...notes.value, data as Activity]
     draft.value = ''
-    toast.success('Notatka zapisana.')
-    // Refresh the central activity cache so the client side-panel
-    // (Aktywności tab + Notatki list) sees the new entry too.
+    toast.success('Aktywność zapisana.')
     void clientStore.refreshApiData()
     emit('added', data as Activity)
   } catch (error: any) {
     const status = error?.response?.status
     if (status === 403) {
-      toast.error('Brak uprawnień do dodawania notatek.')
+      toast.error('Brak uprawnień do dodawania aktywności.')
     } else if (status === 422) {
-      toast.error('Treść notatki jest wymagana.')
+      toast.error('Opis i typ są wymagane.')
     } else {
-      toast.error('Nie udało się zapisać notatki.')
+      toast.error('Nie udało się zapisać aktywności.')
     }
   } finally {
     isSaving.value = false
@@ -119,6 +140,7 @@ const submit = async () => {
 
 watch(() => props.clientId, (id) => {
   draft.value = ''
+  draftType.value = 'NOTE'
   if (id) fetchNotes()
   else notes.value = []
 }, { immediate: true })
@@ -137,8 +159,8 @@ watch(() => props.clientId, (id) => {
           </svg>
         </span>
         <div>
-          <h3 class="text-sm font-bold text-slate-800">Karta notatek interakcji CRM <span v-if="clientName" class="text-indigo-700">• {{ clientName }}</span></h3>
-          <p class="text-[10px] text-slate-500">Rejestr kontaktów handlowych · Dane bezpieczne i audytowalne</p>
+          <h3 class="text-sm font-bold text-slate-800">Aktywności klienta <span v-if="clientName" class="text-indigo-700">• {{ clientName }}</span></h3>
+          <p class="text-[10px] text-slate-500">Pełna historia: notatki, telefony, maile, spotkania · Dane bezpieczne i audytowalne</p>
         </div>
       </div>
       <button
@@ -152,12 +174,17 @@ watch(() => props.clientId, (id) => {
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3 p-3">
       <div class="bg-white rounded-md border border-slate-200 overflow-y-auto max-h-[280px]">
-        <div v-if="isLoading" class="p-4 text-xs text-slate-500">Ładowanie notatek...</div>
-        <div v-else-if="sortedNotes.length === 0" class="p-4 text-xs text-slate-400 italic">Brak notatek. Dodaj pierwszą po prawej stronie.</div>
+        <div v-if="isLoading" class="p-4 text-xs text-slate-500">Ładowanie aktywności...</div>
+        <div v-else-if="sortedNotes.length === 0" class="p-4 text-xs text-slate-400 italic">Brak aktywności. Dodaj pierwszą po prawej stronie.</div>
         <ul v-else class="divide-y divide-slate-100">
           <li v-for="note in sortedNotes" :key="note.id" class="p-3">
-            <div class="flex items-start justify-between gap-2 mb-1">
-              <span class="text-xs font-bold text-indigo-700">{{ note.user?.name || 'Użytkownik' }}</span>
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0" :class="TYPE_BADGE[note.type] || 'bg-slate-100 text-slate-600'">
+                  {{ TYPE_LABELS[note.type] || note.type }}
+                </span>
+                <span class="text-xs font-bold text-indigo-700 truncate">{{ note.user?.name || 'Użytkownik' }}</span>
+              </div>
               <span class="text-[10px] text-slate-400 font-mono shrink-0">{{ formatTimestamp(note.occurred_at) }}</span>
             </div>
             <p class="text-xs text-slate-700 whitespace-pre-wrap break-words">{{ note.description }}</p>
@@ -166,12 +193,18 @@ watch(() => props.clientId, (id) => {
       </div>
 
       <div class="bg-white rounded-md border border-slate-200 p-3 flex flex-col gap-2">
-        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dodaj nową notatkę z rozmowy</label>
+        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dodaj aktywność</label>
+        <select
+          v-model="draftType"
+          class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+        >
+          <option v-for="t in ACTIVITY_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
+        </select>
         <textarea
           v-model="draft"
-          rows="5"
+          rows="4"
           maxlength="5000"
-          placeholder="Przebieg rozmowy, status decyzyjny, uzgodniony budżet..."
+          placeholder="Opis aktywności (treść notatki, przebieg rozmowy, podsumowanie maila...)"
           class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
         ></textarea>
         <div class="flex items-center justify-between">
@@ -183,7 +216,7 @@ watch(() => props.clientId, (id) => {
             @click="submit"
           >
             <span v-if="isSaving">Zapisywanie...</span>
-            <span v-else>Zapisz w bazie CRM</span>
+            <span v-else>Zapisz aktywność</span>
           </button>
         </div>
       </div>
