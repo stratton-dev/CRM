@@ -145,26 +145,42 @@ class ClientsController extends Controller
             'phone' => 'nullable|string|max:64',
             'website' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'accountant_name' => 'nullable|string|max:255',
+            'accountant_email' => 'nullable|email|max:255',
             'industry' => 'nullable|string|max:255',
             'vat_type' => 'nullable|string|max:255',
             'employee_count' => 'nullable|integer|min:0',
             'benefits_enabled' => 'nullable|boolean',
+            // CRM profile fields collected by the inline create form
+            'contact_name' => 'nullable|string|max:255',
+            'contact_phone' => 'nullable|string|max:64',
+            'contact_email' => 'nullable|email|max:255',
+            'source' => 'nullable|string|max:255',
         ]);
+
+        // Pull CRM profile fields out of the company payload before persisting.
+        $profileExtras = collect($data)
+            ->only(['contact_name', 'contact_phone', 'contact_email', 'source'])
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->all();
+        $companyData = collect($data)
+            ->except(['contact_name', 'contact_phone', 'contact_email', 'source'])
+            ->all();
 
         // LEADOWIEC: auto-set added_by_user_id, force status=lead
         if ($authUser && $authUser->role_cached === 'LEADOWIEC') {
-            $data['added_by_user_id'] = $authUser->id;
+            $companyData['added_by_user_id'] = $authUser->id;
         }
 
-        $client = Client::create($data);
+        $client = Client::create($companyData);
 
         // Auto-assign owner and create CRM profile
         $userId = $authUser?->id ?? $this->resolveUserId($context->actorSupabaseId());
         if ($userId) {
-            $client->crmProfile()->create([
+            $client->crmProfile()->create(array_merge([
                 'owner_user_id' => $userId,
                 'status' => 'NEW',
-            ]);
+            ], $profileExtras));
 
             CrmClientActivity::create([
                 'client_id' => $client->id,

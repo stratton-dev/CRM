@@ -18,6 +18,7 @@ class Company extends Model
         'name','nip','regon','krs','address_json',
         'address_line1','address_line2','postal_code','city','country',
         'email','phone','website','notes',
+        'accountant_name','accountant_email',
         'industry','vat_type','employee_count','benefits_enabled',
     ];
 
