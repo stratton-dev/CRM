@@ -15,6 +15,7 @@ import { api } from '@/api/client'
 import type { Client } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
 import NewClientSidebarForm from '@/components/clients/NewClientSidebarForm.vue'
+import ClientNotesPanel from '@/components/clients/ClientNotesPanel.vue'
 
 type ClientContact = {
   id: string
@@ -1200,6 +1201,14 @@ const refreshAfterCreate = async (newId: string) => {
   }
 }
 
+const notesClient = ref<{ id: string; name: string } | null>(null)
+const openNotes = (client: Client) => {
+  notesClient.value = { id: client.id, name: client.name }
+}
+const closeNotes = () => {
+  notesClient.value = null
+}
+
 if (route.query.expand) {
   const expandId = Array.isArray(route.query.expand) ? route.query.expand[0] : route.query.expand
   const target = (Array.isArray(clients.value) ? clients.value : []).find((client) => client.id === expandId)
@@ -1555,8 +1564,13 @@ if (route.query.expand) {
         <div class="p-4 h-full overflow-y-auto flex-shrink-0">
           <NewClientSidebarForm @created="refreshAfterCreate" />
         </div>
-        <div class="flex-1 overflow-x-auto p-4">
-          <div class="flex space-x-4 h-full">
+        <div class="flex-1 overflow-y-auto p-4 flex flex-col min-h-0">
+          <ClientNotesPanel
+            :client-id="notesClient?.id ?? null"
+            :client-name="notesClient?.name"
+            @close="closeNotes"
+          />
+          <div class="flex space-x-4 flex-1 min-h-[400px] overflow-x-auto">
             <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col flex-shrink-0">
           <div class="p-3 border-b border-slate-200 bg-white/50 rounded-t-card">
             <h3 class="font-bold text-sm text-slate-700">{{ stage.title }} <span class="text-xs text-slate-400 font-normal">({{ stage.clients.length }})</span></h3>
@@ -1579,7 +1593,19 @@ if (route.query.expand) {
               </div>
               <p class="text-[11px] text-slate-400 font-mono mt-1">{{ client.nip }}</p>
               <div class="mt-2 pt-2 border-t border-slate-100">
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Opiekun</p>
+                <div class="flex items-start justify-between gap-2">
+                  <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Opiekun</p>
+                  <button
+                    type="button"
+                    title="Notatki klienta"
+                    class="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors -mt-1"
+                    @click.stop="openNotes(client)"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </button>
+                </div>
                 <div v-if="client.opiekunRole" class="text-[8px] font-black text-primary uppercase tracking-tight">{{ client.opiekunRole }}</div>
                 <p class="text-xs text-slate-700 font-bold leading-tight">{{ client.opiekunName }}</p>
                 <p class="text-[10px] text-slate-400 font-mono">ID: {{ client.opiekunHierarchy }}</p>
