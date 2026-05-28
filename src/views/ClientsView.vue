@@ -1598,12 +1598,10 @@ if (route.query.expand) {
                   <button
                     type="button"
                     title="Notatki klienta"
-                    class="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors -mt-1"
+                    class="-mt-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border border-indigo-200 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
                     @click.stop="openNotes(client)"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
+                    Notatki
                   </button>
                 </div>
                 <div v-if="client.opiekunRole" class="text-[8px] font-black text-primary uppercase tracking-tight">{{ client.opiekunRole }}</div>
