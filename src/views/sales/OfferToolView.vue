@@ -45,7 +45,7 @@ const next = () => {
       employeesUop: formData.value.employeesUop,
       avgWageUop: formData.value.avgWageUop,
       employeesUz: formData.value.employeesUz,
-      status: 'OFFER_GENERATED',
+      status: 'IN_TALKS',
     })
   }
   step.value += 1

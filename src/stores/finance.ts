@@ -70,11 +70,9 @@ export const useFinanceStore = defineStore('finance', () => {
       const latestMeeting = meetings[0]
       const status = (() => {
         if (!latestMeeting) return 'NEW'
-        if (latestMeeting.offer_status === 'preparing') return 'OFFER_PREPARING'
-        if (latestMeeting.offer_status === 'generated') return 'OFFER_GENERATED'
-        if (latestMeeting.offer_status === 'sent') return 'CALCULATION_SENT'
+        if (latestMeeting.offer_status === 'preparing' || latestMeeting.offer_status === 'generated' || latestMeeting.offer_status === 'sent') return 'IN_TALKS'
         if (latestMeeting.status === 'open') return 'IN_TALKS'
-        if (latestMeeting.status === 'completed') return latestMeeting.calculation_shown ? 'CALCULATION_SENT' : 'IN_TALKS'
+        if (latestMeeting.status === 'completed') return 'IN_TALKS'
         if (latestMeeting.status === 'expired') return 'RESIGNED'
         return 'NEW'
       })()

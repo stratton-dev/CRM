@@ -2058,11 +2058,11 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           <div class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
             <div>
               <label class="text-xs font-semibold text-gray-500">Key</label>
-              <input v-model="newStatus.key" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="OFFER_GENERATED" />
+              <input v-model="newStatus.key" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="IN_TALKS" />
             </div>
             <div>
               <label class="text-xs font-semibold text-gray-500">Nazwa</label>
-              <input v-model="newStatus.label" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="Oferta wygenerowana" />
+              <input v-model="newStatus.label" type="text" class="mt-1 w-full border-gray-300 rounded text-sm" placeholder="W rozmowach" />
             </div>
             <div class="md:col-span-2">
               <label class="text-xs font-semibold text-gray-500">Opis</label>

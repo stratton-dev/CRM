@@ -32,10 +32,6 @@ const dateInput = ref<HTMLInputElement | null>(null)
 const STATUS_LABELS: Partial<Record<Client['status'], string>> = {
   NEW: 'Nowy',
   IN_TALKS: 'W rozmowach',
-  OFFER_PREPARING: 'Przygotowanie oferty',
-  OFFER_GENERATED: 'Oferta wygenerowana',
-  CALCULATION_SENT: 'Wysłano ofertę',
-  SPECIAL_OFFER: 'Oferta Specjalna',
   RESIGNED: 'Rezygnacja',
   SIGNED: 'Podpisano',
   TERMINATED: 'Zakończono',
@@ -44,10 +40,6 @@ const STATUS_LABELS: Partial<Record<Client['status'], string>> = {
 const STATUS_COLORS: Partial<Record<Client['status'], string>> = {
   NEW: 'bg-slate-100 text-slate-700',
   IN_TALKS: 'bg-indigo-100 text-indigo-800',
-  OFFER_PREPARING: 'bg-amber-100 text-amber-800',
-  OFFER_GENERATED: 'bg-blue-100 text-blue-800',
-  CALCULATION_SENT: 'bg-violet-100 text-violet-800',
-  SPECIAL_OFFER: 'bg-pink-100 text-pink-800',
   RESIGNED: 'bg-rose-100 text-rose-700',
   SIGNED: 'bg-emerald-100 text-emerald-800',
   TERMINATED: 'bg-gray-100 text-gray-600',

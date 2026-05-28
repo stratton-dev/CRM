@@ -300,7 +300,7 @@ const sendEmail = async () => {
       }
     }
     await mailbox.sendEmail(user, emailTo.value, subject.value, content.value, attachments)
-    await updateClientProfileStatus('CALCULATION_SENT')
+    await updateClientProfileStatus('IN_TALKS')
     toast.success('Pomyślnie wysłano ofertę!')
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'

@@ -61,10 +61,6 @@ const statusLabel = (status?: string) => {
   const labels: Record<string, string> = {
     NEW: 'Nowy',
     IN_TALKS: 'W rozmowach',
-    OFFER_PREPARING: 'Przygotowanie oferty',
-    OFFER_GENERATED: 'Oferta wygenerowana',
-    CALCULATION_SENT: 'Wysłano ofertę',
-    SPECIAL_OFFER: 'Oferta Specjalna',
     SIGNED: 'Podpisano',
     TERMINATED: 'Rozwiązano',
     RESIGNED: 'Rezygnacja',
@@ -76,10 +72,6 @@ const statusClass = (status?: string) => {
   const map: Record<string, string> = {
     NEW: 'bg-yellow-100 text-yellow-800',
     IN_TALKS: 'bg-indigo-100 text-indigo-800',
-    OFFER_PREPARING: 'bg-amber-100 text-amber-800',
-    OFFER_GENERATED: 'bg-purple-100 text-purple-800',
-    CALCULATION_SENT: 'bg-blue-100 text-blue-800',
-    SPECIAL_OFFER: 'bg-pink-100 text-pink-800',
     SIGNED: 'bg-emerald-100 text-emerald-800',
     TERMINATED: 'bg-gray-200 text-gray-800',
     RESIGNED: 'bg-red-100 text-red-800',

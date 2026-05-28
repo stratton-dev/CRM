@@ -303,9 +303,9 @@ const meetingItemsPerPage = 10
 const filteredClients = computed(() => {
   let list = Array.isArray(clients.value) ? [...clients.value] : []
   
-  // Exclude clients that are already in sales process (OFFER_GENERATED, CALCULATION_SENT, SIGNED etc.)
-  list = list.filter(c => 
-    !['OFFER_GENERATED', 'CALCULATION_SENT', 'SIGNED', 'TERMINATED', 'RESIGNED'].includes(c.status)
+  // Exclude clients that are already locked into a closed outcome
+  list = list.filter(c =>
+    !['SIGNED', 'TERMINATED', 'RESIGNED'].includes(c.status)
   )
 
   if (searchQuery.value) {

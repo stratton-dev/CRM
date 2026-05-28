@@ -60,7 +60,7 @@ const canProceed = computed(() => {
   return true;
 });
 
-const statusOrder = ['NEW', 'OFFER_PREPARING', 'CALCULATION_SENT', 'RESIGNED', 'SIGNED', 'TERMINATED'];
+const statusOrder = ['NEW', 'IN_TALKS', 'RESIGNED', 'SIGNED', 'TERMINATED'];
 const eligibleClients = computed(() => {
   const list = Array.isArray(clients.value) ? clients.value : [];
   const term = companySearch.value.trim().toLowerCase();

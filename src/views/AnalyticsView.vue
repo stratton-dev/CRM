@@ -116,8 +116,7 @@ const funnelClients = computed(() => {
 const funnelEstimate = computed(() => {
   const weights: Record<string, number> = {
     NEW: 0.1,
-    OFFER_PREPARING: 0.5,
-    CALCULATION_SENT: 0.85,
+    IN_TALKS: 0.5,
     SIGNED: 1,
     RESIGNED: 0,
     TERMINATED: 0,
@@ -159,7 +158,6 @@ const chartData = computed(() => {
     return [
       { label: 'Nowy', value: myClients.filter((c) => c.status === 'NEW').length },
       { label: 'Rozmowy', value: myClients.filter((c) => c.status === 'IN_TALKS').length },
-      { label: 'Oferta', value: myClients.filter((c) => ['OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(c.status)).length },
       { label: 'Umowa', value: myClients.filter((c) => c.status === 'SIGNED').length },
     ]
   }

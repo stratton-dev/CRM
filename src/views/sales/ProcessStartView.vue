@@ -954,7 +954,7 @@ const updateCrmReservationAndStatus = async () => {
 }
 
 const updateCrmStatus = async (
-  status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED'
+  status: 'NEW' | 'IN_TALKS' | 'RESIGNED' | 'SIGNED' | 'TERMINATED'
 ) => {
   if (!auth.enabled || !clientId.value) return
   try {
@@ -1108,31 +1108,6 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
     if (clientIndustry && !analysis.value.industry) {
         analysis.value.industry = clientIndustry
         industrySearch.value = clientIndustry
-    }
-
-    if (!route.query.step && profileStatus === 'OFFER_PREPARING' && meetingId.value) {
-      const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
-      router.push({
-        path: targetPath,
-        query: {
-          meetingId: meetingId.value || undefined,
-          clientId: clientId.value || undefined,
-        },
-      })
-      return
-    }
-
-    if (!route.query.step && profileStatus === 'OFFER_GENERATED' && meetingId.value) {
-      const targetPath = calcTarget.value === 'detailed' ? '/app/calculator' : '/app/quick-calculator'
-      router.push({
-        path: targetPath,
-        query: {
-          meetingId: meetingId.value || undefined,
-          clientId: clientId.value || undefined,
-          step: 'summary',
-        },
-      })
-      return
     }
 
     const { data: consentEntries } = await api.get(`/v1/clients/${clientId.value}/consents`)
@@ -1376,7 +1351,7 @@ const nextStep = async () => {
   }
 
   try {
-    await updateCrmStatus('OFFER_PREPARING')
+    await updateCrmStatus('IN_TALKS')
     await finalizeMeeting()
   } catch (err) {
     // błąd obsłużony wewnątrz finalizeMeeting

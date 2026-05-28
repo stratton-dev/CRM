@@ -98,7 +98,7 @@ export interface Client {
   nip: string
   regon?: string | null
   krs?: string | null
-  status: 'NEW' | 'OFFER_PREPARING' | 'CALCULATION_SENT' | 'RESIGNED' | 'SIGNED' | 'TERMINATED' | 'IN_TALKS' | 'OFFER_GENERATED' | 'SPECIAL_OFFER'
+  status: 'NEW' | 'IN_TALKS' | 'SIGNED' | 'TERMINATED' | 'RESIGNED'
   ownerId: string
   ownerName?: string
   meetingId?: string

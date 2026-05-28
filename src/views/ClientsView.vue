@@ -123,10 +123,6 @@ const calculationsError = ref<string | null>(null)
 const kanbanStages: Array<{ status: Client['status']; title: string }> = [
   { status: 'NEW', title: 'Nowy' },
   { status: 'IN_TALKS', title: 'W rozmowach' },
-  { status: 'OFFER_PREPARING', title: 'Przygotowanie oferty' },
-  { status: 'OFFER_GENERATED', title: 'Oferta wygenerowana' },
-  { status: 'CALCULATION_SENT', title: 'Wysłano ofertę' },
-  { status: 'SPECIAL_OFFER', title: 'Oferta Specjalna' },
   { status: 'SIGNED', title: 'Podpisany (Stratton Prime)' },
   { status: 'TERMINATED', title: 'Umowa Rozwiązana' },
   { status: 'RESIGNED', title: 'Rezygnacja' },
@@ -303,11 +299,10 @@ const sort = (field: keyof Client | 'opiekunDisplay') => {
 const statusLabel = (status: Client['status']) => {
   const labels: Record<Client['status'], string> = {
     NEW: 'Nowy',
-      IN_TALKS: 'W rozmowach',
-      OFFER_PREPARING: 'Przygotowanie oferty',
-      OFFER_GENERATED: 'Oferta wygenerowana',
-      CALCULATION_SENT: 'Wysłano ofertę',
-      SPECIAL_OFFER: 'Oferta Specjalna',
+    IN_TALKS: 'W rozmowach',
+    SIGNED: 'Podpisany (Stratton Prime)',
+    TERMINATED: 'Umowa Rozwiązana',
+    RESIGNED: 'Rezygnacja',
   }
   return labels[status] || status
 }
@@ -457,7 +452,7 @@ const closePanel = () => {
 }
 
 const getClientSlaStatus = (client: Client) => {
-  if (!['NEW', 'IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status)) return 'OK'
+  if (!['NEW', 'IN_TALKS'].includes(client.status)) return 'OK'
   const lastAction = new Date(client.lastActionDate).getTime()
   const now = new Date().getTime()
   const diffDays = (now - lastAction) / (1000 * 60 * 60 * 24)
@@ -1285,10 +1280,6 @@ if (route.query.expand) {
               :class="{
                 'bg-yellow-100 text-yellow-800': client.status === 'NEW',
                 'bg-indigo-100 text-indigo-800': client.status === 'IN_TALKS',
-                'bg-amber-100 text-amber-800': client.status === 'OFFER_PREPARING',
-                'bg-purple-100 text-purple-800': client.status === 'OFFER_GENERATED',
-                'bg-blue-100 text-blue-800': client.status === 'CALCULATION_SENT',
-                'bg-pink-100 text-pink-800': client.status === 'SPECIAL_OFFER',
                 'bg-emerald-100 text-emerald-800': client.status === 'SIGNED',
                 'bg-gray-200 text-gray-800': client.status === 'TERMINATED',
                 'bg-red-100 text-red-800': client.status === 'RESIGNED',
@@ -1304,7 +1295,7 @@ if (route.query.expand) {
           </div>
           <div class="mt-2 flex items-center justify-between">
             <span
-              v-if="getRemainingReservationDays(client) !== null && ['IN_TALKS','OFFER_PREPARING','OFFER_GENERATED','CALCULATION_SENT'].includes(client.status) && (getRemainingReservationDays(client) || 0) > 0"
+              v-if="getRemainingReservationDays(client) !== null && client.status === 'IN_TALKS' && (getRemainingReservationDays(client) || 0) > 0"
               class="text-[10px] rounded bg-sky-100 text-sky-700 font-semibold px-2 py-0.5"
             >do {{ formatReservationDate(client) }}</span>
             <span v-else></span>
@@ -1362,10 +1353,6 @@ if (route.query.expand) {
                   :class="{
                     'bg-yellow-100 text-yellow-800': client.status === 'NEW',
                     'bg-indigo-100 text-indigo-800': client.status === 'IN_TALKS',
-                    'bg-amber-100 text-amber-800': client.status === 'OFFER_PREPARING',
-                    'bg-purple-100 text-purple-800': client.status === 'OFFER_GENERATED',
-                    'bg-blue-100 text-blue-800': client.status === 'CALCULATION_SENT',
-                    'bg-pink-100 text-pink-800': client.status === 'SPECIAL_OFFER',
                     'bg-emerald-100 text-emerald-800': client.status === 'SIGNED',
                     'bg-gray-200 text-gray-800': client.status === 'TERMINATED',
                     'bg-red-100 text-red-800': client.status === 'RESIGNED',
@@ -1381,7 +1368,7 @@ if (route.query.expand) {
                 </div>
               </td>
               <td class="px-4 py-1.5 whitespace-nowrap text-[11px] text-gray-600">
-                <span v-if="getRemainingReservationDays(client) !== null && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status) && (getRemainingReservationDays(client) || 0) > 0" class="inline-flex flex-col items-start rounded bg-sky-100 text-sky-700 font-semibold px-2 py-0.5 leading-tight">
+                <span v-if="getRemainingReservationDays(client) !== null && client.status === 'IN_TALKS' && (getRemainingReservationDays(client) || 0) > 0" class="inline-flex flex-col items-start rounded bg-sky-100 text-sky-700 font-semibold px-2 py-0.5 leading-tight">
                   <span>rezerwacja do</span>
                   <span>{{ formatReservationDate(client) }}</span>
                 </span>
@@ -1542,7 +1529,7 @@ if (route.query.expand) {
               class="bg-white p-3 rounded-card border border-slate-200 shadow-sm cursor-move hover:border-primary hover:shadow-md transition-all relative group"
               @dragstart="onDragStart($event, client)"
             >
-              <div v-if="getRemainingReservationDays(client) && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(client.status)" class="absolute top-2 right-2 text-[10px] bg-primary text-primary-foreground font-bold rounded px-1.5 py-0.5 shadow leading-tight text-right">
+              <div v-if="getRemainingReservationDays(client) && client.status === 'IN_TALKS'" class="absolute top-2 right-2 text-[10px] bg-primary text-primary-foreground font-bold rounded px-1.5 py-0.5 shadow leading-tight text-right">
                 <span class="block">rezerwacja do</span>
                 <span class="block">{{ formatReservationDate(client) }}</span>
               </div>
@@ -1594,8 +1581,7 @@ if (route.query.expand) {
               <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
             <select :value="selectedClient.status" class="py-1.5 pl-3 pr-8 text-sm font-medium rounded-lg border-slate-300 focus:ring-primary focus:border-primary bg-white shadow-sm" :disabled="isReadOnly" @change="changeStatus($event, selectedClient.id)">
                 <option value="NEW">Nowy</option>
-                <option value="OFFER_PREPARING">Przygotowanie oferty</option>
-                <option value="CALCULATION_SENT">Wysłano ofertę</option>
+                <option value="IN_TALKS">W rozmowach</option>
                 <option value="SIGNED">Podpisany</option>
                 <option value="TERMINATED">Umowa rozwiązana</option>
                 <option value="RESIGNED">Rezygnacja</option>

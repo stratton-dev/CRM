@@ -481,7 +481,7 @@ const generateQuickOffer = async () => {
     if (hasClientContext.value) {
       const calc = await store.saveQuickSimToApi(simData);
       await store.updateMeetingOfferStatus('generated');
-      await store.updateClientStatus('OFFER_GENERATED');
+      await store.updateClientStatus('IN_TALKS');
       if (calc?.id) {
         await store.updateCalculationStatus(String(calc.id), 'READY');
       }

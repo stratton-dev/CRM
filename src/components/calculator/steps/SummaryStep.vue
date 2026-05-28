@@ -233,7 +233,7 @@ const handleGenerateOffer = async (layout: 'horizontal' | 'vertical') => {
   // Fire remaining status updates in background — don't block the UI
   void Promise.all([
     store.updateMeetingOfferStatus('generated'),
-    store.updateClientStatus('OFFER_GENERATED'),
+    store.updateClientStatus('IN_TALKS'),
     ...(latestCalculationId.value ? [store.updateCalculationStatus(latestCalculationId.value, 'READY')] : []),
   ]);
 };

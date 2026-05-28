@@ -99,11 +99,9 @@ export const useClientStore = defineStore('client', () => {
 
   const mapMeetingToStatus = (meeting?: ApiMeeting): Client['status'] => {
     if (!meeting) return 'NEW'
-    if (meeting.offer_status === 'preparing') return 'OFFER_PREPARING'
-    if (meeting.offer_status === 'generated') return 'OFFER_PREPARING'
-    if (meeting.offer_status === 'sent') return 'CALCULATION_SENT'
+    if (meeting.offer_status === 'preparing' || meeting.offer_status === 'generated' || meeting.offer_status === 'sent') return 'IN_TALKS'
     if (meeting.status === 'open') return 'NEW'
-    if (meeting.status === 'completed') return meeting.calculation_shown ? 'CALCULATION_SENT' : 'OFFER_PREPARING'
+    if (meeting.status === 'completed') return 'IN_TALKS'
     if (meeting.status === 'expired') return 'RESIGNED'
     return 'NEW'
   }
@@ -382,7 +380,6 @@ export const useClientStore = defineStore('client', () => {
       if (partial.status) {
         payload.status = partial.status
         if (partial.status === 'SIGNED') payload.contract_signed_date = new Date().toISOString().slice(0, 10)
-        if (partial.status === 'CALCULATION_SENT') payload.offer_sent_date = new Date().toISOString().slice(0, 10)
         if (partial.status === 'RESIGNED') payload.reservation_end_date = null
       }
       if (typeof partial.serviceFeePercent === 'number') payload.service_fee_percent = partial.serviceFeePercent
@@ -409,7 +406,7 @@ export const useClientStore = defineStore('client', () => {
 
     const updateData: Partial<Client> = { ...partial, lastActionDate: new Date().toISOString() }
 
-    if (partial.status && client.status === 'NEW' && ['IN_TALKS', 'OFFER_PREPARING', 'OFFER_GENERATED', 'CALCULATION_SENT'].includes(partial.status)) {
+    if (partial.status && client.status === 'NEW' && partial.status === 'IN_TALKS') {
       const endDate = new Date()
       endDate.setDate(new Date().getDate() + 90)
       updateData.reservationEndDate = endDate.toISOString()
