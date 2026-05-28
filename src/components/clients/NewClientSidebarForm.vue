@@ -120,118 +120,134 @@ const submit = async () => {
 </script>
 
 <template>
-  <aside class="w-full md:w-80 flex-shrink-0 bg-white border border-slate-200 rounded-card shadow-sm flex flex-col self-start">
-    <div class="px-4 py-3 border-b border-slate-200 flex items-center gap-2">
-      <span class="inline-flex w-7 h-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 font-bold text-base">+</span>
-      <h3 class="text-sm font-bold text-slate-800">Wprowadź nowego klienta</h3>
+  <aside class="w-full md:w-72 flex-shrink-0 bg-white border border-slate-200 rounded-card shadow-sm flex flex-col self-start text-xs">
+    <div class="px-3 py-2 border-b border-slate-200 flex items-center gap-2">
+      <span class="inline-flex w-5 h-5 items-center justify-center rounded bg-emerald-50 text-emerald-600 font-bold">+</span>
+      <h3 class="text-[13px] font-bold text-slate-800">Wprowadź nowego klienta</h3>
     </div>
 
-    <form class="p-4 space-y-4 overflow-y-auto" @submit.prevent="submit">
-      <fieldset class="border border-slate-200 rounded-lg p-3 space-y-2">
-        <legend class="px-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">GUS API (Szybki odczyt NIP)</legend>
-        <div class="flex gap-2">
+    <form class="p-2.5 space-y-2" @submit.prevent="submit">
+      <fieldset class="border border-slate-200 rounded-md p-2 space-y-1.5">
+        <legend class="px-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">GUS API (NIP / REGON / KRS)</legend>
+        <div class="grid grid-cols-3 gap-1.5">
           <input
             v-model="form.nip"
             type="text"
             inputmode="numeric"
-            placeholder="NIP np. 1112223344"
-            class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+            placeholder="NIP"
+            class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
             @keydown.enter.prevent="fetchGus"
           />
-          <button
-            type="button"
-            class="px-3 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
-            :disabled="isFetchingGus"
-            @click="fetchGus"
-          >
-            <span v-if="isFetchingGus">…</span>
-            <span v-else>Pobierz</span>
-          </button>
+          <input
+            v-model="form.regon"
+            type="text"
+            inputmode="numeric"
+            placeholder="REGON"
+            class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+          />
+          <input
+            v-model="form.krs"
+            type="text"
+            inputmode="numeric"
+            placeholder="KRS"
+            class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+          />
         </div>
+        <button
+          type="button"
+          class="w-full px-2 py-1.5 rounded bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
+          :disabled="isFetchingGus"
+          @click="fetchGus"
+        >
+          <span v-if="isFetchingGus">Pobieranie…</span>
+          <span v-else>Pobierz dane z GUS</span>
+        </button>
       </fieldset>
 
       <div>
-        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nazwa firmy <span class="text-rose-500">*</span></label>
+        <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Nazwa firmy <span class="text-rose-500">*</span></label>
         <input
           v-model="form.name"
           type="text"
           required
           placeholder="Pobierz z GUS lub wpisz"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
       </div>
 
       <div>
-        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Adres rejestrowy</label>
+        <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Adres rejestrowy</label>
         <input
           v-model="form.addressLine1"
           type="text"
           placeholder="Adres siedziby"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
       </div>
 
-      <fieldset class="border border-slate-200 rounded-lg p-3 space-y-2">
-        <legend class="px-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Osoba decyzyjna (Zarząd/HR)</legend>
+      <fieldset class="border border-slate-200 rounded-md p-2 space-y-1.5">
+        <legend class="px-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">Osoba decyzyjna (Zarząd/HR)</legend>
         <input
           v-model="form.contactName"
           type="text"
           placeholder="Imię i Nazwisko"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
         <input
           v-model="form.contactEmail"
           type="email"
           placeholder="E-mail bezpośredni"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
         <input
           v-model="form.contactPhone"
           type="text"
           placeholder="Telefon"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
       </fieldset>
 
-      <fieldset class="border border-slate-200 rounded-lg p-3 space-y-2">
-        <legend class="px-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dział finansów / Księgowość</legend>
+      <fieldset class="border border-slate-200 rounded-md p-2 space-y-1.5">
+        <legend class="px-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">Dział finansów / Księgowość</legend>
         <input
           v-model="form.accountantName"
           type="text"
           placeholder="Nazwisko księgowej"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
         <input
           v-model="form.accountantEmail"
           type="email"
           placeholder="Adres e-mail księgowości"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         />
       </fieldset>
 
-      <div>
-        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Opiekun</label>
-        <input
-          :value="opiekunLabel"
-          type="text"
-          readonly
-          class="w-full border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-sm text-slate-700"
-        />
-      </div>
-
-      <div>
-        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Źródło kontaktu</label>
-        <select
-          v-model="form.source"
-          class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-        >
-          <option v-for="src in CONTACT_SOURCES" :key="src" :value="src">{{ src }}</option>
-        </select>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Opiekun</label>
+          <input
+            :value="opiekunLabel"
+            type="text"
+            readonly
+            class="w-full border border-slate-200 bg-slate-50 rounded px-2 py-1.5 text-xs text-slate-700 truncate"
+            :title="opiekunLabel"
+          />
+        </div>
+        <div>
+          <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Źródło</label>
+          <select
+            v-model="form.source"
+            class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+          >
+            <option v-for="src in CONTACT_SOURCES" :key="src" :value="src">{{ src }}</option>
+          </select>
+        </div>
       </div>
 
       <button
         type="submit"
-        class="w-full px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-full px-3 py-2 rounded-md bg-indigo-600 text-white text-xs font-bold shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="isSubmitting || !form.name.trim()"
       >
         <span v-if="isSubmitting">Zapisywanie...</span>
