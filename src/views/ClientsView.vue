@@ -129,13 +129,18 @@ const calculationsLoading = ref(false)
 const calculationStatuses = ref<Array<{ key: string; label: string }>>([])
 const calculationsError = ref<string | null>(null)
 
-const kanbanStages: Array<{ status: Client['status']; title: string }> = [
+const ALL_KANBAN_STAGES: Array<{ status: Client['status']; title: string }> = [
   { status: 'NEW', title: 'Nowy' },
   { status: 'IN_TALKS', title: 'W rozmowach' },
   { status: 'SIGNED', title: 'Podpisany (Stratton Prime)' },
   { status: 'TERMINATED', title: 'Umowa Rozwiązana' },
   { status: 'RESIGNED', title: 'Rezygnacja' },
 ]
+
+// Non-admin users don't see the "Umowa Rozwiązana" column — TERMINATED is admin-only.
+const kanbanStages = computed(() =>
+  isAdmin.value ? ALL_KANBAN_STAGES : ALL_KANBAN_STAGES.filter((stage) => stage.status !== 'TERMINATED')
+)
 
 const filteredContacts = computed(() => {
   const term = contactSearch.value.trim().toLowerCase()
@@ -273,7 +278,7 @@ const prevClientsPage = () => {
 }
 
 const kanbanData = computed(() =>
-  kanbanStages.map((stage) => ({
+  kanbanStages.value.map((stage) => ({
     ...stage,
     clients: displayedClients.value.filter((client) => client.status === stage.status),
   }))
@@ -1602,7 +1607,7 @@ if (route.query.expand) {
                 <option value="NEW">Nowy</option>
                 <option value="IN_TALKS">W rozmowach</option>
                 <option value="SIGNED">Podpisany</option>
-                <option value="TERMINATED">Umowa rozwiązana</option>
+                <option v-if="isAdmin" value="TERMINATED">Umowa rozwiązana</option>
                 <option value="RESIGNED">Rezygnacja</option>
               </select>
             </div>
