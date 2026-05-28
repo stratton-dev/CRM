@@ -1150,35 +1150,40 @@ const exportToCsv = () => {
 }
 
 const onDragStart = (event: DragEvent, client: Client) => {
-  if (event.dataTransfer && !isReadOnly.value) {
-    event.dataTransfer.effectAllowed = 'move'
-    draggedClientId.value = client.id
-  }
+  if (!event.dataTransfer || isReadOnly.value) return
+  event.dataTransfer.effectAllowed = 'move'
+  // Set a dummy payload so Firefox actually starts the drag.
+  try { event.dataTransfer.setData('text/plain', client.id) } catch {}
+  draggedClientId.value = client.id
 }
 
 const onDragOver = (event: DragEvent) => {
+  if (!draggedClientId.value) return
   event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
 }
 
 const onDrop = (event: DragEvent, newStatus: Client['status']) => {
   event.preventDefault()
   const clientId = draggedClientId.value
-  if (!clientId) return
-  const client = (Array.isArray(clients.value) ? clients.value : []).find((c) => c.id === clientId)
-  if (!client || client.status === newStatus) {
-    draggedClientId.value = null
-    return
-  }
-
-  if (client.status === 'SIGNED' && !confirm('Czy na pewno chcesz zmienić status podpisanego klienta?')) {
-    draggedClientId.value = null
-    return
-  }
-
-  clientStore.updateClient(clientId, { status: newStatus })
-  toast.success(`Przeniesiono '${client.name}' do etapu: ${statusLabel(newStatus)}`)
-
+  // Clear drag state synchronously so the browser can finalize the drag
+  // before any Vue re-render kicks in.
   draggedClientId.value = null
+  if (!clientId) return
+
+  const list = Array.isArray(clients.value) ? clients.value : []
+  const client = list.find((c) => c.id === clientId)
+  if (!client || client.status === newStatus) return
+
+  // Defer mutation + native confirm() to the next macrotask. Calling
+  // confirm() or mutating the dragged element from inside the drop
+  // handler can leave Chrome with a frozen invisible dialog and a
+  // half-cleaned-up drag layer, blocking the whole tab.
+  setTimeout(() => {
+    if (client.status === 'SIGNED' && !window.confirm('Czy na pewno chcesz zmienić status podpisanego klienta?')) return
+    clientStore.updateClient(clientId, { status: newStatus })
+    toast.success(`Przeniesiono '${client.name}' do etapu: ${statusLabel(newStatus)}`)
+  }, 0)
 }
 
 const generateContract = (clientId: string) => {
