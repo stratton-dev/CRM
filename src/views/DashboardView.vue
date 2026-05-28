@@ -519,7 +519,7 @@ watch(
           </div>
         </div>
 
-        <RouterLink to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink v-if="!isLeadowiec" to="/app/quick-calculator" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
           <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Kalkulator" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
