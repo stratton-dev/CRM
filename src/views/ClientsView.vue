@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -14,6 +14,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { api } from '@/api/client'
 import type { Client } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
+import NewClientSidebarForm from '@/components/clients/NewClientSidebarForm.vue'
 
 type ClientContact = {
   id: string
@@ -1190,6 +1191,15 @@ const generateContract = (clientId: string) => {
   router.push(`/app/contract-preview/${clientId}`)
 }
 
+const refreshAfterCreate = async (newId: string) => {
+  await clientStore.refreshApiData()
+  if (newId) {
+    await nextTick()
+    const card = document.getElementById(`client-${newId}`)
+    card?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
+
 if (route.query.expand) {
   const expandId = Array.isArray(route.query.expand) ? route.query.expand[0] : route.query.expand
   const target = (Array.isArray(clients.value) ? clients.value : []).find((client) => client.id === expandId)
@@ -1224,10 +1234,6 @@ if (route.query.expand) {
       </div>
       <div class="flex-1 flex flex-wrap items-center justify-end px-2 md:px-4 gap-2 md:gap-4">
         <div class="flex items-center space-x-2">
-          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="router.push('/app/sales/start')">
-            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span>Nowy</span>
-          </button>
           <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="exportToCsv">
             <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Eksportuj</span>
@@ -1544,9 +1550,14 @@ if (route.query.expand) {
       </div>
     </div>
 
-    <div v-if="viewMode === 'kanban'" class="flex-1 overflow-x-auto p-4 bg-surface">
-      <div class="flex space-x-4 h-full">
-        <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col flex-shrink-0">
+    <div v-if="viewMode === 'kanban'" class="flex-1 overflow-hidden bg-surface">
+      <div class="h-full flex">
+        <div class="p-4 h-full overflow-y-auto flex-shrink-0">
+          <NewClientSidebarForm @created="refreshAfterCreate" />
+        </div>
+        <div class="flex-1 overflow-x-auto p-4">
+          <div class="flex space-x-4 h-full">
+            <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col flex-shrink-0">
           <div class="p-3 border-b border-slate-200 bg-white/50 rounded-t-card">
             <h3 class="font-bold text-sm text-slate-700">{{ stage.title }} <span class="text-xs text-slate-400 font-normal">({{ stage.clients.length }})</span></h3>
           </div>
@@ -1587,6 +1598,8 @@ if (route.query.expand) {
             <div v-if="stage.clients.length === 0" class="h-full border-2 border-dashed border-slate-200 rounded-lg flex items-center justify-center text-xs text-slate-400 p-4">
               Przeciągnij klienta tutaj
             </div>
+          </div>
+        </div>
           </div>
         </div>
       </div>
