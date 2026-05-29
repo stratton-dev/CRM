@@ -310,17 +310,19 @@ const openOfferEmail = async (force: boolean | Event = false) => {
 };
 
 onMounted(async () => {
-  if (!auth.enabled || !store.context.meetingId) return;
+  if (!auth.enabled || !store.context.clientId) return;
   try {
-    const { data } = await api.get(`/v1/meetings/${store.context.meetingId}`);
-    offerStatus.value = data?.offer_status || null;
-    const list = Array.isArray(data?.calculations) ? data.calculations : [];
+    // Source the latest calculation directly from /v1/calculations filtered
+    // by client_id. The meetings table no longer carries this state.
+    const { data } = await api.get('/v1/calculations', {
+      params: { client_id: store.context.clientId, per_page: 50 },
+    });
+    const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
     if (list.length > 0) {
       const latest = list.sort((a: any, b: any) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())[0];
       if (latest?.id) latestCalculationId.value = String(latest.id);
-      if (offerStatus.value === 'generated' && latest?.id && String(latest.status || '').toUpperCase() !== 'READY') {
-        await store.updateCalculationStatus(String(latest.id), 'READY');
-      }
+      const status = String(latest?.status || '').toUpperCase();
+      offerStatus.value = status === 'READY' ? 'generated' : status === 'SENT' ? 'sent' : 'preparing';
     }
   } catch (error) {
     console.error(error);

@@ -171,17 +171,12 @@ const applyRecipientDefaults = () => {
 }
 
 const resolveClient = async () => {
+  // Meetings are no longer the canonical source. Email compose now relies
+  // on ?client_id= coming from ProcessStart / calculator / clients list.
+  // Anything else falls through to the empty-state block below.
   const queryClientId = clientIdFromQuery.value
   if (queryClientId) {
     resolvedClientId.value = String(queryClientId)
-  } else if (meetingId.value && auth.enabled) {
-    try {
-      const { data } = await api.get(`/v1/meetings/${meetingId.value}`)
-      if (data?.client_id) resolvedClientId.value = String(data.client_id)
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Nie udało się pobrać danych spotkania.'
-      toast.warning(message)
-    }
   }
 
   if (!resolvedClientId.value) {
@@ -256,15 +251,9 @@ const updateClientProfileStatus = async (status: string) => {
 }
 
 const sendEmail = async () => {
-  if (auth.enabled && meetingId.value) {
-    try {
-      await api.patch(`/v1/meetings/${meetingId.value}`, { offer_status: 'sent', calculation_shown: true })
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Nie udało się oznaczyć oferty jako wysłanej.'
-      toast.error(message)
-      return
-    }
-  }
+  // Meeting offer-status tracking removed — the calculation row carries
+  // the canonical state now (status SENT after this send) and the
+  // client's activity log records the email itself.
 
   const user = session.currentUser
   if (!user) {

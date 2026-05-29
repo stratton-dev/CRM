@@ -716,18 +716,13 @@ export const useCalculatorStore = defineStore('calculator', () => {
     await excelGenerator.generateImportTemplate(rows);
   };
 
-  const updateMeetingOfferStatus = async (status: 'preparing' | 'generated' | 'sent') => {
-    const auth = useAuthStore();
-    if (!auth.enabled || !context.value.meetingId) return;
-    const payload: Record<string, any> = { offer_status: status };
-    if (status !== 'preparing') {
-      payload.calculation_shown = true;
-    }
-    try {
-      await api.patch(`/v1/meetings/${context.value.meetingId}`, payload);
-    } catch (error) {
-      console.error(error);
-    }
+  const updateMeetingOfferStatus = async (_status: 'preparing' | 'generated' | 'sent') => {
+    // Meetings table is no longer the canonical store for offer state —
+    // status now lives on crm_client_profiles + on the client-side wizard
+    // context. The function is kept as a no-op so callers in
+    // QuickSimulation/SummaryStep/HistoryModal don't need to be touched
+    // in this stage.
+    return;
   };
 
   const updateClientStatus = async (status: string) => {
