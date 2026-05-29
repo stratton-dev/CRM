@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
 import AppIcon from '@/components/AppIcon.vue';
+import TabHeader from '@/components/ui/TabHeader.vue';
 import { useCalculatorStore } from '@/components/calculator/store/useCalculatorStore';
 import { Pracownik } from '@/components/calculator/models/employee';
 import { api } from '@/api/client';
@@ -229,45 +230,38 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-full max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-8 space-y-4 md:space-y-8">
-    <div class="rounded-card shadow-card-hover border p-4 md:p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-4 md:gap-6">
-        <div class="flex items-center gap-4 md:gap-6 self-start md:self-center">
-            <button type="button" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
-              <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            </button>
-            <div>
-              <h1 class="text-xl md:text-3xl font-serif font-bold text-white flex items-center gap-2 md:gap-3">
-                Kalkulator szczegółowy
-                <span class="text-[10px] bg-emerald-500/10 text-emerald-500 font-bold px-2 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider">Aktywny</span>
-              </h1>
-              <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">
-                {{ currentStep === -1 ? 'Pulpit' : `Krok ${currentStep + 1} / ${steps.length}` }}
-              </p>
-            </div>
-        </div>
-        
-        <button 
-          type="button" 
-          class="h-12 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white px-8 rounded-md shadow-md transition-all duration-300 font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 group disabled:opacity-50 disabled:grayscale self-end md:self-center border border-white/20 hover:brightness-110 active:scale-95"
-          :disabled="!canProceed || currentStep >= steps.length - 1" 
+  <div class="flex flex-col h-[calc(100vh-112px)]">
+
+    <TabHeader icon="calculator" title="Kalkulator szczegółowy" :on-back="handleBack">
+      <template #actions>
+        <span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-wider">Aktywny</span>
+        <span class="text-xs text-slate-500 uppercase tracking-widest font-bold">
+          {{ currentStep === -1 ? 'Pulpit' : `Krok ${currentStep + 1} / ${steps.length}` }}
+        </span>
+        <button
+          type="button"
+          class="h-9 bg-linear-to-r from-[#D4AF37] to-[#C5A059] text-white px-4 rounded-md shadow-sm transition-all font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 group disabled:opacity-50 disabled:grayscale border border-white/20 hover:brightness-110 active:scale-95 text-xs"
+          :disabled="!canProceed || currentStep >= steps.length - 1"
           @click="currentStep++"
         >
-          <span class="text-xs">Dalej</span>
-          <AppIcon name="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          <span>Dalej</span>
+          <AppIcon name="arrow-right" class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
         </button>
-      </div>
+      </template>
+    </TabHeader>
 
-      <div class="relative rounded-2xl border border-[#003d7a] shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 group hover:border-[#0051a8] transition-colors" style="background: linear-gradient(135deg, #002347 0%, #002f5e 50%, #003875 100%)">
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+
+      <div class="relative rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white group hover:border-slate-300 transition-colors">
         <div>
-          <div class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Firma dla kalkulacji</div>
-          <div class="text-xl font-bold text-white tracking-tight">
+          <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Firma dla kalkulacji</div>
+          <div class="text-xl font-bold text-slate-800 tracking-tight">
             {{ store.firma.nazwa || 'Nie wybrano firmy' }}
           </div>
-          <div v-if="store.firma.nip" class="text-xs text-slate-400 font-mono mt-1">NIP: <span class="text-slate-300">{{ store.firma.nip }}</span></div>
+          <div v-if="store.firma.nip" class="text-xs text-slate-500 font-mono mt-1">NIP: <span class="text-slate-700">{{ store.firma.nip }}</span></div>
         </div>
         <div class="flex items-center gap-2">
-          <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors" @click="showCompanyPicker = !showCompanyPicker">
+          <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors" @click="showCompanyPicker = !showCompanyPicker">
             Zmień firmę
           </button>
         </div>
