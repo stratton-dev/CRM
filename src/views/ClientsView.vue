@@ -1219,26 +1219,18 @@ if (route.query.expand) {
 <template>
   <div class="flex flex-col" :class="embedded ? 'h-auto min-h-[600px]' : 'h-[calc(100vh-112px)]'">
 
-    <div class="px-4 pt-4 pb-2 md:px-6 md:pt-6" v-if="!embedded">
-       <div class="text-white rounded-card p-4 md:p-8 shadow-card-hover flex justify-between items-center relative overflow-hidden border" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-          <div class="relative z-10 flex items-center gap-4 md:gap-6">
-              <RouterLink to="/app/sales/start" class="hidden md:flex w-12 h-12 rounded-md bg-slate-800 border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
-                  <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-              </RouterLink>
-              <div>
-                  <h1 class="font-serif font-bold text-2xl md:text-4xl text-white tracking-tight">Klienci</h1>
-                  <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Twoja baza kontaktów</p>
-              </div>
-          </div>
-          <div class="relative z-10 flex items-center gap-4">
-              <!-- Actions -->
-          </div>
-       </div>
-    </div>
-    
     <div class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap items-center gap-y-2 shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-card' : ''">
-      <div class="flex items-center gap-3 ml-4">
-        <AppIcon name="users" class="w-5 h-5 text-primary" />
+      <div class="flex items-center gap-2 ml-2">
+        <button
+          v-if="!embedded"
+          type="button"
+          title="Wróć"
+          class="w-9 h-9 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center shadow-sm transition-colors group"
+          @click="router.back()"
+        >
+          <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+        </button>
+        <AppIcon name="users" class="w-5 h-5 text-primary ml-1" />
         <h3 class="font-black text-slate-800 text-xl tracking-tight">Klienci w obsłudze</h3>
       </div>
       <div class="flex-1 flex flex-wrap items-center justify-end px-2 md:px-4 gap-2 md:gap-4">
