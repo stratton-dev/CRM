@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\CrmEmployeesController;
 use App\Http\Controllers\Api\CrmClientActivitiesController;
 use App\Http\Controllers\Api\CrmClientProfilesController;
 use App\Http\Controllers\Api\CrmSavedOffersController;
+use App\Http\Controllers\Api\CrmOfferPdfsController;
 use App\Http\Controllers\Api\CrmStatusesController;
 use App\Http\Controllers\Api\CrmEventsController;
 use App\Http\Controllers\Api\CrmEventLogsController;
@@ -46,6 +47,7 @@ Route::apiResource('crm-employees', CrmEmployeesController::class)->only(['index
 Route::apiResource('crm-client-activities', CrmClientActivitiesController::class)->only(['index', 'store', 'update', 'destroy']);
 Route::apiResource('crm-client-profiles', CrmClientProfilesController::class)->only(['index', 'show', 'store', 'update']);
 Route::apiResource('crm-saved-offers', CrmSavedOffersController::class)->only(['index', 'store', 'update', 'destroy']);
+Route::apiResource('crm-offer-pdfs', CrmOfferPdfsController::class)->only(['index', 'show', 'store', 'destroy']);
 Route::apiResource('crm-statuses', CrmStatusesController::class)->only(['index', 'store', 'update', 'destroy']);
 Route::apiResource('crm-events', CrmEventsController::class)->only(['index', 'store', 'update', 'destroy']);
 Route::apiResource('crm-event-logs', CrmEventLogsController::class)->only(['index', 'store']);
