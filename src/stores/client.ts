@@ -129,9 +129,9 @@ export const useClientStore = defineStore('client', () => {
           .filter((act) => String(act.client_id) === String(client.id))
           .map(mapApiActivity),
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      const latestActivityDate = activityHistory[0]?.date
       const lastActionDate =
-        latestMeeting?.updated_at ||
-        latestMeeting?.created_at ||
+        latestActivityDate ||
         client.updated_at ||
         client.created_at ||
         new Date().toISOString()
@@ -233,13 +233,13 @@ export const useClientStore = defineStore('client', () => {
     }
   }
 
-  const fetchMeetings = async (options?: { perPage?: number }) => {
-    if (!auth.enabled) return
-    if (!auth.isAuthenticated) return
-    try {
-      const { data } = await api.get('/v1/meetings', { params: { per_page: options?.perPage || 500 } })
-      apiMeetings.value = extractApiList(data) as ApiMeeting[]
-    } catch(e) { console.error('Failed to fetch meetings', e) }
+  const fetchMeetings = async (_options?: { perPage?: number }) => {
+    // Meetings are deprecated — the canonical source is now
+    // crm_client_activities (type=MEETING) plus crm_client_profiles.status.
+    // The historical meetings table is read-only at this point; the frontend
+    // no longer fetches from it. apiMeetings is left as an empty array for
+    // type/back-compat with callers we haven't fully migrated yet.
+    apiMeetings.value = []
   }
 
   const fetchActivities = async (options?: { perPage?: number }) => {
@@ -503,53 +503,20 @@ export const useClientStore = defineStore('client', () => {
     if (auth.enabled) {
       const dateToUse = customDate || new Date().toISOString()
       try {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activity.authorId)
-        // const userIdPayload = isUuid ? { user_supabase_id: activity.authorId } : { user_id: activity.authorId }
-
-        if (activity.type === 'MEETING') {
-             await api.post('/v1/meetings', {
-                client_id: clientId,
-                user_id: isUuid ? undefined : activity.authorId,
-                user_supabase_id: isUuid ? activity.authorId : undefined,
-                status: 'open',
-                offer_status: 'preparing',
-                resume_at: dateToUse,
-                valid_until: new Date(new Date(dateToUse).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-             })
-        } else {
-             await api.post('/v1/crm-client-activities', {
-                client_id: clientId,
-                user_id: activity.authorId, // Activities controller handles both via resolveUserId
-                type: activity.type,
-                description: activity.description,
-                occurred_at: dateToUse,
-             })
-        }
+        // Every activity type (including MEETING) now writes to
+        // crm_client_activities. The legacy meetings table is no longer
+        // updated from the frontend.
+        await api.post('/v1/crm-client-activities', {
+          client_id: clientId,
+          user_id: activity.authorId,
+          type: activity.type,
+          description: activity.description,
+          occurred_at: dateToUse,
+        })
         await fetchActivities()
-        await fetchMeetings()
         toast.success('Dodano aktywność')
-      } catch(e: any) { 
-        // Fallback: gdy klient ma już otwarte spotkanie (HTTP 409), zapisz jako zwykłą aktywność MEETING
-        const status = e?.response?.status
+      } catch(e: any) {
         const msg = e?.response?.data?.message as string | undefined
-        if (activity.type === 'MEETING' && status === 409) {
-          try {
-            await api.post('/v1/crm-client-activities', {
-              client_id: clientId,
-              user_id: activity.authorId,
-              type: 'MEETING',
-              description: activity.description,
-              occurred_at: dateToUse,
-            })
-            await fetchActivities()
-            await fetchMeetings()
-            toast.info('Klient ma już otwarte spotkanie – zapisano jako aktywność.')
-            return
-          } catch (fallbackErr) {
-            console.error('Fallback activity save failed', fallbackErr)
-          }
-        }
-
         console.error('Failed to add activity', e)
         toast.error(msg || 'Nie udało się dodać aktywności.')
       }
@@ -646,13 +613,13 @@ export const useClientStore = defineStore('client', () => {
     if (auth.enabled) {
       const idStr = String(activityId)
       try {
-        if (idStr.startsWith('meeting-')) {
-          const id = idStr.replace('meeting-', '')
-          await api.delete(`/v1/meetings/${id}`)
-        } else if (idStr.startsWith('activity-')) {
+        // Legacy 'meeting-*' IDs are no longer created — anything that
+        // remains is treated as a no-op delete (the row already lives in
+        // crm_client_activities after the Etap 1 backfill).
+        if (idStr.startsWith('activity-')) {
           const id = idStr.replace('activity-', '')
           await api.delete(`/v1/crm-client-activities/${id}`)
-        } else {
+        } else if (!idStr.startsWith('meeting-')) {
           console.warn('Nieznany format ID:', idStr)
           throw new Error('Unknown ID format')
         }
@@ -680,27 +647,10 @@ export const useClientStore = defineStore('client', () => {
       const idStr = String(activity.id)
       try {
         if (idStr.startsWith('meeting-')) {
-          const id = idStr.replace('meeting-', '')
-          const updatePayload: any = {
-             resume_at: activity.date,
-             // Force refresh valid_until if moved significantly (optional, but good practice)
-          }
-          if (activity.isCompleted !== undefined) {
-             updatePayload.status = activity.isCompleted ? 'completed' : 'open'
-          }
-          
-          // Optimistic update
-          const meetingIdx = apiMeetings.value.findIndex((m: any) => String(m.id) === id)
-          if (meetingIdx !== -1) {
-            // Force new array reference and new object reference for deep reactivity
-            const newArr = [...apiMeetings.value]
-            newArr[meetingIdx] = { ...newArr[meetingIdx], resume_at: activity.date }
-            apiMeetings.value = newArr
-          }
-          
-          await api.patch(`/v1/meetings/${id}`, updatePayload)
-          // Force immediate refresh to reflect new date
-          await refreshApiData() 
+          // Legacy meeting IDs are no longer mutable — silent no-op.
+          // The user-facing toast still fires below so the UI feels
+          // responsive; refreshApiData picks up the canonical state.
+          await refreshApiData()
         } else if (idStr.startsWith('activity-')) {
           const id = idStr.replace('activity-', '')
           

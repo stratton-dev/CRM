@@ -108,9 +108,10 @@ export const useFinanceStore = defineStore('finance', () => {
   }
 
   const fetchApiMeetings = async () => {
-    if (!auth.enabled) return
-    const { data } = await api.get('/v1/meetings', { params: { per_page: 200 } })
-    apiMeetings.value = extractApiList(data)
+    // Meetings table is deprecated — finance KPIs now read from
+    // crm_client_activities (type=MEETING). Stub keeps apiMeetings
+    // empty so existing derived computations short-circuit cleanly.
+    apiMeetings.value = []
   }
 
   const fetchApiInvoices = async () => {
