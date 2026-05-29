@@ -1456,39 +1456,7 @@ onMounted(() => {
           </div>
         </RouterLink>
 
-        <RouterLink v-if="canViewMeetings" to="/app/meetings" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
-           <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-40 transition-transform duration-700 group-hover:scale-105" alt="Spotkania" />
-             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/95 via-slate-100/50 to-transparent"></div>
-          </div>
-          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
-            <div class="text-stratton-gold relative">
-              <AppIcon name="briefcase" class="w-8 h-8" />
-              <div class="absolute -top-1 -right-2 bg-white rounded-full p-0.5 shadow-sm group-hover:bg-pink-600 transition-colors hidden">
-                <AppIcon name="plus" class="w-3 h-3 text-pink-600 group-hover:text-white" />
-              </div>
-            </div>
-            <div>
-              <h3 class="crm-tile-title text-xl text-slate-900 mb-1">Spotkania</h3>
-              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Zaplanuj termin</p>
-            </div>
-          </div>
-        </RouterLink>
-        <div v-else class="crm-tile h-44 opacity-60 grayscale cursor-not-allowed relative overflow-hidden bg-slate-100 border border-slate-200">
-           <div class="absolute inset-0 z-0">
-             <img src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20" alt="Spotkania" />
-             <div class="absolute inset-0 bg-slate-100/80"></div>
-          </div>
-          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
-            <div class="text-slate-500">
-               <AppIcon name="briefcase" class="w-8 h-8" />
-            </div>
-            <div>
-              <h3 class="crm-tile-title text-xl text-slate-400 mb-1">Spotkania</h3>
-              <p class="crm-tile-desc text-xs text-slate-600 font-medium">Brak uprawnień</p>
-            </div>
-          </div>
-        </div>
+        <!-- Spotkania tiles removed — meetings are now captured as activities on each client -->
 
         <div @click="openNewMeeting" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">

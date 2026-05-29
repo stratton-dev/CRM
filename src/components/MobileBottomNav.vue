@@ -153,7 +153,7 @@ const moreMenuItems = computed(() => {
   const items = [
     { path: '/app/calendar', label: 'Kalendarz', emoji: '📅' },
     { path: '/app/mailbox', label: 'Skrzynka', emoji: '✉️' },
-    { path: '/app/meetings', label: 'Spotkania', emoji: '🤝' },
+    // Spotkania entry removed
     { path: '/app/notifications', label: 'Powiadomienia', emoji: '🔔' },
     { path: '/app/knowledge-base', label: 'Baza wiedzy', emoji: '📚' },
     { path: '/app/leaderboard', label: 'Ranking', emoji: '🏆' },

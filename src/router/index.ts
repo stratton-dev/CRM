@@ -37,7 +37,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/payroll', name: 'payroll', component: () => import('@/views/PayrollView.vue'), meta: { requiresAuth: true } },
   { path: '/app/leaderboard', name: 'leaderboard', component: () => import('@/views/LeaderboardView.vue'), meta: { requiresAuth: true } },
   { path: '/app/settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
-  { path: '/app/meetings', name: 'meetings', component: () => import('@/views/MeetingsManagementView.vue'), meta: { requiresAuth: true } },
+  // /app/meetings removed — clients view + activity panel replaces it
   { path: '/app/admin/knowledge-base', name: 'admin-knowledge-base', component: () => import('@/views/admin/KnowledgeBaseView.vue'), meta: { requiresAuth: true } },
   { path: '/app/leadowiec', redirect: '/app/leadowiec/clients' },
   { path: '/app/leadowiec/clients', name: 'leadowiec-clients', component: () => import('@/views/LeadowiecClientsView.vue'), meta: { requiresAuth: true } },

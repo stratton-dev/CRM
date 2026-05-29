@@ -9,7 +9,7 @@ import { useClientStore } from '@/stores/client'
 import { useMailboxStore } from '@/stores/mailbox'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import ClientsView from '@/views/ClientsView.vue'
-import MeetingsManagementView from '@/views/MeetingsManagementView.vue'
+// MeetingsManagementView import removed — meetings UI is gone
 import StructureView from '@/views/StructureView.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import TabHeader from '@/components/ui/TabHeader.vue'
@@ -852,10 +852,7 @@ watch(
         <ClientsView :embedded="true" :date-from="dateFrom" :date-to="dateTo" />
       </div>
 
-      <!-- Injected Meetings View (Stats Mode) -->
-      <div v-if="showMeetingsTab" class="bg-surface rounded-card shadow-card border border-slate-100 overflow-hidden mb-4 md:mb-8 animate-fade-in-down">
-        <MeetingsManagementView :embedded="true" />
-      </div>
+      <!-- Meetings tab removed — meetings are now activities on each client -->
 
       <!-- Injected Team View (Stats Mode) -->
       <div v-if="showTeamTab" class="bg-surface rounded-card shadow-card border border-slate-100 p-4 md:p-6 mb-4 md:mb-8 animate-fade-in-down">

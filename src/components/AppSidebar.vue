@@ -108,7 +108,7 @@ const navLinks = computed((): NavLink[] => {
     )
   } else if (role === 'SALES') {
     links.push(
-      { label: 'Spotkania', path: '/app/meetings', icon: 'calendar', viewKey: 'meetings' },
+      // Spotkania removed — activity panel on each client card handles it
       { label: 'Moi Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
       { label: 'Szybka Oferta', path: '/app/quick-calculator', icon: 'calculator', viewKey: 'quick-calculator' },
       { label: 'Moje Prowizje', path: '/app/settlements', icon: 'hand-holding-dollar', viewKey: 'settlements' },
