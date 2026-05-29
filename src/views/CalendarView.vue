@@ -8,6 +8,7 @@ import { useSessionStore } from '@/stores/session'
 import { useNotificationStore } from '@/stores/notification'
 import { useRoute } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import api from '@/api/client'
 
 const data = useDataStore()
@@ -526,75 +527,56 @@ onBeforeUnmount(() => {
     <!-- Overlay for closing month picker -->
     <div v-if="showMonthPicker" class="fixed inset-0 z-40 bg-transparent" @click="closeMonthPicker"></div>
 
-    <!-- Header Section -->
-    <header class="rounded-card p-4 md:p-8 mb-4 md:mb-6 shadow-card-hover border relative overflow-hidden group flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 isolate z-50" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      <!-- Decor Container -->
-      <div class="absolute inset-0 overflow-hidden rounded-card pointer-events-none z-0">
-         <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2"></div>
-      </div>
-
-      <div class="relative z-10 flex items-center gap-3 md:gap-6">
-        <RouterLink
-          to="/app/dashboard"
-          class="hidden md:flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-white hover:border-slate-600 transition-all shadow-sm group/link"
-        >
-           <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover/link:-translate-x-1" />
-        </RouterLink>
-
-        <div>
-          <h1 class="text-xl md:text-3xl font-serif font-bold text-white tracking-tight leading-tight mb-1 md:mb-2">Kalendarz Pracy</h1>
-          <p class="text-slate-400 text-xs md:text-sm font-medium">Zarządzaj swoimi spotkaniami.</p>
-        </div>
-      </div>
-    
-      <div class="relative z-10 flex items-center gap-3 bg-slate-800/50 p-1.5 rounded-xl shadow-sm border border-slate-700 backdrop-blur-sm self-start md:self-center">
-        <button 
-          type="button" 
-          class="w-10 h-10 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-colors" 
-          @click="changeMonth(-1)"
-        >
-          <AppIcon name="chevron-left" class="w-5 h-5" />
-        </button>
-        
-        <div class="relative z-50">
-          <button 
-            type="button" 
-            class="h-10 px-6 flex items-center justify-center text-sm font-bold uppercase tracking-widest text-stratton-gold hover:text-white rounded-lg transition-colors select-none" 
-            @click="toggleMonthPicker"
+    <TabHeader icon="calendar" title="Kalendarz Pracy">
+      <template #actions>
+        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg shadow-sm p-1">
+          <button
+            type="button"
+            class="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            @click="changeMonth(-1)"
           >
-            {{ currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' }) }}
+            <AppIcon name="chevron-left" class="w-4 h-4" />
           </button>
-          
-          <!-- Month Picker Popup -->
-          <div v-if="showMonthPicker" class="absolute top-10 left-1/2 -translate-x-1/2 bg-white border border-slate-200 shadow-2xl rounded-2xl p-4 w-64 animate-fade-in-up origin-top text-slate-800 z-50 ring-4 ring-slate-900/10 flex flex-col gap-3">
-             <div class="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-t border-l border-slate-200"></div>
-             
-             <div class="flex gap-2 relative z-10 p-1">
+
+          <div class="relative">
+            <button
+              type="button"
+              class="h-8 px-4 flex items-center justify-center text-xs font-bold uppercase tracking-widest text-slate-700 hover:text-stratton-gold rounded-md transition-colors select-none"
+              @click="toggleMonthPicker"
+            >
+              {{ currentDate.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' }) }}
+            </button>
+
+            <div v-if="showMonthPicker" class="absolute top-10 right-0 bg-white border border-slate-200 shadow-2xl rounded-xl p-4 w-64 animate-fade-in-up origin-top text-slate-800 z-50 ring-4 ring-slate-900/10 flex flex-col gap-3">
+              <div class="absolute -top-2 right-6 w-4 h-4 bg-white rotate-45 border-t border-l border-slate-200"></div>
+
+              <div class="flex gap-2 relative z-10 p-1">
                 <select v-model="pickerMonth" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold transition cursor-pointer">
-                   <option v-for="i in 12" :key="i" :value="i - 1">{{ new Date(2000, i - 1, 1).toLocaleDateString('pl-PL', { month: 'long' }) }}</option>
+                  <option v-for="i in 12" :key="i" :value="i - 1">{{ new Date(2000, i - 1, 1).toLocaleDateString('pl-PL', { month: 'long' }) }}</option>
                 </select>
-                
+
                 <select v-model="pickerYear" class="w-24 bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold transition cursor-pointer text-center appearance-none">
-                   <option v-for="year in yearsRange" :key="year" :value="year">{{ year }}</option>
+                  <option v-for="year in yearsRange" :key="year" :value="year">{{ year }}</option>
                 </select>
-             </div>
-             
-             <div class="flex justify-end gap-2 text-[10px] font-bold uppercase tracking-wider relative z-10">
+              </div>
+
+              <div class="flex justify-end gap-2 text-[10px] font-bold uppercase tracking-wider relative z-10">
                 <button @click="showMonthPicker = false" class="text-slate-400 hover:text-slate-600 px-3 py-1.5 transition rounded-lg hover:bg-slate-50">Anuluj</button>
                 <button @click="applyMonthPicker" class="bg-stratton-gold text-white rounded-lg px-3 py-1.5 hover:bg-amber-600 transition shadow-lg shadow-amber-500/20">Wybierz</button>
-             </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <button 
-          type="button" 
-          class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-colors" 
-          @click="changeMonth(1)"
-        >
-          <AppIcon name="chevron-right" class="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </header>
+          <button
+            type="button"
+            class="w-8 h-8 flex items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            @click="changeMonth(1)"
+          >
+            <AppIcon name="chevron-right" class="w-4 h-4" />
+          </button>
+        </div>
+      </template>
+    </TabHeader>
 
     <!-- Calendar Grid -->
     <div class="flex-1 bg-white shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden flex flex-col border border-slate-100 relative pointer-events-auto z-10">

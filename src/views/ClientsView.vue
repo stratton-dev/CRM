@@ -16,6 +16,7 @@ import type { Client } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
 import NewClientSidebarForm from '@/components/clients/NewClientSidebarForm.vue'
 import ClientNotesPanel from '@/components/clients/ClientNotesPanel.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 
 type ClientContact = {
   id: string
@@ -1219,21 +1220,8 @@ if (route.query.expand) {
 <template>
   <div class="flex flex-col" :class="embedded ? 'h-auto min-h-[600px]' : 'h-[calc(100vh-112px)]'">
 
-    <div class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap items-center gap-y-2 shadow-sm flex-shrink-0" :class="embedded ? 'rounded-t-card' : ''">
-      <div class="flex items-center gap-2 ml-2">
-        <button
-          v-if="!embedded"
-          type="button"
-          title="Wróć"
-          class="w-9 h-9 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white flex items-center justify-center shadow-sm transition-colors group"
-          @click="router.back()"
-        >
-          <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-        </button>
-        <AppIcon name="users" class="w-5 h-5 text-primary ml-1" />
-        <h3 class="font-black text-slate-800 text-xl tracking-tight">Klienci w obsłudze</h3>
-      </div>
-      <div class="flex-1 flex flex-wrap items-center justify-end px-2 md:px-4 gap-2 md:gap-4">
+    <TabHeader icon="users" title="Klienci w obsłudze" :embedded="embedded">
+      <template #actions>
         <div class="flex items-center space-x-2">
           <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="exportToCsv">
             <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -1271,8 +1259,8 @@ if (route.query.expand) {
             <AppIcon name="search" class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
-      </div>
-    </div>
+      </template>
+    </TabHeader>
 
     <!-- Leady od moich leadowców — panel -->
     <div v-if="fromMyLeadowcy && isOpiekunOrAbove" class="mx-4 mb-4 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
