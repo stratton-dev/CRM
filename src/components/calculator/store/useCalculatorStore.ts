@@ -349,7 +349,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
       advisorEmail: advisor?.email || '',
       advisorPhone: advisor?.phone || '',
     });
-    offerPdfGenerator.generateOfferPDF(item, {
+    const meta = {
       offerNumber,
       validUntil,
       advisorName: advisor?.name || advisor?.email || 'Doradca',
@@ -362,10 +362,92 @@ export const useCalculatorStore = defineStore('calculator', () => {
       footerLine1: config.value.branding?.footerLine1,
       footerLine2: config.value.branding?.footerLine2,
       footerLogoUrl: config.value.branding?.footerLogoUrl,
-      documentLayout: options?.documentLayout || 'vertical',
-    });
+      documentLayout: options?.documentLayout || ('vertical' as 'horizontal' | 'vertical'),
+    };
 
+    // Existing flow: open print preview window for the user
+    offerPdfGenerator.generateOfferPDF(item, meta);
     toast.info('Generowanie PDF...');
+
+    // New flow: capture HTML, render to actual PDF blob, upload base64
+    if (auth.enabled && context.value.clientId) {
+      try {
+        await uploadOfferPdfToCrm(item, meta, validUntil, offerNumber);
+      } catch (error) {
+        console.error('Offer PDF upload failed', error);
+      }
+    }
+  };
+
+  const uploadOfferPdfToCrm = async (
+    item: ZapisanaKalkulacja,
+    meta: any,
+    validUntil: string,
+    offerNumber: string,
+  ) => {
+    const clientId = context.value.clientId;
+    if (!clientId) return;
+    const advisor = session.currentUser;
+    const htmlContent = buildOfferPdfHtml(item, meta);
+
+    const { default: html2canvas } = await import('html2canvas');
+    const { jsPDF } = await import('jspdf');
+
+    // Render the HTML inside a hidden iframe so it picks up its embedded styles
+    // without polluting the live DOM.
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = '794px'; // A4 width @ 96dpi
+    iframe.style.height = '1123px';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    try {
+      const doc = iframe.contentDocument!;
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+      // Give the iframe a tick to lay out + load any fonts/images
+      await new Promise((r) => setTimeout(r, 600));
+
+      const root = doc.body;
+      const canvas = await html2canvas(root, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
+      const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const dataUri = pdf.output('datauristring');
+      const base64 = dataUri.split(',')[1] || '';
+      const fileName = `Oferta_${offerNumber}.pdf`;
+
+      await api.post('/v1/crm-offer-pdfs', {
+        client_id: Number(clientId),
+        user_id: advisor?.id,
+        calculation_id: item?.id ? Number(item.id) : undefined,
+        name: fileName,
+        valid_until: validUntil || null,
+        pdf_base64: base64,
+      });
+      toast.success('Oferta PDF zapisana w CRM.');
+    } finally {
+      iframe.remove();
+    }
   };
 
   const generateTestOfferPdf = async (

@@ -52,8 +52,29 @@ const TYPE_BADGE: Record<ActivityType, string> = {
   MEETING: 'bg-blue-100 text-blue-800',
 }
 
+type OfferPdf = {
+  id: number
+  name: string
+  size_bytes?: number | null
+  valid_until?: string | null
+  calculation_id?: number | null
+  created_at: string
+  user?: { id: number; name?: string; email?: string }
+}
+
+type SavedOffer = {
+  id: number
+  name: string
+  estimated_savings?: number | null
+  employees_uop?: number | null
+  created_at: string
+}
+
 const notes = ref<Activity[]>([])
+const offerPdfs = ref<OfferPdf[]>([])
+const savedOffers = ref<SavedOffer[]>([])
 const isLoading = ref(false)
+const isLoadingOffers = ref(false)
 const isSaving = ref(false)
 const draft = ref('')
 const draftType = ref<ActivityType>('NOTE')
@@ -138,11 +159,75 @@ const submit = async () => {
   }
 }
 
+const fetchOffers = async () => {
+  if (!props.clientId) {
+    offerPdfs.value = []
+    savedOffers.value = []
+    return
+  }
+  isLoadingOffers.value = true
+  try {
+    const [pdfRes, savedRes] = await Promise.allSettled([
+      api.get('/v1/crm-offer-pdfs', { params: { client_id: props.clientId, per_page: 200 } }),
+      api.get('/v1/crm-saved-offers', { params: { client_id: props.clientId, per_page: 200 } }),
+    ])
+    if (pdfRes.status === 'fulfilled') {
+      const d = pdfRes.value.data
+      const rows = Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : []
+      offerPdfs.value = rows as OfferPdf[]
+    } else {
+      offerPdfs.value = []
+    }
+    if (savedRes.status === 'fulfilled') {
+      const d = savedRes.value.data
+      const rows = Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : []
+      savedOffers.value = rows as SavedOffer[]
+    } else {
+      savedOffers.value = []
+    }
+  } finally {
+    isLoadingOffers.value = false
+  }
+}
+
+const downloadOfferPdf = async (offer: OfferPdf) => {
+  try {
+    const { data } = await api.get(`/v1/crm-offer-pdfs/${offer.id}`)
+    const base64 = data?.pdf_base64
+    if (!base64) {
+      toast.error('Brak pliku PDF do pobrania.')
+      return
+    }
+    const href = String(base64).startsWith('data:') ? String(base64) : `data:application/pdf;base64,${base64}`
+    const link = document.createElement('a')
+    link.href = href
+    link.download = offer.name.endsWith('.pdf') ? offer.name : `${offer.name}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch {
+    toast.error('Nie udało się pobrać oferty.')
+  }
+}
+
+const formatBytes = (bytes?: number | null) => {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 watch(() => props.clientId, (id) => {
   draft.value = ''
   draftType.value = 'NOTE'
-  if (id) fetchNotes()
-  else notes.value = []
+  if (id) {
+    fetchNotes()
+    fetchOffers()
+  } else {
+    notes.value = []
+    offerPdfs.value = []
+    savedOffers.value = []
+  }
 }, { immediate: true })
 </script>
 
@@ -172,7 +257,7 @@ watch(() => props.clientId, (id) => {
       </button>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3 p-3">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_260px_300px] gap-3 p-3">
       <div class="bg-white rounded-md border border-slate-200 overflow-y-auto max-h-[280px]">
         <div v-if="isLoading" class="p-4 text-xs text-slate-500">Ładowanie aktywności...</div>
         <div v-else-if="sortedNotes.length === 0" class="p-4 text-xs text-slate-400 italic">Brak aktywności. Dodaj pierwszą po prawej stronie.</div>
@@ -188,6 +273,47 @@ watch(() => props.clientId, (id) => {
               <span class="text-[10px] text-slate-400 font-mono shrink-0">{{ formatTimestamp(note.occurred_at) }}</span>
             </div>
             <p class="text-xs text-slate-700 whitespace-pre-wrap break-words">{{ note.description }}</p>
+          </li>
+        </ul>
+      </div>
+
+      <div class="bg-white rounded-md border border-slate-200 overflow-y-auto max-h-[280px]">
+        <div class="px-3 py-2 border-b border-slate-100 sticky top-0 bg-white">
+          <h4 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Oferty PDF klienta</h4>
+        </div>
+        <div v-if="isLoadingOffers" class="p-3 text-xs text-slate-500">Ładowanie ofert...</div>
+        <div v-else-if="offerPdfs.length === 0 && savedOffers.length === 0" class="p-3 text-xs text-slate-400 italic">Brak ofert. Wygeneruj PDF z kalkulatora.</div>
+        <ul v-else class="divide-y divide-slate-100">
+          <li v-for="pdf in offerPdfs" :key="`pdf-${pdf.id}`" class="p-2.5">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 shrink-0">PDF</span>
+              <span class="text-[10px] text-slate-400 font-mono shrink-0">{{ formatTimestamp(pdf.created_at) }}</span>
+            </div>
+            <p class="text-xs text-slate-700 font-semibold truncate" :title="pdf.name">{{ pdf.name }}</p>
+            <div class="flex items-center justify-between mt-1.5">
+              <span class="text-[10px] text-slate-400">
+                {{ formatBytes(pdf.size_bytes) }}<span v-if="pdf.valid_until"> · ważna do {{ pdf.valid_until }}</span>
+              </span>
+              <button
+                type="button"
+                class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
+                @click="downloadOfferPdf(pdf)"
+              >
+                Pobierz
+              </button>
+            </div>
+          </li>
+          <li v-for="offer in savedOffers" :key="`saved-${offer.id}`" class="p-2.5">
+            <div class="flex items-start justify-between gap-2 mb-1">
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-200 text-slate-600 shrink-0">Archiwum</span>
+              <span class="text-[10px] text-slate-400 font-mono shrink-0">{{ formatTimestamp(offer.created_at) }}</span>
+            </div>
+            <p class="text-xs text-slate-700 font-semibold truncate" :title="offer.name">{{ offer.name }}</p>
+            <div class="text-[10px] text-slate-400 mt-1">
+              <span v-if="offer.estimated_savings">osz. {{ Number(offer.estimated_savings).toLocaleString('pl-PL') }} PLN</span>
+              <span v-if="offer.employees_uop"> · {{ offer.employees_uop }} prac.</span>
+              <span class="ml-1 italic">— bez PDF</span>
+            </div>
           </li>
         </ul>
       </div>
