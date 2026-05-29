@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import type { Client, User } from '@/types/models'
 
 defineProps<{
@@ -639,74 +640,34 @@ const exportToCsv = () => {
 </script>
 
 <template>
-  <div class="p-3 md:p-6 max-w-[1600px] mx-auto space-y-4 md:space-y-8" :class="{ 'p-0! max-w-none! space-y-0!': embedded }">
-    <!-- Header -->
-    <div v-if="!embedded" class="text-white rounded-card p-4 md:p-8 shadow-card-hover border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden mb-3 md:mb-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+  <div class="flex flex-col" :class="embedded ? 'h-auto min-h-[600px]' : 'h-[calc(100vh-112px)]'">
 
-      <div class="relative z-10 flex items-center gap-3 md:gap-6">
-          <button
-            @click="router.push('/app/dashboard')"
-            class="hidden md:flex w-12 h-12 rounded-md bg-slate-800 border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group"
-            title="Powrót do Dashboardu"
-          >
-            <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+    <TabHeader icon="calendar" title="Spotkania w obsłudze" :embedded="embedded">
+      <template #actions>
+        <div class="flex items-center space-x-2">
+          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="openAddModal">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>Nowy</span>
           </button>
-
-          <div>
-            <h1 class="text-xl md:text-4xl font-serif font-bold text-white tracking-tight">Zarządzanie Spotkaniami</h1>
-            <p class="text-stratton-100 mt-1 text-xs md:text-sm font-medium opacity-90">Planuj kontakty i zarządzaj bazą klientów</p>
-          </div>
+          <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="exportToCsv">
+            <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Eksportuj</span>
+          </button>
         </div>
 
-        <button
-          type="button"
-          @click="openAddModal"
-          class="bg-linear-to-r from-[#D4AF37] to-stratton-gold hover:brightness-110 text-white px-4 md:px-6 py-2 md:py-3 rounded-md font-bold transition-all flex items-center gap-2 md:gap-3 shadow-md group hover:-translate-y-0.5 relative z-20 text-sm self-start md:self-auto"
-        >
-          <div class="w-4 h-4 md:w-5 md:h-5 rounded bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-            <AppIcon name="plus" class="w-3 h-3 md:w-3.5 md:h-3.5" />
-          </div>
-          Dodaj Spotkanie
-        </button>
-      </div>
-
-    <!-- Filters & Table -->
-    <div 
-      class="flex flex-col min-h-0 bg-surface"
-      :class="embedded ? 'h-auto overflow-visible rounded-t-card' : 'rounded-card shadow-card border border-slate-200 overflow-hidden'"
-    >
-      <div
-        class="bg-slate-50 border-b border-slate-200 p-2 flex flex-wrap items-center gap-y-2 shadow-sm shrink-0"
-        :class="embedded ? 'rounded-t-card' : ''"
-      >
-        <div class="flex items-center gap-3 ml-4">
-          <AppIcon name="calendar" class="w-5 h-5 text-primary" />
-          <h3 class="font-black text-slate-800 text-xl tracking-tight">Spotkania w obsłudze</h3>
+        <div class="w-full md:w-96 relative">
+          <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Szukaj klienta, firmy lub NIP..."
+            class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400"
+          />
         </div>
-        <div class="flex-1 flex flex-wrap items-center justify-end px-2 md:px-4 gap-2 md:gap-4">
-          <div class="flex items-center space-x-2">
-            <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="openAddModal">
-              <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-              <span>Nowy</span>
-            </button>
-            <button type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="exportToCsv">
-              <svg class="w-4 h-4 mr-1.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              <span>Eksportuj</span>
-            </button>
-          </div>
+      </template>
+    </TabHeader>
 
-          <div class="w-full md:w-96 relative">
-            <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
-            <input
-              v-model="searchQuery"
-              type="text" 
-              placeholder="Szukaj klienta, firmy lub NIP..."
-              class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400"
-            />
-          </div>
-        </div>
-      </div>
-
+    <div class="flex flex-col flex-1 min-h-0 bg-surface">
       <div class="flex-1 relative bg-surface" :class="embedded ? 'overflow-visible' : 'overflow-hidden'">
         <!-- Mobile card list -->
         <div class="md:hidden divide-y divide-slate-100 bg-white overflow-y-auto" :class="embedded ? 'h-auto' : 'h-full'">

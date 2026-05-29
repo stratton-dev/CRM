@@ -8,7 +8,8 @@ import { useStructureStore } from '@/stores/structure'
 import { useSessionStore } from '@/stores/session'
 import { useToastStore } from '@/stores/toast'
 import AppIcon from '@/components/AppIcon.vue'
-import * as ExcelJS from 'exceljs' 
+import TabHeader from '@/components/ui/TabHeader.vue'
+import * as ExcelJS from 'exceljs'
 
 // Stores
 const router = useRouter()
@@ -286,47 +287,34 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-3 md:p-6 max-w-[1920px] mx-auto space-y-4 md:space-y-8">
-    <!-- Header -->
-    <div class="text-white rounded-card p-4 md:p-8 shadow-card-hover border relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
+  <div class="flex flex-col h-[calc(100vh-112px)]">
 
-      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 w-full">
-        <div class="flex items-center gap-4 md:gap-6">
-          <button @click="router.push('/app/sales/start')" class="hidden md:flex w-12 h-12 rounded-md bg-slate-800 border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
-            <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+    <TabHeader icon="user-group" title="Leady Sprzedażowe">
+      <template #actions>
+        <div class="flex items-center space-x-2">
+          <button v-if="canAddLeads" type="button" class="flex items-center px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg border border-slate-200 bg-white font-medium transition-colors" @click="showImportModal = true">
+            <AppIcon name="arrow-down-tray" class="w-4 h-4 mr-1.5 text-indigo-500" />
+            <span>Importuj</span>
           </button>
-          
-          <div>
-            <h1 class="text-xl md:text-4xl font-serif font-bold text-white tracking-tight">Leady Sprzedażowe</h1>
-            <p class="text-slate-400 mt-1 md:mt-2 text-xs md:text-base font-medium opacity-90">Etap 1: Kwalifikacja i wstępny kontakt</p>
-          </div>
+          <button v-if="canAddLeads" type="button" class="flex items-center px-3 py-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold shadow-sm transition-colors" @click="openAddModal">
+            <AppIcon name="plus" class="w-4 h-4 mr-1.5" />
+            <span>Dodaj Leada</span>
+          </button>
         </div>
 
-        <div class="flex flex-wrap gap-3">
-           <button v-if="canAddLeads" @click="showImportModal = true" class="px-4 md:px-6 py-2 md:py-3 rounded-md bg-white/5 hover:bg-white/10 text-white text-sm font-bold border border-white/10 backdrop-blur-sm transition-all flex items-center gap-2 group">
-             <AppIcon name="arrow-down-tray" class="w-4 md:w-5 h-4 md:h-5 text-indigo-400 group-hover:text-indigo-300" />
-             Importuj
-           </button>
-           <button v-if="canAddLeads" @click="openAddModal" class="px-4 md:px-6 py-2 md:py-3 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2">
-             <AppIcon name="plus" class="w-4 md:w-5 h-4 md:h-5" />
-             Dodaj Leada
-           </button>
+        <div class="w-full md:w-96 relative">
+          <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Szukaj po nazwie firmy, NIPie lub kontakcie..."
+            class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400"
+          />
         </div>
-      </div>
-    </div>
+      </template>
+    </TabHeader>
 
-    <!-- Toolbar -->
-    <div class="flex flex-col md:flex-row gap-4 justify-between items-center">
-      <div class="relative w-full md:w-96 group">
-        <AppIcon name="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-stratton-gold transition-colors pointer-events-none" />
-        <input 
-          v-model="searchQuery" 
-          type="text" 
-          placeholder="Szukaj po nazwie firmy, NIPie lub kontakcie..." 
-          class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 focus:border-stratton-gold transition-all shadow-sm text-right font-bold" 
-        />
-      </div>
-    </div>
+    <div class="flex-1 overflow-y-auto p-4 md:p-6">
 
     <!-- Table -->
     <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
@@ -435,7 +423,8 @@ onMounted(() => {
             </table>
         </div>
     </div>
-    
+    </div>
+
     <!-- Add Modal -->
     <div v-if="showAddModal" class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 md:p-4 animate-fade-in">
         <div class="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full md:max-w-2xl overflow-hidden transform transition-all scale-100 max-h-[90vh] overflow-y-auto">

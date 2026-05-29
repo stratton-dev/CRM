@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import { api } from '@/api/client'
 import ConsentTextModal from '@/components/ConsentTextModal.vue'
 import PresentationModal from '@/components/PresentationModal.vue'
@@ -1470,19 +1471,11 @@ onMounted(() => {
 
 
 <template>
-  <div v-if="!isProcessActive" class="view-transition pb-20 space-y-4 md:space-y-8">
-    <div class="w-full pt-3 md:pt-6">
-      <div class="rounded-3xl shadow-xl border p-4 md:p-8 mb-4 md:mb-8 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-        <div class="flex-1">
-          <div class="flex items-center gap-3 md:gap-4 mb-2 md:mb-3">
-             <RouterLink to="/app/dashboard" class="hidden md:flex w-10 h-10 rounded-full bg-white border border-slate-200 items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm">
-                <AppIcon name="arrow-left" class="w-5 h-5" />
-             </RouterLink>
-             <h1 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight">Dzień dobry, {{ userName }}</h1>
-          </div>
-          <p class="text-slate-400 text-sm md:text-base font-medium md:ml-14">Panel Procesu Sprzedażowego</p>
-        </div>
-      </div>
+  <div v-if="!isProcessActive" class="flex flex-col h-[calc(100vh-112px)]">
+
+    <TabHeader icon="briefcase" title="Proces Sprzedażowy" />
+
+    <div class="flex-1 overflow-y-auto p-4 md:p-6">
 
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mb-8 md:mb-12">
         <RouterLink to="/app/leads" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
@@ -1640,26 +1633,21 @@ onMounted(() => {
   </div>
 
 
-  <div v-else class="view-transition pb-20 space-y-4 md:space-y-8">
-    <div class="w-full pt-3 md:pt-6">
-      <div class="rounded-3xl shadow-xl border p-4 md:p-8 mb-4 md:mb-8 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-        <div class="flex-1">
-          <div class="flex items-center gap-3 md:gap-4 mb-2 md:mb-3">
-             <button @click="goBack" class="hidden md:flex w-10 h-10 rounded-full bg-white border border-slate-200 items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition shadow-sm">
-                <AppIcon name="arrow-left" class="w-5 h-5" />
-             </button>
-             <h1 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight">Nowa Sprzedaż</h1>
-          </div>
-          <div class="md:ml-14 flex flex-wrap items-center gap-2 md:gap-3">
-              <span class="text-slate-400 font-medium">Panel Procesu Sprzedażowego</span>
-              <span class="text-xs bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/30 uppercase tracking-wider">Sesja Aktywna</span>
-              <span class="text-xs text-slate-500 font-mono">ID: {{ sessionId }}</span>
+  <div v-else class="flex flex-col h-[calc(100vh-112px)]">
+
+    <TabHeader icon="briefcase" title="Nowa Sprzedaż">
+      <template #actions>
+        <div class="flex items-center gap-3">
+          <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 uppercase tracking-wider">Sesja aktywna</span>
+          <span class="text-xs text-slate-500 font-mono">ID: {{ sessionId }}</span>
+          <div class="hidden md:flex items-center gap-2 ml-2">
+            <div v-for="i in [1, 2, 3, 4]" :key="i" class="h-1.5 w-10 rounded-full transition-colors" :class="step >= i ? 'bg-stratton-gold' : 'bg-slate-200'"></div>
           </div>
         </div>
-        <div class="hidden md:flex items-center gap-2">
-          <div v-for="i in [1, 2, 3, 4]" :key="i" class="h-1.5 w-12 rounded-full transition-colors" :class="step >= i ? 'bg-stratton-gold' : 'bg-slate-800'"></div>
-        </div>
-      </div>
+      </template>
+    </TabHeader>
+
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 items-start">
       <div class="lg:col-span-4 space-y-4 md:space-y-6 sticky top-4 md:top-8">
