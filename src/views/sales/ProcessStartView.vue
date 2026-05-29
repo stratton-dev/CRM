@@ -760,13 +760,11 @@ const saveContactDrafts = async () => {
   }
 }
 
-const resolveOpenMeetingId = async (targetClientId: string) => {
-  const { data } = await api.get('/v1/meetings', {
-    params: { client_id: targetClientId, status: 'open', per_page: 1 },
-    timeout: 60000
-  })
-  const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
-  return list.length > 0 ? String(list[0].id) : null
+const resolveOpenMeetingId = async (_targetClientId: string) => {
+  // Meetings table is deprecated. The wizard session no longer needs
+  // to look up an open meeting — the client_id + crm_profile.status
+  // are the canonical session state.
+  return null
 }
 
 const saveClientAndMeeting = async () => {
@@ -830,40 +828,10 @@ const saveClientAndMeeting = async () => {
     const contactsOk = await saveContactDrafts()
     if (!contactsOk) return false
 
-    if (clientId.value && !meetingId.value) {
-      const existingMeetingId = await resolveOpenMeetingId(clientId.value)
-      if (existingMeetingId) {
-        meetingId.value = existingMeetingId
-        sessionId.value = `MEETING-${meetingId.value}`
-        toast.warning('Klient ma już aktywne spotkanie. Kontynuuję istniejące.')
-        return true
-      }
-      const validUntil = new Date()
-      validUntil.setDate(validUntil.getDate() + 90)
-      const payload = {
-        client_id: clientId.value,
-        user_supabase_id: currentUser.value?.id,
-        status: 'open',
-        calculation_shown: false,
-        valid_until: validUntil.toISOString().slice(0, 10),
-      }
-      try {
-        const { data } = await api.post('/v1/meetings', payload, { timeout: 60000 })
-        meetingId.value = String(data?.id || '')
-        if (meetingId.value) {
-          sessionId.value = `MEETING-${meetingId.value}`
-        }
-      } catch (error: any) {
-        const status = error?.response?.status
-        const fallbackId = error?.response?.data?.meeting_id
-        if (status === 409 && fallbackId) {
-          meetingId.value = String(fallbackId)
-          sessionId.value = `MEETING-${meetingId.value}`
-          toast.warning('Klient ma już aktywne spotkanie. Kontynuuję istniejące.')
-        } else {
-          throw error
-        }
-      }
+    // Session identifier is now derived from the client itself —
+    // meetings table is no longer created/written by the wizard.
+    if (clientId.value && !sessionId.value) {
+      sessionId.value = `CLIENT-${clientId.value}-${Date.now().toString(36)}`
     }
 
     return true
@@ -923,11 +891,10 @@ const updateCrmReservationAndStatus = async () => {
       crmProfileId.value = profile?.id ? String(profile.id) : null
     }
 
-    let reservationEndDate: string | null = null
-    if (meetingId.value) {
-      const { data: meeting } = await api.get(`/v1/meetings/${meetingId.value}`)
-      reservationEndDate = meeting?.valid_until || null
-    }
+    // reservation_end_date is now sourced from the profile itself (set when
+    // the client first moves into IN_TALKS — see stores/client.ts). The
+    // meeting.valid_until lookup is no longer needed.
+    const reservationEndDate: string | null = null
 
     const currentStatus = profile?.status || null
     const nextStatus =
@@ -967,11 +934,10 @@ const updateCrmStatus = async (
       crmProfileId.value = profile?.id ? String(profile.id) : null
     }
 
-    let reservationEndDate: string | null = null
-    if (meetingId.value) {
-      const { data: meeting } = await api.get(`/v1/meetings/${meetingId.value}`)
-      reservationEndDate = meeting?.valid_until || null
-    }
+    // reservation_end_date is now sourced from the profile itself (set when
+    // the client first moves into IN_TALKS — see stores/client.ts). The
+    // meeting.valid_until lookup is no longer needed.
+    const reservationEndDate: string | null = null
 
     const payload: Record<string, any> = {
       client_id: clientId.value,
@@ -995,12 +961,13 @@ const updateCrmStatus = async (
 }
 
 const saveMeetingAnalysis = async () => {
-  if (!auth.enabled || !meetingId.value) return true
+  if (!auth.enabled || !clientId.value) return true
   if (isSavingStep.value) return false
   isSavingStep.value = true
   try {
-    const payload = {
-      meeting_id: meetingId.value,
+    // Meeting analysis is now persisted as part of the crm_client_profiles
+    // payload (analysis_json) instead of a separate meeting_analyses row.
+    const analysisPayload = {
       industry: analysis.value.industry || null,
       tax_model: analysis.value.taxationType || analysis.value.contractType || null,
       zus_cost_level:
@@ -1014,11 +981,11 @@ const saveMeetingAnalysis = async () => {
       benefits: analysis.value.hasBenefits === null ? null : analysis.value.hasBenefits ? 'Tak' : 'Nie',
     }
 
-    if (meetingAnalysisId.value) {
-      await api.patch(`/v1/meeting-analyses/${meetingAnalysisId.value}`, payload)
-    } else {
-      const { data } = await api.post('/v1/meeting-analyses', payload)
-      meetingAnalysisId.value = String(data?.id || '')
+    if (crmProfileId.value) {
+      await api.patch(`/v1/crm-client-profiles/${crmProfileId.value}`, {
+        client_id: clientId.value,
+        analysis_json: analysisPayload,
+      })
     }
 
     return true
@@ -1034,25 +1001,30 @@ const saveMeetingAnalysis = async () => {
 }
 
 const finalizeMeeting = async () => {
-  if (!auth.enabled || !meetingId.value) return
-  
+  if (!auth.enabled || !clientId.value) return
+
   // Ostatnie sprawdzenie rezerwacji NIP przed finalizacją (krok 4)
   const nip = normalizeNip(companyData.value.nip)
   if (nip) {
     const isReserved = await checkNipReservation(nip)
     if (isReserved) {
       toast.error(nipBlockMessage.value || 'NIP został w międzyczasie zarezerwowany przez innego handlowca.')
-      // Cofamy do kroku 1, aby handlowiec widział błąd rezerwacji
       step.value = 1
       throw new Error('NIP_RESERVED')
     }
   }
 
+  // Finalization no longer writes to the meetings table. Log a MEETING
+  // activity instead so the wizard outcome shows up in the client's
+  // activity panel + calendar.
   try {
-    await api.patch(`/v1/meetings/${meetingId.value}`, {
-      status: 'completed',
-      calculation_shown: true,
-      reserve_nip: true // Wysyłamy flagę do backendu, aby dokonał rezerwacji przy pierwszej ofercie
+    await api.post('/v1/crm-client-activities', {
+      client_id: clientId.value,
+      user_id: currentUser.value?.id,
+      type: 'MEETING',
+      description: `Spotkanie zakończone (sesja ${sessionId.value || 'wizard'})`,
+      occurred_at: new Date().toISOString(),
+      is_completed: true,
     })
   } catch (error: any) {
     const message = error?.response?.data?.message || error?.message || 'Nie udało się zakończyć spotkania.'
@@ -1079,24 +1051,12 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
     }
     await fetchClientContacts(clientId.value)
 
-    let meeting = null
-    if (targetMeetingId) {
-      const { data } = await api.get(`/v1/meetings/${targetMeetingId}`)
-      meeting = data
-    } else {
-      const { data } = await api.get('/v1/meetings', { params: { client_id: clientId.value, per_page: 1 } })
-      const list = Array.isArray(data?.data) ? data.data : []
-      meeting = list.length ? list[0] : null
-    }
-
-    if (meeting?.id) {
-      meetingId.value = String(meeting.id)
-      sessionId.value = `MEETING-${meetingId.value}`
-      
-      // Auto-fill employee counts from meeting data/client data
-      if (meeting.company_size && !analysis.value.uopCount) {
-        analysis.value.uopCount = parseInt(meeting.company_size) || null
-      }
+    // Meetings table no longer consulted — session_id derived from the
+    // client + a timestamp. Existing meeting lookups are skipped; the
+    // historic data is preserved in crm_client_activities (type=MEETING).
+    void targetMeetingId
+    if (clientId.value && !sessionId.value) {
+      sessionId.value = `CLIENT-${clientId.value}-${Date.now().toString(36)}`
     }
 
     if (!analysis.value.uopCount && client?.company_size) {
@@ -1119,11 +1079,13 @@ const loadExistingProcess = async (targetClientId: string, targetMeetingId?: str
       return acc
     }, {})
 
-    if (meetingId.value) {
-      const { data: analysisResp } = await api.get('/v1/meeting-analyses', { params: { meeting_id: meetingId.value, per_page: 1 } })
-      const analysisList = Array.isArray(analysisResp?.data) ? analysisResp.data : []
-      const analysisItem = analysisList.length ? analysisList[0] : null
-      if (analysisItem?.id) {
+    // Analysis is now embedded in crm_client_profiles.analysis_json — no
+    // separate meeting-analyses fetch needed. Map back into the wizard's
+    // analysis.value if the profile carries one.
+    const existingAnalysis = (client as any)?.crm_profile?.analysis_json
+    if (existingAnalysis && typeof existingAnalysis === 'object') {
+      const analysisItem = existingAnalysis
+      if (false) {
         meetingAnalysisId.value = String(analysisItem.id)
       }
       
