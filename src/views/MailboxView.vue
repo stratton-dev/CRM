@@ -12,6 +12,7 @@ import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { api } from '@/api/client'
 import type { Email } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import MailAiPanel from '@/components/MailAiPanel.vue'
 
 const mailboxStore = useMailboxStore()
@@ -653,48 +654,31 @@ watch(searchQuery, () => {
 </script>
 
 <template>
-  <div class="p-3 md:p-6 lg:p-8 max-w-[1920px] mx-auto space-y-3 md:space-y-6 h-full flex flex-col bg-surface-subtle">
-    
-    <!-- Header: Reimagined with more depth and professional feel -->
-    <div class="rounded-card shadow-card-hover border p-4 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 relative overflow-hidden shrink-0 group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-      <div class="relative z-10 flex items-center gap-4 md:gap-6">
-        <RouterLink to="/app/dashboard" class="hidden md:flex w-12 h-12 rounded-2xl bg-slate-800/80 backdrop-blur-md border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 hover:border-stratton-gold/30 transition-all duration-300 shadow-lg group/back">
-          <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover/back:-translate-x-1" />
-        </RouterLink>
-        <div>
-          <div class="flex items-center gap-2 md:gap-3">
-            <h1 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight leading-none">Skrzynka Pocztowa</h1>
-            <div class="px-2 py-1 bg-stratton-gold/10 border border-stratton-gold/20 rounded-md">
-              <span class="text-[10px] text-stratton-gold font-bold uppercase tracking-tighter">Enterprise Edition</span>
-            </div>
-          </div>
-          <p class="text-xs text-slate-400 font-medium uppercase tracking-[0.2em] mt-2 opacity-80">Zintegrowany panel komunikacji biznesowej</p>
-        </div>
-      </div>
-      
-      <div class="relative z-10 w-full md:w-auto md:min-w-60 lg:w-[450px]">
-         <div class="relative group/search">
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Wyszukaj w korespondencji..."
-              class="w-full pl-4 pr-10 py-2 md:py-3 bg-white border border-slate-200 text-slate-800 placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all duration-300 shadow-sm font-bold text-sm"
-            />
-            <button
-              v-if="searchQuery"
-              type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
-              @click="searchQuery = ''"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-         </div>
-      </div>
-    </div>
+  <div class="flex flex-col h-[calc(100vh-112px)] bg-surface-subtle">
 
-    <!-- Main Content: Refined with Modern Glassmorphism & Structured Layout -->
-    <div class="flex-1 bg-white rounded-xl md:rounded-[2.5rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border border-slate-200/60 flex overflow-hidden min-h-0 relative">
+    <TabHeader icon="envelope" title="Skrzynka Pocztowa">
+      <template #actions>
+        <div class="w-full md:w-96 relative">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Wyszukaj w korespondencji..."
+            class="w-full pl-4 pr-10 py-2 bg-white border border-slate-200 text-slate-800 placeholder-slate-400 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-sm font-bold text-sm"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors"
+            @click="searchQuery = ''"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </template>
+    </TabHeader>
+
+    <!-- Main Content -->
+    <div class="flex-1 mx-3 md:mx-6 my-3 md:my-4 bg-white rounded-xl md:rounded-[2rem] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.1)] border border-slate-200/60 flex overflow-hidden min-h-0 relative">
       
       <!-- Mobile Drawer (folders) — visible only on mobile via Teleport -->
       <Teleport to="body">

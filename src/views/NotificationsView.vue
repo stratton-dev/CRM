@@ -5,6 +5,7 @@ import { useNotificationStore } from '@/stores/notification'
 import { useSessionStore } from '@/stores/session'
 import { useStructureStore } from '@/stores/structure'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import { getNotificationTone } from '@/utils/uiColors'
 import type { Notification } from '@/types/models'
 
@@ -153,40 +154,34 @@ const getTypeLabel = (type: string) => {
 </script>
 
 <template>
-  <div class="space-y-3 md:space-y-6 p-3 md:p-4 lg:p-6">
-    <div class="text-white rounded-card p-4 md:p-8 shadow-card-hover flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0 relative overflow-hidden border" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-        <div class="relative z-10 flex items-center gap-3 md:gap-6">
-            <RouterLink to="/app/dashboard" class="hidden md:flex w-12 h-12 rounded-md bg-slate-800 border border-slate-700 items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group">
-                <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            </RouterLink>
-            <div>
-                <h1 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight">Powiadomienia</h1>
-                <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Centrum wiadomości</p>
-            </div>
-        </div>
-      <div class="flex flex-wrap gap-2 md:gap-0 md:space-x-2 relative z-10">
-        <button 
-            v-if="canSend"
-            @click="activeTab = 'SENT'"
-            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors', activeTab === 'SENT' ? 'bg-stratton-gold text-white shadow-sm' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700']">
-            Wysłane
+  <div class="flex flex-col h-[calc(100vh-112px)]">
+
+    <TabHeader icon="bell" title="Powiadomienia">
+      <template #actions>
+        <button
+          v-if="canSend"
+          @click="activeTab = 'SENT'"
+          :class="['px-3 py-1.5 rounded-md text-sm font-medium transition-colors border', activeTab === 'SENT' ? 'bg-stratton-gold text-white border-stratton-gold' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">
+          Wysłane
         </button>
-        <button 
-            @click="activeTab = 'INBOX'"
-            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors', activeTab === 'INBOX' ? 'bg-stratton-gold text-white shadow-sm' : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 border border-slate-700']">
-            Odebrane
-            <span v-if="inboxList.filter(n => !n.read).length > 0" class="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                {{ inboxList.filter(n => !n.read).length }}
-            </span>
+        <button
+          @click="activeTab = 'INBOX'"
+          :class="['px-3 py-1.5 rounded-md text-sm font-medium transition-colors border', activeTab === 'INBOX' ? 'bg-stratton-gold text-white border-stratton-gold' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50']">
+          Odebrane
+          <span v-if="inboxList.filter(n => !n.read).length > 0" class="ml-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+            {{ inboxList.filter(n => !n.read).length }}
+          </span>
         </button>
-        <button 
-            v-if="canSend"
-            @click="activeTab = 'COMPOSE'"
-            :class="['px-4 py-2 rounded-md text-sm font-medium transition-colors border', activeTab === 'COMPOSE' ? 'bg-stratton-gold text-white border-stratton-gold shadow-inner' : 'text-stratton-gold border-stratton-gold hover:bg-stratton-gold hover:text-white shadow-sm bg-slate-800']">
-            Nowe Powiadomienie
+        <button
+          v-if="canSend"
+          @click="activeTab = 'COMPOSE'"
+          :class="['px-3 py-1.5 rounded-md text-sm font-bold transition-colors border', activeTab === 'COMPOSE' ? 'bg-stratton-gold text-white border-stratton-gold shadow-inner' : 'text-stratton-gold border-stratton-gold hover:bg-stratton-gold hover:text-white bg-white']">
+          Nowe powiadomienie
         </button>
-      </div>
-    </div>
+      </template>
+    </TabHeader>
+
+    <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 space-y-3 md:space-y-6">
 
     <!-- INBOX TAB -->
     <div v-if="activeTab === 'INBOX'" class="bg-white rounded-card shadow-card-hover overflow-hidden border border-slate-100">

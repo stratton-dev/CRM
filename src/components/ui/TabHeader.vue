@@ -2,17 +2,23 @@
 import { useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   icon: string
   title: string
   embedded?: boolean
+  onBack?: () => void
 }>(), {
   embedded: false,
+  onBack: undefined,
 })
 
 const router = useRouter()
 
 const goBack = () => {
+  if (props.onBack) {
+    props.onBack()
+    return
+  }
   // Try history first, fall back to dashboard if there's nothing to go back to.
   if (window.history.length > 1) {
     router.back()

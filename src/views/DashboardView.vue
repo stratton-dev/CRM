@@ -12,6 +12,7 @@ import ClientsView from '@/views/ClientsView.vue'
 import MeetingsManagementView from '@/views/MeetingsManagementView.vue'
 import StructureView from '@/views/StructureView.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import GaugeChart from '@/components/GaugeChart.vue'
 
 type UserRole = 'SALES' | 'MANAGER' | 'DIRECTOR' | 'ADMIN' | 'CLIENT_HR' | 'LEADOWIEC'
@@ -444,31 +445,31 @@ watch(
 
 <template>
   <div class="view-transition space-y-4">
-    <div v-if="viewMode === 'hub'" class="w-full pt-2">
-      <div class="rounded-card shadow-card-hover border p-4 md:p-8 mb-4 md:mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-        <div class="flex-1">
-          <h1 class="font-serif font-bold text-xl md:text-3xl text-white mb-2 tracking-tight">Dzień dobry, {{ firstName }}</h1>
-          <div class="flex flex-col gap-1.5 max-w-md">
-            <div class="flex justify-end items-baseline gap-2">
-              <span class="text-xs font-bold text-slate-400">{{ goalLabel }}:</span>
+    <div v-if="viewMode === 'hub'" class="flex flex-col">
+
+      <TabHeader icon="home" :title="`Dzień dobry, ${firstName}`">
+        <template #actions>
+          <div class="flex flex-col gap-1 min-w-[240px] mr-3">
+            <div class="flex justify-between items-baseline gap-2">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{{ goalLabel }}</span>
               <span class="text-xs font-bold text-primary">{{ goalScore }}% zrealizowane</span>
             </div>
-            <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
               <div class="h-full bg-primary rounded-full" :style="{ width: `${goalScore}%` }"></div>
             </div>
           </div>
-        </div>
-        <div class="flex gap-3 self-stretch md:self-auto">
-          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-3 md:p-4 flex-1 md:w-32 flex flex-col items-center justify-center min-h-[72px] md:h-24">
-            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Leady Nowe</span>
-            <span class="text-xl md:text-2xl font-bold text-primary">{{ leadCount }}</span>
+          <div class="bg-white border border-slate-200 rounded-md px-3 py-1.5 flex flex-col items-center justify-center">
+            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Leady</span>
+            <span class="text-base font-bold text-primary">{{ leadCount }}</span>
           </div>
-          <div class="bg-slate-800/50 border border-slate-700 shadow-sm rounded-card p-3 md:p-4 flex-1 md:w-32 flex flex-col items-center justify-center min-h-[72px] md:h-24">
-            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Spotkania</span>
-            <span class="text-xl md:text-2xl font-bold text-primary">{{ todaysMeetings }}</span>
+          <div class="bg-white border border-slate-200 rounded-md px-3 py-1.5 flex flex-col items-center justify-center">
+            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Spotkania</span>
+            <span class="text-base font-bold text-primary">{{ todaysMeetings }}</span>
           </div>
-        </div>
-      </div>
+        </template>
+      </TabHeader>
+
+      <div class="p-4 md:p-6">
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 md:gap-8 mb-6 md:mb-10 px-4">
         <div v-if="!isLeadowiec" @click="viewMode = 'stats'" class="crm-tile h-44 group cursor-pointer relative overflow-hidden bg-slate-100 border border-slate-200">
@@ -730,21 +731,14 @@ watch(
           </div>
         </div>
       </div>
+      </div>
     </div>
 
-    <div v-else class="space-y-4 md:space-y-8 max-w-7xl mx-auto pt-3 md:pt-6">
-      <div class="rounded-card shadow-card-hover border p-4 md:p-8" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-8 pb-4 md:pb-8 border-b border-slate-800 gap-3 md:gap-6">
-          <div class="flex items-center gap-3 md:gap-6">
-            <button type="button" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="viewMode = 'hub'">
-              <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            </button>
-            <div>
-              <h2 class="font-serif font-bold text-xl md:text-4xl text-white tracking-tight">Dashboard</h2>
-              <p class="text-xs text-slate-500 cursor-pointer hover:text-primary mt-1 uppercase tracking-widest font-bold" @click="toggleRole">Widok: {{ roleDisplayName }}</p>
-            </div>
-          </div>
+    <div v-else class="flex flex-col">
 
+      <TabHeader icon="layout-dashboard" title="Dashboard" :on-back="() => viewMode = 'hub'">
+        <template #actions>
+          <p class="text-xs text-slate-500 cursor-pointer hover:text-primary uppercase tracking-widest font-bold" @click="toggleRole">Widok: {{ roleDisplayName }}</p>
           <div class="flex flex-wrap items-center gap-3 md:gap-6 w-full md:w-auto">
             <div class="relative w-full md:w-48">
               <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Od</label>
@@ -772,10 +766,12 @@ watch(
               </div>
             </div>
           </div>
-        </div>
+        </template>
+      </TabHeader>
 
+      <div class="p-4 md:p-6">
         <div class="flex items-center gap-4 flex-wrap">
-        <button 
+        <button
           @click="showKPIsTab = !showKPIsTab"
           class="px-2 md:px-3 py-1.5 md:py-2.5 rounded-lg font-bold text-sm md:text-base transition-all shadow-lg flex items-center justify-center gap-2 group hover:-translate-y-0.5 w-32 md:w-44 h-10 md:h-14"
           :class="showKPIsTab ? 'bg-primary text-white shadow-amber-900/20 ring-2 ring-offset-2 ring-primary ring-offset-slate-900' : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700 hover:text-white shadow-transparent'"
