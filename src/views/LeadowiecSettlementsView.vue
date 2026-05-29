@@ -149,5 +149,6 @@ onMounted(fetchSettlements)
         </div>
       </div>
     </template>
+    </div>
   </div>
 </template>

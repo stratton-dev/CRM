@@ -354,5 +354,6 @@ const getTypeLabel = (type: string) => {
             </div>
         </form>
     </div>
+    </div>
   </div>
 </template>

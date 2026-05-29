@@ -392,5 +392,6 @@ const signedContractsWithDetails = computed(() => {
         </table>
       </div>
     </div>
+    </div>
   </div>
 </template>

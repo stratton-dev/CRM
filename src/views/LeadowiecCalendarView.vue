@@ -197,5 +197,6 @@ onMounted(fetchMeetings)
         </div>
       </div>
     </template>
+    </div>
   </div>
 </template>
