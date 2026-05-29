@@ -21,13 +21,17 @@ Route::prefix('v1')->group(function () {
 
 Route::prefix('v1')->middleware('supabase')->group(function () {
     Route::get('me', MeController::class);
-    Route::post('meetings/prospect', [MeetingsController::class, 'storeProspect']);
+    // Meetings module retired — frontend no longer calls /v1/meetings* or
+    // /v1/meeting-analyses*. Routes are disabled here; the controllers and
+    // the underlying tables stay on the DB as a read-only archive until
+    // a follow-up DROP migration after stabilization.
+    // Route::post('meetings/prospect', [MeetingsController::class, 'storeProspect']);
 
     require __DIR__ . '/api/structure.php';
     require __DIR__ . '/api/admin.php';
     require __DIR__ . '/api/users.php';
     require __DIR__ . '/api/clients.php';
-    require __DIR__ . '/api/meetings.php';
+    // require __DIR__ . '/api/meetings.php';
     require __DIR__ . '/api/sales.php';
     require __DIR__ . '/api/notifications.php';
     require __DIR__ . '/api/documents.php';
