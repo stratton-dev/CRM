@@ -25,8 +25,19 @@ const monthLabel = computed(() =>
 const fetchMeetings = async () => {
   loading.value = true
   try {
-    const { data } = await api.get('/v1/meetings', { params: { per_page: 200 } })
-    meetings.value = Array.isArray(data) ? data : data.data ?? []
+    // Meetings live in crm_client_activities now (type=MEETING). Map the
+    // activity shape into the existing meetings template field names so
+    // the calendar render code below keeps working unchanged.
+    const { data } = await api.get('/v1/crm-client-activities', {
+      params: { type: 'MEETING', per_page: 200 },
+    })
+    const rows = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
+    meetings.value = rows.map((act: any) => ({
+      id: act.id,
+      client: act.client ?? null,
+      status: act.is_completed ? 'completed' : 'open',
+      created_at: act.occurred_at || act.created_at,
+    }))
   } catch {
     meetings.value = []
   } finally {
