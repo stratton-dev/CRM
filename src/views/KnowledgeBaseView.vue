@@ -6,6 +6,7 @@ import { useToastStore } from '@/stores/toast'
 import { useSessionStore } from '@/stores/session'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import type { FileCategory, KnowledgeFile } from '@/types/models'
 
 const knowledgeBase = useKnowledgeBaseStore()
@@ -181,38 +182,25 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-3 md:space-y-6">
-    <div class="rounded-card p-4 md:p-8 mb-2 md:mb-4 shadow-card-hover border relative overflow-hidden group" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%); border-color: #003366;">
-      <!-- Decor -->
-      <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-800 rounded-full mix-blend-overlay filter blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+  <div class="flex flex-col h-[calc(100vh-112px)]">
 
-      <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6">
-        <div class="flex items-center gap-3 md:gap-6">
-          <RouterLink to="/app/dashboard" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group">
-            <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-          </RouterLink>
-
-          <div>
-            <h1 class="text-xl md:text-4xl font-serif font-bold text-white tracking-wide leading-tight">Baza Wiedzy</h1>
-            <p class="text-slate-400 max-w-xl text-xs md:text-lg mt-1 tracking-tight">Pliki i dokumenty</p>
-          </div>
+    <TabHeader icon="book-open" title="Baza Wiedzy">
+      <template #actions>
+        <div v-if="activeCategory" class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+          <span>{{ categoryNames[activeCategory] }}</span>
+          <button type="button" class="text-amber-500 hover:text-amber-700" @click="activeCategory = null">✕</button>
         </div>
-
-        <div class="flex items-center gap-2 md:gap-4 shrink-0 w-full md:w-auto">
-          <div v-if="activeCategory" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700/50 text-stratton-gold text-xs font-semibold backdrop-blur-sm shrink-0">
-            <span>{{ categoryNames[activeCategory] }}</span>
-            <button type="button" class="text-slate-400 hover:text-white" @click="activeCategory = null">✕</button>
-          </div>
-          <div class="relative flex-1 md:w-72 lg:w-96">
-            <input v-model="searchQuery" type="text" placeholder="Szukaj w plikach..." class="w-full pl-9 md:pl-12 pr-4 md:pr-6 py-2 md:py-4 bg-slate-800/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-stratton-gold/50 backdrop-blur-sm transition-all text-sm md:text-base font-bold text-right" />
-            <AppIcon name="search" class="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 h-4 md:h-5 w-4 md:w-5 text-slate-400 pointer-events-none" />
-          </div>
-          <button type="button" class="px-4 md:px-8 py-2 md:py-4 bg-stratton-gold hover:bg-white text-stratton-900 rounded-xl font-bold transition-all shadow-lg shadow-stratton-gold/10 whitespace-nowrap shrink-0 text-sm" @click="openUpload">
-            Dodaj plik
-          </button>
+        <div class="relative w-full md:w-72">
+          <input v-model="searchQuery" type="text" placeholder="Szukaj w plikach..." class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-stratton-gold/40 focus:border-stratton-gold transition-all text-sm font-bold text-right shadow-sm" />
+          <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
         </div>
-      </div>
-    </div>
+        <button type="button" class="px-3 py-1.5 bg-stratton-gold hover:bg-amber-600 text-white rounded-lg font-bold transition-colors shadow-sm text-sm whitespace-nowrap" @click="openUpload">
+          Dodaj plik
+        </button>
+      </template>
+    </TabHeader>
+
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
 
     <!-- Presentation Tiles Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 mb-4 md:mb-8">
