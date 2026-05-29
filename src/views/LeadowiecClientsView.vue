@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 
 interface ClientNote {
   id: number
@@ -203,33 +204,28 @@ onMounted(fetchClients)
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-slate-50">
-    <!-- Header -->
-    <div class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-      <div>
-        <h1 class="text-xl font-bold text-slate-800">Moi Klienci</h1>
-        <p class="text-xs text-slate-500 mt-0.5">Lista dodanych przez Ciebie klientów{{ totalClients ? ` · ${totalClients} rekordów` : '' }}</p>
-      </div>
-      <div class="flex items-center gap-3">
+  <div class="flex flex-col h-[calc(100vh-112px)] bg-slate-50">
+
+    <TabHeader icon="users" title="Moi Klienci">
+      <template #actions>
         <div class="relative">
           <AppIcon name="magnifying-glass" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             v-model="search"
             @input="onSearch"
             placeholder="Szukaj po nazwie lub NIP..."
-            class="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 w-64"
+            class="pl-9 pr-4 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 w-64"
           />
         </div>
         <button
           @click="openAddModal"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white shrink-0"
-          style="background: linear-gradient(135deg, #001f3d 0%, #003366 100%)"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors shrink-0"
         >
           <AppIcon name="plus" class="w-4 h-4" />
           Dodaj klienta
         </button>
-      </div>
-    </div>
+      </template>
+    </TabHeader>
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">

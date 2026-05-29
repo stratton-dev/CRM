@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 
 interface Meeting {
   id: number
@@ -102,23 +103,23 @@ onMounted(fetchMeetings)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 p-6">
-    <!-- Header -->
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-slate-800">Kalendarz spotkań</h1>
-      <p class="text-sm text-slate-500 mt-0.5">Spotkania opiekuna z Twoimi klientami (tylko do odczytu)</p>
-    </div>
+  <div class="flex flex-col h-[calc(100vh-112px)] bg-slate-50">
 
-    <!-- Month nav -->
-    <div class="flex items-center gap-4 mb-6">
-      <button @click="prevMonth" class="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
-        <AppIcon name="chevron-left" class="w-4 h-4 text-slate-600" />
-      </button>
-      <span class="text-base font-semibold text-slate-700 capitalize min-w-[180px] text-center">{{ monthLabel }}</span>
-      <button @click="nextMonth" class="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
-        <AppIcon name="chevron-right" class="w-4 h-4 text-slate-600" />
-      </button>
-    </div>
+    <TabHeader icon="calendar" title="Kalendarz spotkań">
+      <template #actions>
+        <div class="flex items-center gap-2">
+          <button @click="prevMonth" class="p-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
+            <AppIcon name="chevron-left" class="w-4 h-4 text-slate-600" />
+          </button>
+          <span class="text-sm font-semibold text-slate-700 capitalize min-w-[140px] text-center">{{ monthLabel }}</span>
+          <button @click="nextMonth" class="p-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 transition-colors">
+            <AppIcon name="chevron-right" class="w-4 h-4 text-slate-600" />
+          </button>
+        </div>
+      </template>
+    </TabHeader>
+
+    <div class="flex-1 overflow-y-auto p-6">
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-16">

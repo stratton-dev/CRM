@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 
 interface SettlementClient {
   client_id: number
@@ -54,29 +55,26 @@ onMounted(fetchSettlements)
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 p-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-800">Rozliczenia</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Twoje prowizje od klientów z podpisaną umową</p>
-      </div>
-      <div class="flex items-center gap-2">
+  <div class="flex flex-col h-[calc(100vh-112px)] bg-slate-50">
+
+    <TabHeader icon="banknotes" title="Rozliczenia">
+      <template #actions>
         <input
           v-model="selectedMonth"
           type="month"
-          class="border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
+          class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300"
           @change="fetchSettlements"
         />
         <button
           @click="fetchSettlements"
-          class="px-3 py-2 rounded-lg text-sm font-medium text-white"
-          style="background: linear-gradient(135deg, #001f3d, #003366)"
+          class="px-3 py-1.5 rounded-lg text-sm font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors"
         >
           Odśwież
         </button>
-      </div>
-    </div>
+      </template>
+    </TabHeader>
+
+    <div class="flex-1 overflow-y-auto p-6">
 
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-16">
@@ -90,10 +88,10 @@ onMounted(fetchSettlements)
 
     <template v-else-if="settlements">
       <!-- Summary card -->
-      <div class="rounded-2xl p-6 mb-6 text-white" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
-        <p class="text-sm opacity-70 mb-1">Prowizja za {{ monthLabel(selectedMonth) }}</p>
-        <p class="text-4xl font-black" style="color: #C5A059">{{ formatPLN(settlements.total_commission) }}</p>
-        <p class="text-sm opacity-60 mt-1">
+      <div class="rounded-2xl p-6 mb-6 bg-white border border-slate-200 shadow-sm">
+        <p class="text-sm text-slate-500 mb-1">Prowizja za {{ monthLabel(selectedMonth) }}</p>
+        <p class="text-4xl font-black text-stratton-gold">{{ formatPLN(settlements.total_commission) }}</p>
+        <p class="text-sm text-slate-500 mt-1">
           Stawka prowizji: {{ (settlements.commission_rate * 100).toFixed(1) }}%
         </p>
       </div>
