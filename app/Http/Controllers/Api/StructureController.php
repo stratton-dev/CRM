@@ -163,6 +163,7 @@ class StructureController extends Controller
             'addressData' => $user->address_json,
             'documents' => $user->documents_json,
             'isRemovedFromStructure' => (bool) $user->is_removed_from_structure,
+            'isAgentAuthorized' => (bool) $user->is_agent_authorized,
             'renewalCommissionRate' => $user->renewal_commission_rate,
             'overrideCommissionRate' => $user->override_commission_rate,
             'name' => $user->name,

@@ -9,18 +9,29 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Override commission engine — per-relacja edition.
+ * Override commission engine.
  *
- * Reguły:
- *  • Self (level 0): stawka z `users.override_commission_rate` na profilu
- *    sub-membera (np. handlowca). To „własna stawka" z własnych dealów.
- *  • Ancestor (level >= 1): lookup w `crm_commission_chain_overrides`
- *    po PARZE (sub_member_supabase_id = źródło dealu, ancestor_supabase_id).
- *    Brak rekordu = 0% (ancestor nic nie dostaje od tego sub-membera).
- *  • Chain idzie rekurencyjnie po `parent_supabase_id` aż do roota.
- *  • Modele niezależne — wszyscy liczeni od tej samej kwoty bazowej.
- *  • Pomijani: blocked + is_removed_from_structure.
- *  • Safeguard max depth = 32.
+ * Dwa różne tryby zależnie od roli SOURCE (kto przyniósł deal):
+ *
+ *  TRYB A — LEADOWIEC source:
+ *    • Self (level 0): default 10% (config commission.leadowiec.self_rate)
+ *      lub users.override_commission_rate jeśli ustawiony jawnie.
+ *    • Walk UP chain — TYLKO LEADOWIEC ancestor-ów, max 2 poziomy:
+ *        L1 LEADOWIEC parent: default 5% (commission.leadowiec.l1_rate)
+ *        L2 LEADOWIEC grandparent: default 2% (commission.leadowiec.l2_rate)
+ *        L3+ LEADOWIEC: ignorujemy (cap chain)
+ *    • Znajdź AGENTA: pierwszy non-LEADOWIEC w chain z
+ *      is_agent_authorized=true. Dostaje default 10%
+ *      (commission.agent.default_rate). NIE walk-ujemy chain agenta.
+ *    • Per-relacja override (crm_commission_chain_overrides) nadal
+ *      wygrywa nad defaultami gdziekolwiek się pojawi.
+ *
+ *  TRYB B — wszystko inne (SALES/MANAGER/DIRECTOR/ADMIN source):
+ *    • Self z users.override_commission_rate, brak default = 0
+ *    • Ancestor z per-relacja override, brak = 0
+ *    • Pełny walk UP do roota (max depth 32)
+ *
+ *  Wspólne: pomijani blocked + is_removed_from_structure.
  */
 class CommissionCalculatorService
 {
@@ -39,19 +50,29 @@ class CommissionCalculatorService
             return [];
         }
 
-        // Pobierz wszystkie override-y per-relacja dla tego sub-membera (1 query)
+        if (($source->role_cached ?? '') === 'LEADOWIEC') {
+            return $this->calculateForLeadowiec($source, $baseAmount);
+        }
+
+        return $this->calculateForChain($source, $baseAmount);
+    }
+
+    /**
+     * Standard chain — pełny walk UP po per-relacja override-ach.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function calculateForChain(User $source, float $baseAmount): array
+    {
         $overrides = CrmCommissionChainOverride::query()
-            ->where('sub_member_supabase_id', $sourceUserSupabaseId)
+            ->where('sub_member_supabase_id', $source->supabase_id)
             ->pluck('rate', 'ancestor_supabase_id')
             ->toArray();
 
         $items = [];
-
-        // Level 0 — self
         $selfRate = (float) ($source->override_commission_rate ?? 0);
         $items[] = $this->buildItem($source, 0, $baseAmount, $selfRate);
 
-        // Level 1..N — chain w górę
         $cursor = $source;
         $level = 1;
         $visited = [$source->supabase_id => true];
@@ -73,6 +94,93 @@ class CommissionCalculatorService
         }
 
         return $items;
+    }
+
+    /**
+     * MLM leadowca: self + max 2 LEADOWIEC ancestor-ów + agent.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function calculateForLeadowiec(User $source, float $baseAmount): array
+    {
+        $overrides = CrmCommissionChainOverride::query()
+            ->where('sub_member_supabase_id', $source->supabase_id)
+            ->pluck('rate', 'ancestor_supabase_id')
+            ->toArray();
+
+        $defaults = config('commission.leadowiec');
+        $agentDefault = (float) (config('commission.agent.default_rate') ?? 0.10);
+        $maxLeadowiecDepth = (int) ($defaults['max_chain_depth'] ?? 2);
+
+        $items = [];
+
+        // Level 0 — self leadowiec
+        $selfRate = $source->override_commission_rate !== null
+            ? (float) $source->override_commission_rate
+            : (float) ($defaults['self_rate'] ?? 0.10);
+        $items[] = $this->buildItem($source, 0, $baseAmount, $selfRate);
+
+        // LEADOWIEC chain — TYLKO leadowcy, max N poziomów
+        $cursor = $source;
+        $leadowiecLevel = 1;
+        $visited = [$source->supabase_id => true];
+
+        while ($cursor->parent_supabase_id) {
+            $parentUuid = $cursor->parent_supabase_id;
+            if (isset($visited[$parentUuid])) {
+                break;
+            }
+            $parent = User::query()->where('supabase_id', $parentUuid)->first();
+            if (!$parent) {
+                break;
+            }
+            $visited[$parentUuid] = true;
+            $cursor = $parent;
+
+            $parentRole = $parent->role_cached ?? '';
+
+            if ($parentRole === 'LEADOWIEC') {
+                if ($leadowiecLevel > $maxLeadowiecDepth) {
+                    // Wyczerpaliśmy cap — przerywamy bez szukania dalej agenta,
+                    // bo agent jest pierwszym NIE-leadowcem powyżej. Ale my już
+                    // tylko skaczemy po leadowcach więc warto sprawdzić jeszcze
+                    // wyżej dla agenta. Stop tylko dla cap przyznawania %.
+                    // Zatem nie break, tylko level wyższy bez dodawania itemu.
+                    continue;
+                }
+                $defaultForLevel = $this->defaultRateForLeadowiecLevel($leadowiecLevel, $defaults);
+                $rate = isset($overrides[$parentUuid])
+                    ? (float) $overrides[$parentUuid]
+                    : $defaultForLevel;
+                $items[] = $this->buildItem($parent, $leadowiecLevel, $baseAmount, $rate);
+                $leadowiecLevel++;
+                continue;
+            }
+
+            // Pierwszy NON-LEADOWIEC. Jeśli ma is_agent_authorized → agent.
+            if ((bool) $parent->is_agent_authorized) {
+                $rate = isset($overrides[$parentUuid])
+                    ? (float) $overrides[$parentUuid]
+                    : $agentDefault;
+                $item = $this->buildItem($parent, $leadowiecLevel, $baseAmount, $rate);
+                $item['role_in_distribution'] = 'AGENT';
+                $items[] = $item;
+            }
+            // Niezależnie czy jest agentem czy nie — przestajemy iść wyżej
+            // (agent's chain NIE dziedziczy z deala leadowca).
+            break;
+        }
+
+        return $items;
+    }
+
+    private function defaultRateForLeadowiecLevel(int $level, array $defaults): float
+    {
+        return match ($level) {
+            1 => (float) ($defaults['l1_rate'] ?? 0.05),
+            2 => (float) ($defaults['l2_rate'] ?? 0.02),
+            default => 0.0,
+        };
     }
 
     public function persistDistribution(

@@ -37,9 +37,12 @@ class CommissionChainController extends Controller
                 'name' => $ancestor->name ?? trim(($ancestor->first_name ?? '') . ' ' . ($ancestor->last_name ?? '')),
                 'email' => $ancestor->email,
                 'role' => $ancestor->role_cached,
+                'isAgentAuthorized' => (bool) $ancestor->is_agent_authorized,
                 'rate' => isset($overrides[$uuid]) ? (float) $overrides[$uuid] : null,
             ];
         }, $chain);
+
+        $isLeadowiec = ($user->role_cached ?? '') === 'LEADOWIEC';
 
         return response()->json([
             'subMember' => [
@@ -47,9 +50,18 @@ class CommissionChainController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role_cached,
+                'isAgentAuthorized' => (bool) $user->is_agent_authorized,
                 'selfRate' => $user->override_commission_rate !== null ? (float) $user->override_commission_rate : null,
             ],
             'ancestors' => $ancestors,
+            'mode' => $isLeadowiec ? 'LEADOWIEC' : 'STANDARD',
+            'defaults' => $isLeadowiec ? [
+                'selfRate' => (float) config('commission.leadowiec.self_rate'),
+                'l1Rate' => (float) config('commission.leadowiec.l1_rate'),
+                'l2Rate' => (float) config('commission.leadowiec.l2_rate'),
+                'agentRate' => (float) config('commission.agent.default_rate'),
+                'maxChainDepth' => (int) config('commission.leadowiec.max_chain_depth'),
+            ] : null,
         ]);
     }
 
