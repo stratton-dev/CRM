@@ -161,10 +161,14 @@ export const useStructureStore = defineStore('structure', () => {
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`
   }
 
-  const addUser = async (userData: Omit<User, 'id'> & { id?: string }, initiatorId: string, idempotencyKey?: string) => {
+  const addUser = async (
+    userData: Omit<User, 'id'> & { id?: string; password?: string; sendPasswordReset?: boolean },
+    initiatorId: string,
+    idempotencyKey?: string,
+  ) => {
     if (auth.enabled) {
       const key = idempotencyKey || createIdempotencyKey()
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: userData.name,
         email: userData.email,
         phone: userData.phone || null,
@@ -178,6 +182,8 @@ export const useStructureStore = defineStore('structure', () => {
         hierarchical_preview: userData.hierarchicalId || null,
         supabase_id: userData.id,
       }
+      if (userData.password) payload.password = userData.password
+      if (userData.sendPasswordReset !== undefined) payload.send_password_reset = userData.sendPasswordReset
       try {
         const { data: created } = await api.post('/v1/users', payload, {
           headers: { 'Idempotency-Key': key },
@@ -424,6 +430,23 @@ export const useStructureStore = defineStore('structure', () => {
     data.logAction(initiatorId, newState ? 'BLOCK_USER' : 'UNBLOCK_USER', `Zmieniono blokadę dla ${user.name}`, user.id)
   }
 
+  const deleteUserAdmin = async (user: User) => {
+    if (auth.enabled) {
+      const { data } = await api.delete(`/v1/users/${user.id}`)
+      apiUsers.value = apiUsers.value.filter((u) => u.id !== user.id)
+      return data as { deleted: boolean; supabaseDeleted: boolean; supabaseError?: string | null }
+    }
+    // Local fallback — mark as removed in raw store.
+    data.rawUpdateUser(user.id, { isRemovedFromStructure: true })
+    return { deleted: true, supabaseDeleted: false, supabaseError: null }
+  }
+
+  const sendPasswordReset = async (user: User) => {
+    if (!auth.enabled) return { sent: false, actionLink: null as string | null }
+    const { data } = await api.post(`/v1/users/${user.id}/send-password-reset`, {})
+    return data as { sent: boolean; email: string; actionLink: string | null }
+  }
+
   const canAddUnder = (currentUser: User, targetNode: User) => {
     // Anyone with a structure role can recruit another Leadowiec under an existing Leadowiec
     // (chain extends indefinitely).
@@ -502,5 +525,7 @@ export const useStructureStore = defineStore('structure', () => {
     canAddUnder,
     canImpersonate,
     canRemove,
+    deleteUserAdmin,
+    sendPasswordReset,
   }
 })
