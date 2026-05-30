@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
 use App\Http\Controllers\Api\PublicOffersController;
 use App\Http\Controllers\Api\AutentiWebhookController;
+use App\Http\Controllers\Api\EbsWebhookController;
 use App\Http\Controllers\Api\ImapServiceController;
 use App\Http\Controllers\Api\GusController;
 use App\Http\Controllers\Api\MeController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\MeetingsController;
 
 Route::get('offers/{token}', PublicOffersController::class);
 Route::post('autenti/webhook', AutentiWebhookController::class);
+Route::post('ebs/webhook', EbsWebhookController::class);
 
 Broadcast::routes(['middleware' => ['supabase']]);
 
@@ -41,6 +43,7 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
     require __DIR__ . '/api/ai.php';
     require __DIR__ . '/api/pdf.php';
     require __DIR__ . '/api/leadowiec.php';
+    require __DIR__ . '/api/commission.php';
 });
 
 Route::options('/{any}', function () {
