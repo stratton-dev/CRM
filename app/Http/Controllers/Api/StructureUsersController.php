@@ -59,6 +59,8 @@ class StructureUsersController extends Controller
             $response = $this->formatUser($user);
             $response['inviteSent'] = $result['invite_sent'];
             $response['inviteError'] = $result['invite_error'];
+            $response['inviteLink'] = $result['invite_link'] ?? null;
+            $response['supabaseUserCreated'] = $result['supabase_user_created'] ?? false;
             $idempotency->complete($record, $response);
 
             return response()->json($response, 201);

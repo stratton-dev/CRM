@@ -7,9 +7,11 @@ use App\Events\Structure\StructureUserMoved;
 use App\Events\Structure\StructureUserRemoved;
 use App\Events\Structure\StructureUserRestored;
 use App\Models\User;
+use App\Services\Auth\SupabaseAdminService;
 use App\Services\Auth\TokenContext;
 use App\Services\Autenti\AutentiOnboardingService;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -17,7 +19,8 @@ class StructureService
 {
     public function __construct(
         private readonly HierarchicalCodeService $codes,
-        private readonly AutentiOnboardingService $autenti
+        private readonly AutentiOnboardingService $autenti,
+        private readonly SupabaseAdminService $supabaseAdmin
     )
     {
     }
@@ -104,9 +107,53 @@ class StructureService
             $hierarchicalCode = $this->codes->generate($teamPath, $parentCode, $this->initialsFromName($data['name'] ?? null));
         }
 
-        $supabaseUuid = $data['supabase_id'] ?? Str::uuid()->toString();
+        $supabaseUuid = $data['supabase_id'] ?? null;
         $inviteSent = null;
         $inviteError = null;
+        $inviteLink = null;
+        $supabaseUserCreated = false;
+
+        // Try to create the auth user in Supabase first so we anchor on the
+        // returned UUID. Fall back to a locally-generated UUID if the admin
+        // API is not configured or fails (record will still be created so
+        // workflow doesn't break in dev environments).
+        if (empty($data['skip_supabase_user']) && $this->supabaseAdmin->isConfigured() && !empty($data['email'])) {
+            try {
+                $supabaseUser = $this->supabaseAdmin->createUser([
+                    'email' => $data['email'],
+                    'password' => $data['password'] ?? Str::random(24),
+                    'name' => $data['name'] ?? null,
+                    'role' => $role,
+                    'phone' => $data['phone'] ?? null,
+                    'email_confirm' => true,
+                ]);
+                $supabaseUuid = $supabaseUser['id'];
+                $supabaseUserCreated = true;
+
+                if (!empty($data['send_password_reset'])) {
+                    try {
+                        $link = $this->supabaseAdmin->generatePasswordResetLink($data['email']);
+                        $inviteLink = $link['action_link'];
+                        $inviteSent = true;
+                    } catch (\Throwable $e) {
+                        $inviteSent = false;
+                        $inviteError = $e->getMessage();
+                        Log::warning('Supabase password reset link failed', ['email' => $data['email'], 'error' => $e->getMessage()]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                $inviteSent = false;
+                $inviteError = 'Supabase admin: ' . $e->getMessage();
+                Log::error('Supabase createUser failed; falling back to local UUID', [
+                    'email' => $data['email'] ?? null,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        if (empty($supabaseUuid)) {
+            $supabaseUuid = Str::uuid()->toString();
+        }
 
         $user = User::create([
             'supabase_id' => $supabaseUuid,
@@ -139,7 +186,78 @@ class StructureService
             'user' => $user,
             'invite_sent' => $inviteSent,
             'invite_error' => $inviteError,
+            'invite_link' => $inviteLink,
+            'supabase_user_created' => $supabaseUserCreated,
         ];
+    }
+
+    /**
+     * Trwale usuwa uzytkownika: z Supabase Auth (jesli ma supabase_id) i z DB.
+     */
+    public function deleteUser(string $userSupabaseId, TokenContext $context): array
+    {
+        $user = User::query()->where('supabase_id', $userSupabaseId)->first();
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'user_supabase_id' => ['User not found.'],
+            ]);
+        }
+
+        if ($context->actorSupabaseId() !== '' && $context->actorSupabaseId() === $user->supabase_id) {
+            throw ValidationException::withMessages([
+                'user_supabase_id' => ['Cannot delete yourself.'],
+            ]);
+        }
+
+        Gate::authorize('structure.remove', [$user]);
+
+        $supabaseDeleted = false;
+        $supabaseError = null;
+
+        if ($this->supabaseAdmin->isConfigured() && $user->supabase_id) {
+            try {
+                $this->supabaseAdmin->deleteUser($user->supabase_id);
+                $supabaseDeleted = true;
+            } catch (\Throwable $e) {
+                $supabaseError = $e->getMessage();
+                Log::warning('Supabase deleteUser failed; deleting DB record anyway', [
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Detach children so we don't leave dangling parent_supabase_id pointers.
+        User::query()
+            ->where('parent_supabase_id', $user->supabase_id)
+            ->update(['parent_supabase_id' => null]);
+
+        $user->delete();
+
+        return [
+            'deleted' => true,
+            'supabase_deleted' => $supabaseDeleted,
+            'supabase_error' => $supabaseError,
+        ];
+    }
+
+    /**
+     * Wysyla link do resetu hasla przez Supabase.
+     */
+    public function sendPasswordReset(string $userSupabaseId): array
+    {
+        $user = User::query()->where('supabase_id', $userSupabaseId)->first();
+        if (!$user || !$user->email) {
+            throw ValidationException::withMessages([
+                'user_supabase_id' => ['User or email not found.'],
+            ]);
+        }
+
+        if (!$this->supabaseAdmin->isConfigured()) {
+            throw new \RuntimeException('Supabase admin not configured.');
+        }
+
+        return $this->supabaseAdmin->generatePasswordResetLink($user->email);
     }
 
     public function restoreUser(string $userSupabaseId, TokenContext $context): array

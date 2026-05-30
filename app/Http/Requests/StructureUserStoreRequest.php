@@ -27,7 +27,7 @@ class StructureUserStoreRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:255',
-            'role' => 'required|string|in:ADMIN,DIRECTOR,MANAGER,SALES,LEADOWIEC',
+            'role' => 'required|string|in:ADMIN,DIRECTOR,MANAGER,SALES,LEADOWIEC,CLIENT_HR',
             'parent_supabase_id' => 'nullable|string|max:255',
             'team_group_path' => 'nullable|string|max:255',
             'contract_status' => 'nullable|string|max:255',
@@ -35,6 +35,9 @@ class StructureUserStoreRequest extends FormRequest
             'address_json' => 'nullable|array',
             'documents_json' => 'nullable|array',
             'hierarchical_preview' => 'nullable|string|max:255',
+            'password' => 'nullable|string|min:8|max:128',
+            'send_password_reset' => 'nullable|boolean',
+            'skip_supabase_user' => 'nullable|boolean',
         ];
     }
 }

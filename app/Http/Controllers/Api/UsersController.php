@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\Auth\SupabaseAdminService;
 use App\Services\Auth\TokenContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class UsersController extends Controller
@@ -167,7 +169,99 @@ class UsersController extends Controller
         $user->fill($data)->save();
         $user->load('role:id,code,name');
 
+        // Sync role/email/phone to Supabase Auth so login + role enforcement
+        // stay consistent. Failures here are not fatal — DB is source of truth.
+        if ($isAdmin && $user->supabase_id) {
+            $admin = app(SupabaseAdminService::class);
+            if ($admin->isConfigured()) {
+                $patch = [];
+                if (array_key_exists('email', $data)) $patch['email'] = $data['email'];
+                if (array_key_exists('phone', $data)) $patch['phone'] = $data['phone'];
+                if (isset($data['role_cached'])) $patch['role'] = $data['role_cached'];
+                if (array_key_exists('name', $data)) $patch['name'] = $data['name'];
+                if (array_key_exists('is_blocked', $data)) {
+                    $patch['ban_duration'] = $data['is_blocked'] ? '876000h' : 'none';
+                }
+                if (!empty($patch)) {
+                    try {
+                        $admin->updateUser($user->supabase_id, $patch);
+                    } catch (\Throwable $e) {
+                        Log::warning('Supabase updateUser sync failed', [
+                            'user' => $user->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+        }
+
         return $this->formatUser($user);
+    }
+
+    public function destroy(User $user, TokenContext $context, SupabaseAdminService $admin)
+    {
+        $actorRole = $context->primaryRole();
+        if ($actorRole !== 'ADMIN') {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+        if ($context->actorSupabaseId() !== '' && $user->supabase_id === $context->actorSupabaseId()) {
+            return response()->json(['message' => 'Cannot delete yourself.'], 422);
+        }
+
+        $supabaseDeleted = false;
+        $supabaseError = null;
+
+        if ($user->supabase_id && $admin->isConfigured()) {
+            try {
+                $admin->deleteUser($user->supabase_id);
+                $supabaseDeleted = true;
+            } catch (\Throwable $e) {
+                $supabaseError = $e->getMessage();
+                Log::warning('Supabase deleteUser failed; DB delete proceeds', [
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Detach children so we don't leave dangling parent_supabase_id pointers.
+        if ($user->supabase_id) {
+            User::query()
+                ->where('parent_supabase_id', $user->supabase_id)
+                ->update(['parent_supabase_id' => null]);
+        }
+        User::query()->where('parent_id', $user->id)->update(['parent_id' => null]);
+
+        $user->delete();
+
+        return response()->json([
+            'deleted' => true,
+            'supabaseDeleted' => $supabaseDeleted,
+            'supabaseError' => $supabaseError,
+        ]);
+    }
+
+    public function sendPasswordReset(User $user, TokenContext $context, SupabaseAdminService $admin)
+    {
+        $actorRole = $context->primaryRole();
+        $isAdmin = in_array($actorRole, ['ADMIN', 'DIRECTOR'], true);
+        $isSelf = $context->actorSupabaseId() !== '' && $user->supabase_id === $context->actorSupabaseId();
+        if (!$isAdmin && !$isSelf) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+        if (!$user->email) {
+            return response()->json(['message' => 'User has no email.'], 422);
+        }
+        if (!$admin->isConfigured()) {
+            return response()->json(['message' => 'Supabase admin not configured.'], 503);
+        }
+
+        $result = $admin->generatePasswordResetLink($user->email);
+        return response()->json([
+            'sent' => true,
+            'email' => $user->email,
+            'actionLink' => $result['action_link'],
+        ]);
     }
 
     private function resolveRole(string $roleCode): ?Role

@@ -25,6 +25,18 @@ return [
     'issuer' => env('SUPABASE_ISSUER'),
 
     /*
+     * Service role key — wymagany do tworzenia/usuwania uzytkownikow przez
+     * Supabase Admin API. NIGDY nie wysylac na klienta.
+     */
+    'service_role_key' => env('SUPABASE_SERVICE_ROLE_KEY', ''),
+
+    /*
+     * URL, na ktory uzytkownik trafia po klikniciu linku reset hasla.
+     * Domyslnie: {APP_URL}/reset-password
+     */
+    'password_reset_redirect' => env('SUPABASE_PASSWORD_RESET_REDIRECT'),
+
+    /*
      * Mapowanie rol z app_metadata.role -> lokalna rola CRM.
      */
     'role_map' => [

@@ -8,7 +8,9 @@ use App\Http\Controllers\Api\PermissionsController;
 use App\Http\Controllers\Api\CrmViewPermissionsController;
 
 Route::apiResource('users', UsersController::class)
-    ->only(['index', 'show', 'update']);
+    ->only(['index', 'show', 'update', 'destroy']);
+
+Route::post('users/{user}/send-password-reset', [UsersController::class, 'sendPasswordReset']);
 
 Route::apiResource('organizations', OrganizationsController::class)
     ->only(['index', 'show'])
