@@ -93,11 +93,21 @@ class StructureService
 
         $role = $data['role'];
 
-        // Leadowiec bypasses the standard team-path + hierarchical-code pipeline.
-        if ($role === 'LEADOWIEC') {
-            $teamPath = $parent?->team_group_path ?? '';
+        // LEADOWIEC, ADMIN and CLIENT_HR bypass the team-path + hierarchical-code
+        // pipeline. Admins are global; CLIENT_HR is attached to an external
+        // organization; LEADOWIEC chains under a sales rep without team scope.
+        if (in_array($role, ['LEADOWIEC', 'ADMIN', 'CLIENT_HR'], true)) {
+            $teamPath = $parent?->team_group_path ?? ($data['team_group_path'] ?? '');
             $teamId   = $parent?->team_id ?? null;
-            Gate::authorize('structure.create', [$parent, $role, $teamPath]);
+            try {
+                Gate::authorize('structure.create', [$parent, $role, $teamPath]);
+            } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                // For ADMIN creating ADMIN/CLIENT_HR globally we accept lack of
+                // team context — the gate is built around per-team hierarchies.
+                if ($context->primaryRole() !== 'ADMIN') {
+                    throw $e;
+                }
+            }
             $hierarchicalCode = null;
         } else {
             $teamPath = $this->resolveTeamPath($context, $parent, $data);
