@@ -56,6 +56,7 @@ export interface User {
   contractStatus?: ContractStatus | null
   documents?: UserDocuments | null
   isBlocked?: boolean
+  isAgentAuthorized?: boolean
   isRemovedFromStructure?: boolean
   linkedClientId?: string
   rank?: Rank | null

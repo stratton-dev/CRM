@@ -742,6 +742,19 @@ const onCommissionSaved = () => {
   structure.fetchStructure().catch(() => undefined)
 }
 
+const toggleAgentAuthorization = async (node: User) => {
+  try {
+    await structure.toggleAgentAuthorized(node)
+    toast.success(
+      node.isAgentAuthorized
+        ? `${node.name || node.email} — odebrano uprawnienia agenta.`
+        : `${node.name || node.email} — nadano uprawnienia agenta.`
+    )
+  } catch (e: any) {
+    toast.error(e?.response?.data?.message || 'Nie udało się zmienić uprawnień.')
+  }
+}
+
 const updateFullName = () => {
   if (newUserData.type !== 'PRIVATE' && newUserData.type !== 'LEADOWIEC') return
   newUserData.name = `${newUserData.firstName} ${newUserData.lastName}`.trim()
@@ -1158,6 +1171,37 @@ const addUser = async () => {
                       {{ movingNodeId === node.id ? '...' : 'Przenieś' }}
                     </button>
                   </div>
+                </div>
+
+                <div
+                  v-if="currentUser?.role === 'ADMIN' && ['SALES', 'MANAGER', 'DIRECTOR'].includes(node.role as string)"
+                  class="px-3 py-2 rounded-lg border transition-colors cursor-pointer"
+                  :class="node.isAgentAuthorized
+                    ? 'bg-emerald-50 border-emerald-300 hover:bg-emerald-100'
+                    : 'bg-slate-50 border-slate-200 hover:bg-slate-100'"
+                  :title="node.isAgentAuthorized
+                    ? 'Może przyjmować umowy od leadowców (10% prowizji)'
+                    : 'Zaznacz aby uprawnić do bycia agentem dla leadowców'"
+                  @click.stop="toggleAgentAuthorization(node)"
+                >
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      :checked="!!node.isAgentAuthorized"
+                      @click.stop
+                      @change="toggleAgentAuthorization(node)"
+                    />
+                    <div>
+                      <span class="font-bold block text-slate-700 uppercase text-[10px] leading-tight">Agent</span>
+                      <span
+                        class="text-[10px] leading-tight"
+                        :class="node.isAgentAuthorized ? 'text-emerald-700 font-bold' : 'text-slate-400'"
+                      >
+                        {{ node.isAgentAuthorized ? 'Aktywny' : 'Nieaktywny' }}
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
               <div class="flex justify-end items-center space-x-2">

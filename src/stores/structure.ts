@@ -422,6 +422,18 @@ export const useStructureStore = defineStore('structure', () => {
     return true
   }
 
+  const toggleAgentAuthorized = async (user: User) => {
+    const newState = !user.isAgentAuthorized
+    if (auth.enabled) {
+      const { data: updated } = await api.patch(`/v1/users/${user.id}`, {
+        is_agent_authorized: newState,
+      })
+      upsertApiUser(updated)
+      return
+    }
+    data.rawUpdateUser(user.id, { isAgentAuthorized: newState })
+  }
+
   const toggleBlockUser = async (user: User, initiatorId: string) => {
     const newState = !user.isBlocked
     if (auth.enabled) {
@@ -532,5 +544,6 @@ export const useStructureStore = defineStore('structure', () => {
     canRemove,
     deleteUserAdmin,
     sendPasswordReset,
+    toggleAgentAuthorized,
   }
 })
