@@ -12,7 +12,6 @@ import { Pracownik } from '../models/employee';
 import { usePdfGenerator } from '@/composables/usePdfGenerator';
 
 type ContractType = 'UOP' | 'UZ' | 'MIXED';
-type StrategyType = 'SAVINGS' | 'WIN_WIN';
 
 const props = withDefaults(
   defineProps<{
@@ -64,8 +63,6 @@ const salaryMode = ref<'NETTO' | 'BRUTTO'>(props.initialSalaryMode);
 
 const countUopInput = ref(props.initialContractType === 'UZ' ? 0 : (props.initialContractType === 'MIXED' ? Math.floor(props.initialEmployees / 2) : props.initialEmployees));
 const countUzInput = ref(props.initialContractType === 'UOP' ? 0 : (props.initialContractType === 'MIXED' ? Math.ceil(props.initialEmployees / 2) : props.initialEmployees));
-
-const strategy = ref<StrategyType>('SAVINGS');
 
 const handleBack = () => {
   if (route.query.source === 'process') {
@@ -238,7 +235,7 @@ const buildQuickSimHtml = () => {
   const firmaNip = store.firma.nip || '';
   const date = new Date().toLocaleDateString('pl-PL');
   const dateWaz = new Date(Date.now() + 14 * 86400000).toLocaleDateString('pl-PL');
-  const provPercent = strategy.value === 'SAVINGS' ? 28 : 26;
+  const provPercent = store.activeCommissionRate;
   const oszczMies = s.monthlySavings;
   const oszczRocz = s.yearlySavings;
   const prowizja = s.totalProv;
@@ -429,7 +426,7 @@ const buildQuickSimHtml = () => {
 
 const handleShortOffer = async () => {
   const s = simulation.value;
-  const provPercent = strategy.value === 'SAVINGS' ? 28 : 26;
+  const provPercent = store.activeCommissionRate;
   const oszczMies = s.monthlySavings;
   const oszczRocz = s.yearlySavings;
   const prowizja = s.totalProv;

@@ -307,7 +307,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
   const resetSession = () => {
     firma.value = normalizeFirma({ ...DEFAULT_FIRMA_STATE, okres: new Date().toISOString().slice(0, 7) });
     pracownicy.value = [];
-    prowizjaProc.value = 26;
+    prowizjaProc.value = 22;
   };
 
   const saveToHistory = (): ZapisanaKalkulacja | null => {
@@ -695,7 +695,7 @@ export const useCalculatorStore = defineStore('calculator', () => {
         valid_to: validTo,
         expires_at: validTo,
         commission_percent: prowizjaProc.value / 100,
-        stratton_raise_percent: prowizjaProc.value === 26 ? 0.04 : 0,
+        stratton_raise_percent: 0,
         currency: 'PLN',
       };
 
