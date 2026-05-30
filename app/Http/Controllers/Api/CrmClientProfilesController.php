@@ -93,6 +93,7 @@ class CrmClientProfilesController extends Controller
             'contract_signed_date' => 'nullable|date',
             'reservation_end_date' => 'nullable|date',
             'analysis_json' => 'nullable|array',
+            'has_external_accounting' => 'nullable|boolean',
         ];
         $data = $request->validate($rules);
         if (!empty($data['owner_user_id'])) {

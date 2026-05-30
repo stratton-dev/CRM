@@ -29,6 +29,7 @@ class CrmClientProfile extends Model
         'company_size',
         'contact_position',
         'is_decision_maker',
+        'has_external_accounting',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class CrmClientProfile extends Model
         'reservation_end_date' => 'date',
         'analysis_json' => 'array',
         'is_decision_maker' => 'boolean',
+        'has_external_accounting' => 'boolean',
     ];
 
     public function client(): BelongsTo
