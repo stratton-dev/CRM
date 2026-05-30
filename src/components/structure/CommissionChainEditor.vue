@@ -89,55 +89,45 @@ const isLeadowiec = computed(() => chain.value?.mode === 'LEADOWIEC')
 const defaults = computed(() => chain.value?.defaults ?? null)
 
 interface LeadowiecRow {
-  type: 'LEADOWIEC' | 'AGENT' | 'PASS_THROUGH'
   ancestor: AncestorItem
-  level: number  // L1, L2 (or 0 for skipped)
-  defaultRate: number | null
+  level: number  // L1, L2
+  defaultRate: number
   inCap: boolean
 }
 
+interface AgentRow {
+  ancestor: AncestorItem
+  defaultRate: number
+}
+
 /**
- * Dla LEADOWIEC source — odtwarza logikę calculator-a:
- *  L1 = pierwszy LEADOWIEC ancestor, L2 = drugi, L3+ wygaszone.
- *  Pierwszy NON-LEADOWIEC = potencjalny agent (jeśli isAgentAuthorized).
+ * Dla LEADOWIEC source — rozdziela ancestor-ów na:
+ *  - leadowiecRows: pierwsze 2 LEADOWIEC ancestor-y (L1, L2) — prawy column
+ *  - agentRow: pierwszy NON-LEADOWIEC w chain — lewy column (osobno)
  */
 const leadowiecRows = computed<LeadowiecRow[]>(() => {
   if (!isLeadowiec.value || !chain.value || !defaults.value) return []
   const rows: LeadowiecRow[] = []
-  let leadowiecLevel = 1
-  let foundAgent = false
+  let level = 1
 
   for (const a of chain.value.ancestors) {
-    if (foundAgent) break
-
-    if (a.role === 'LEADOWIEC') {
-      const inCap = leadowiecLevel <= defaults.value.maxChainDepth
-      const def = leadowiecLevel === 1
-        ? defaults.value.l1Rate
-        : leadowiecLevel === 2 ? defaults.value.l2Rate : 0
-      rows.push({
-        type: inCap ? 'LEADOWIEC' : 'PASS_THROUGH',
-        ancestor: a,
-        level: leadowiecLevel,
-        defaultRate: inCap ? def : 0,
-        inCap,
-      })
-      leadowiecLevel++
-      continue
-    }
-
-    // Pierwszy non-LEADOWIEC
-    rows.push({
-      type: 'AGENT',
-      ancestor: a,
-      level: leadowiecLevel,
-      defaultRate: a.isAgentAuthorized ? defaults.value.agentRate : 0,
-      inCap: a.isAgentAuthorized,
-    })
-    foundAgent = true
+    if (a.role !== 'LEADOWIEC') break
+    const inCap = level <= defaults.value.maxChainDepth
+    const def = level === 1 ? defaults.value.l1Rate : level === 2 ? defaults.value.l2Rate : 0
+    rows.push({ ancestor: a, level, defaultRate: inCap ? def : 0, inCap })
+    level++
   }
 
   return rows
+})
+
+const agentRow = computed<AgentRow | null>(() => {
+  if (!isLeadowiec.value || !chain.value || !defaults.value) return null
+  for (const a of chain.value.ancestors) {
+    if (a.role === 'LEADOWIEC') continue
+    return { ancestor: a, defaultRate: defaults.value.agentRate }
+  }
+  return null
 })
 
 async function save() {
@@ -251,45 +241,116 @@ watch(() => props.userId, loadChain, { immediate: true })
     </div>
 
     <!-- ════════════════════ TRYB LEADOWIEC ════════════════════ -->
-    <div v-else-if="chain && isLeadowiec && defaults" class="space-y-3">
-      <!-- Info banner -->
-      <div class="bg-violet-50 border border-violet-200 rounded-lg p-3 text-[11px] text-violet-800 leading-relaxed">
-        <strong>Schemat MLM leadowca:</strong>
-        leadowiec dostaje {{ (defaults.selfRate * 100).toFixed(0) }}% z każdej faktury klienta,
-        jego rekruter L1 dostaje {{ (defaults.l1Rate * 100).toFixed(0) }}%, L2
-        ({{ (defaults.l2Rate * 100).toFixed(0) }}%), powyżej — wygaszone.
-        Pierwszy <strong>uprawniony agent</strong> w chain dostaje
-        {{ (defaults.agentRate * 100).toFixed(0) }}%. Domyślne wartości pokazane jako placeholder;
-        wpisz aby nadpisać.
-      </div>
+    <div v-else-if="chain && isLeadowiec && defaults" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- LEWA KOLUMNA — Własna stawka + Stawka agenta -->
+      <div class="space-y-3">
+        <!-- Self (poziom 0) -->
+        <div class="bg-emerald-50/60 border border-emerald-200 rounded-lg p-3">
+          <label class="block text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-2">
+            Własna stawka z dealu (default {{ (defaults.selfRate * 100).toFixed(0) }}%)
+          </label>
+          <div class="flex items-center gap-2">
+            <input
+              v-model.number="selfPercent"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              :placeholder="`default ${(defaults.selfRate * 100).toFixed(0)}`"
+              class="flex-1 border border-emerald-300 rounded p-1.5 text-xs focus:outline-none focus:border-stratton-gold bg-white"
+            />
+            <span class="text-xs font-bold text-emerald-700">%</span>
+          </div>
+          <p class="text-[10px] text-emerald-700 mt-1 leading-snug">
+            {{ chain.subMember.name }} dostaje ten % z każdego dealu który sam zamknie.
+          </p>
+        </div>
 
-      <!-- Self (level 0 — leadowiec) -->
-      <div class="bg-violet-50/60 border border-violet-200 rounded-lg p-3">
-        <label class="block text-[10px] font-bold text-violet-800 uppercase tracking-wider mb-2">
-          Własna stawka z mojego klienta (default {{ (defaults.selfRate * 100).toFixed(0) }}%)
-        </label>
-        <div class="flex items-center gap-2">
-          <input
-            v-model.number="selfPercent"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            :placeholder="`default ${(defaults.selfRate * 100).toFixed(0)}`"
-            class="flex-1 border border-violet-300 rounded p-1.5 text-xs focus:outline-none focus:border-stratton-gold bg-white"
-          />
-          <span class="text-xs font-bold text-violet-700">%</span>
+        <!-- Agent (osobno) -->
+        <div
+          v-if="agentRow"
+          class="rounded-lg p-3 border"
+          :class="agentRow.ancestor.isAgentAuthorized
+            ? 'bg-sky-50/60 border-sky-200'
+            : 'bg-red-50/60 border-red-200'"
+        >
+          <label
+            class="block text-[10px] font-bold uppercase tracking-wider mb-2"
+            :class="agentRow.ancestor.isAgentAuthorized ? 'text-sky-800' : 'text-red-800'"
+          >
+            Stawka Agenta (default {{ (agentRow.defaultRate * 100).toFixed(0) }}%)
+          </label>
+
+          <div class="flex items-center gap-3 mb-2">
+            <span
+              class="inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold shrink-0"
+              :class="agentRow.ancestor.isAgentAuthorized ? 'bg-sky-100 text-sky-700' : 'bg-red-100 text-red-700'"
+            >
+              A
+            </span>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-bold text-slate-800 truncate">
+                {{ agentRow.ancestor.name || agentRow.ancestor.email }}
+              </div>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="px-1.5 py-0 rounded text-[10px] font-bold border" :class="ROLE_BADGE[agentRow.ancestor.role] || 'bg-slate-100 text-slate-600 border-slate-200'">{{ agentRow.ancestor.role }}</span>
+                <span
+                  v-if="agentRow.ancestor.isAgentAuthorized"
+                  class="px-1.5 py-0 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"
+                  title="Uprawnienia agenta nadane"
+                >
+                  AGENT ✓
+                </span>
+                <span
+                  v-else
+                  class="px-1.5 py-0 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-200"
+                  title="Brak uprawnień — zaznacz checkbox Agent w panelu tego usera"
+                >
+                  BRAK UPRAWNIEŃ
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <input
+              v-model.number="ancestorPercents[agentRow.ancestor.userSupabaseId]"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              :placeholder="agentRow.ancestor.isAgentAuthorized ? `default ${(agentRow.defaultRate * 100).toFixed(0)}` : '0 (brak uprawnień)'"
+              :disabled="!agentRow.ancestor.isAgentAuthorized"
+              class="flex-1 border rounded p-1.5 text-xs focus:outline-none focus:border-stratton-gold bg-white text-right font-mono"
+              :class="agentRow.ancestor.isAgentAuthorized ? 'border-sky-300' : 'border-red-200 bg-red-50 cursor-not-allowed'"
+            />
+            <span class="text-xs font-bold" :class="agentRow.ancestor.isAgentAuthorized ? 'text-sky-700' : 'text-red-700'">%</span>
+          </div>
+
+          <p v-if="!agentRow.ancestor.isAgentAuthorized" class="text-[10px] text-red-700 mt-2 leading-snug">
+            <strong>{{ agentRow.ancestor.name }}</strong> nie ma uprawnień agenta. W kalkulacji dostanie 0 zł.
+            Zaznacz checkbox „Agent" w jego panelu w widoku Struktura aby aktywować.
+          </p>
+          <p v-else class="text-[10px] text-sky-700 mt-2 leading-snug">
+            Stawka agenta z każdego dealu zamkniętego przez {{ chain.subMember.name }}.
+          </p>
+        </div>
+
+        <!-- Brak agenta w chain -->
+        <div v-else class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] text-slate-500 italic">
+          Brak agenta w chain — leadowiec nie ma żadnego non-LEADOWIEC powyżej.
+          Bez agenta deal nie może być podpisany.
         </div>
       </div>
 
-      <!-- LEADOWIEC chain + agent -->
-      <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
-        <label class="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-2">
-          Łańcuch wypłat z mojego dealu
+      <!-- PRAWA KOLUMNA — Tylko leadowiec chain (L1, L2) -->
+      <div class="bg-violet-50/40 border border-violet-200 rounded-lg p-3">
+        <label class="block text-[10px] font-bold text-violet-800 uppercase tracking-wider mb-2">
+          Nadprowizja moich rekruterów (chain leadowców)
         </label>
 
         <div v-if="leadowiecRows.length === 0" class="text-xs text-slate-500 italic py-2">
-          Brak przełożonych w łańcuchu — leadowiec nie ma rekrutera ani uprawnionego agenta.
+          Brak leadowca-rekrutera w chain — ten leadowiec nie ma nikogo z polecenia.
         </div>
 
         <div v-else class="space-y-2">
@@ -297,35 +358,19 @@ watch(() => props.userId, loadChain, { immediate: true })
             v-for="row in leadowiecRows"
             :key="row.ancestor.userSupabaseId"
             class="flex items-center gap-3 bg-white rounded p-2 border"
-            :class="row.type === 'AGENT'
-              ? (row.inCap ? 'border-emerald-300 bg-emerald-50/40' : 'border-red-200 bg-red-50/40')
-              : (row.inCap ? 'border-violet-200' : 'border-slate-200 opacity-60')"
+            :class="row.inCap ? 'border-violet-200' : 'border-slate-200 opacity-60'"
           >
             <span
-              class="inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shrink-0"
-              :class="row.type === 'AGENT' ? 'bg-emerald-100 text-emerald-700' : row.inCap ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'"
+              class="inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold shrink-0"
+              :class="row.inCap ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-400'"
             >
-              {{ row.type === 'AGENT' ? 'A' : `L${row.level}` }}
+              L{{ row.level }}
             </span>
             <div class="flex-1 min-w-0">
               <div class="text-xs font-bold text-slate-800 truncate flex items-center gap-1.5">
                 {{ row.ancestor.name || row.ancestor.email }}
                 <span
-                  v-if="row.type === 'AGENT' && row.ancestor.isAgentAuthorized"
-                  class="px-1.5 py-0 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"
-                  title="Uprawnienia agenta nadane"
-                >
-                  AGENT ✓
-                </span>
-                <span
-                  v-else-if="row.type === 'AGENT' && !row.ancestor.isAgentAuthorized"
-                  class="px-1.5 py-0 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-200"
-                  title="Brak uprawnień agenta — % będzie 0"
-                >
-                  BRAK UPRAWNIEŃ
-                </span>
-                <span
-                  v-else-if="!row.inCap"
+                  v-if="!row.inCap"
                   class="px-1.5 py-0 rounded text-[9px] font-bold bg-slate-100 text-slate-500 border border-slate-200"
                   title="Poziom L3+ — poza chainem MLM"
                 >
@@ -344,15 +389,19 @@ watch(() => props.userId, loadChain, { immediate: true })
                 min="0"
                 max="100"
                 step="0.01"
-                :placeholder="row.inCap ? `default ${((row.defaultRate ?? 0) * 100).toFixed(0)}` : '0'"
-                :disabled="!row.inCap && row.type !== 'AGENT'"
+                :placeholder="row.inCap ? `default ${(row.defaultRate * 100).toFixed(0)}` : '0'"
+                :disabled="!row.inCap"
                 class="w-20 border rounded p-1.5 text-xs focus:outline-none focus:border-stratton-gold bg-white text-right font-mono"
-                :class="row.inCap ? 'border-slate-300' : 'border-slate-200 bg-slate-50 cursor-not-allowed'"
+                :class="row.inCap ? 'border-violet-300' : 'border-slate-200 bg-slate-50 cursor-not-allowed'"
               />
-              <span class="text-xs font-bold text-slate-700">%</span>
+              <span class="text-xs font-bold text-violet-700">%</span>
             </div>
           </div>
         </div>
+
+        <p class="text-[10px] text-violet-700 mt-3 leading-snug border-t border-violet-200 pt-2">
+          Schemat MLM: L1 = {{ (defaults.l1Rate * 100).toFixed(0) }}%, L2 = {{ (defaults.l2Rate * 100).toFixed(0) }}%, L3+ wygaszone.
+        </p>
       </div>
     </div>
 
