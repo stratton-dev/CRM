@@ -128,12 +128,58 @@ export const useCalculatorStore = defineStore('calculator', () => {
     return saved ? JSON.parse(saved) : [];
   })());
 
-  const prowizjaProc = ref(28);
+  // Default = external accounting → 22%. When the sales rep toggles
+  // 'własna księgowość' in the UI, this flips to false and the active
+  // rate drops to 20%. Synced to crm_client_profiles.has_external_accounting
+  // (Etap 1A migration) when a client context is set.
+  const hasExternalAccounting = ref<boolean>(true);
+
+  const prowizjaProc = ref(22);
   const comparisonState = ref<ComparisonState>({
     activeCard: 'STANDARD',
-    customStandardRate: 28,
-    customPrimeRate: 26,
+    customStandardRate: 22, // external accounting (was 28%)
+    customPrimeRate: 20,    // own accounting (was 26%)
   });
+
+  // The single active commission percent that drives every calculation
+  // downstream. Reads hasExternalAccounting + the corresponding
+  // customRate (admin can override the default 22 / 20).
+  const activeCommissionRate = computed(() => {
+    return hasExternalAccounting.value
+      ? comparisonState.value.customStandardRate
+      : comparisonState.value.customPrimeRate;
+  });
+
+  const setHasExternalAccounting = async (value: boolean) => {
+    hasExternalAccounting.value = value;
+    prowizjaProc.value = value
+      ? comparisonState.value.customStandardRate
+      : comparisonState.value.customPrimeRate;
+
+    // Persist to crm_client_profiles when there's a known client.
+    if (!auth.enabled || !context.value.clientId) return;
+    try {
+      const { data: profiles } = await api.get('/v1/crm-client-profiles', {
+        params: { client_id: context.value.clientId, per_page: 1 },
+      });
+      const list = Array.isArray(profiles?.data) ? profiles.data : Array.isArray(profiles) ? profiles : [];
+      const profile = list.length ? list[0] : null;
+      if (profile?.id) {
+        await api.patch(`/v1/crm-client-profiles/${profile.id}`, {
+          client_id: context.value.clientId,
+          has_external_accounting: value,
+        });
+      } else {
+        await api.post('/v1/crm-client-profiles', {
+          client_id: context.value.clientId,
+          has_external_accounting: value,
+          status: 'NEW',
+        });
+      }
+    } catch (error) {
+      console.error('Persist has_external_accounting failed', error);
+    }
+  };
 
   const isCalculating = ref(false);
   const context = ref<CalculatorContext>({ meetingId: null, clientId: null, source: null });
@@ -180,7 +226,28 @@ export const useCalculatorStore = defineStore('calculator', () => {
   };
 
   const setContext = (payload: Partial<CalculatorContext>) => {
-    context.value = { ...context.value, ...payload };
+    const prev = context.value;
+    context.value = { ...prev, ...payload };
+
+    // When the client context changes, hydrate the accounting flag from
+    // the matching crm_client_profile so the calculator opens on the
+    // correct commission rate.
+    const nextClientId = context.value.clientId;
+    if (auth.enabled && nextClientId && nextClientId !== prev.clientId) {
+      api
+        .get('/v1/crm-client-profiles', { params: { client_id: nextClientId, per_page: 1 } })
+        .then(({ data }) => {
+          const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+          const profile = list.length ? list[0] : null;
+          if (profile && typeof profile.has_external_accounting === 'boolean') {
+            hasExternalAccounting.value = profile.has_external_accounting;
+            prowizjaProc.value = profile.has_external_accounting
+              ? comparisonState.value.customStandardRate
+              : comparisonState.value.customPrimeRate;
+          }
+        })
+        .catch((error) => console.warn('Hydrate has_external_accounting failed', error));
+    }
   };
 
   const addEmployee = () => {
@@ -1045,6 +1112,9 @@ export const useCalculatorStore = defineStore('calculator', () => {
     configError,
     prowizjaProc,
     comparisonState,
+    hasExternalAccounting,
+    activeCommissionRate,
+    setHasExternalAccounting,
     isCalculating,
     context,
     wyniki,
