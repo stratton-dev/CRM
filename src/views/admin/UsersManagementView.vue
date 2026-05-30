@@ -7,6 +7,7 @@ import { useSessionStore } from '@/stores/session'
 import { useToastStore } from '@/stores/toast'
 import TabHeader from '@/components/ui/TabHeader.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import { RouterLink } from 'vue-router'
 import type { User, UserRole } from '@/types/models'
 
 const opiekunRoles = ['SALES', 'MANAGER', 'DIRECTOR', 'ADMIN']
@@ -41,7 +42,6 @@ const userSearchQuery = ref('')
 const roleFilter = ref<string>('ALL')
 const selectedUserForEdit = ref<User | null>(null)
 const editPasswordOverride = ref<string>('')
-const editOverridePercent = ref<number | null>(null)
 const config = ref({ ...commissionConfig.value })
 const isCreating = ref(false)
 const isSaving = ref(false)
@@ -182,16 +182,11 @@ const editUser = (user: User) => {
   }
   selectedUserForEdit.value = { ...user, firstName, lastName }
   editPasswordOverride.value = ''
-  // Stored as 0-1 decimal in backend; UI shows 0-100 percentage for clarity
-  editOverridePercent.value = user.overrideCommissionRate != null
-    ? Number((Number(user.overrideCommissionRate) * 100).toFixed(2))
-    : null
 }
 
 const closeEditPanel = () => {
   selectedUserForEdit.value = null
   editPasswordOverride.value = ''
-  editOverridePercent.value = null
 }
 
 const toggleBlock = async (user: User) => {
@@ -274,12 +269,10 @@ const saveUser = async () => {
         phone,
       }
       if (editPasswordOverride.value) partial.password = editPasswordOverride.value
-      if (editOverridePercent.value != null && editOverridePercent.value !== '' as any) {
-        // Convert % UI value back to 0-1 decimal for backend
-        partial.overrideCommissionRate = Number((Number(editOverridePercent.value) / 100).toFixed(6))
-      } else {
-        partial.overrideCommissionRate = null
-      }
+      // Self-rate (override_commission_rate) and per-relacja override-y
+      // ustawiane teraz w widoku Struktura (CommissionChain section).
+      // Tu nie wysyłamy overrideCommissionRate żeby przypadkiem nie nadpisać.
+      delete partial.overrideCommissionRate
       await structure.updateUserAdmin(userToSave.id, partial, me.id)
       const msg = editPasswordOverride.value
         ? 'Zaktualizowano dane użytkownika + hasło ustawione w Supabase.'
@@ -638,24 +631,14 @@ const saveConfig = () => {
               <p class="text-xs text-slate-400 mt-1">Min. 8 znaków. Hasło zostanie zapisane bezpośrednio w Supabase Auth.</p>
             </div>
 
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <label class="block text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">Prowizja Override (%)</label>
-              <div class="flex items-center gap-2">
-                <input
-                  v-model.number="editOverridePercent"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  placeholder="np. 17 dla 17%"
-                  class="flex-1 border border-amber-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold bg-white"
-                />
-                <span class="text-sm font-bold text-amber-700">%</span>
-              </div>
-              <p class="text-xs text-amber-700 mt-2 leading-relaxed">
-                Procent prowizji który <strong>{{ selectedUserForEdit.firstName || 'ten user' }}</strong>
-                otrzyma z każdego dealu zamkniętego przez <strong>kogokolwiek w jego pionie</strong>
-                (każdy sub-member, sub-sub-member itd. rekurencyjnie). Dla handlowca = jego własna stawka z kontraktów.
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <p class="text-xs text-slate-600 leading-relaxed flex items-start gap-2">
+                <AppIcon name="info" class="w-4 h-4 mt-0.5 shrink-0 text-slate-400" />
+                <span>
+                  <strong class="text-slate-700">Prowizje override</strong> ustawiasz teraz w widoku
+                  <RouterLink to="/app/structure" class="text-stratton-gold font-bold hover:underline">Struktura</RouterLink> —
+                  rozwiń tego użytkownika i wpisz indywidualne stawki dla każdego z jego przełożonych.
+                </span>
               </p>
             </div>
           </div>

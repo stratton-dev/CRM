@@ -9,6 +9,7 @@ import { useMailboxStore } from '@/stores/mailbox'
 import { useToastStore } from '@/stores/toast'
 import AppIcon from '@/components/AppIcon.vue'
 import StructureChartView from '@/components/StructureChartView.vue'
+import CommissionChainEditor from '@/components/structure/CommissionChainEditor.vue'
 import type { EntityType, User, UserRole } from '@/types/models'
 
 type TreeNode = User & { level: number; hasChildren: boolean; isLast: boolean; parentChain: boolean[]; isTeamNode?: boolean }
@@ -735,6 +736,12 @@ const restoreUser = async (node: User) => {
   }
 }
 
+const onCommissionSaved = () => {
+  // No-op for now; structure reload not needed since rates aren't shown in tree.
+  // Refresh anyway so users.overrideCommissionRate cache is fresh elsewhere.
+  structure.fetchStructure().catch(() => undefined)
+}
+
 const updateFullName = () => {
   if (newUserData.type !== 'PRIVATE' && newUserData.type !== 'LEADOWIEC') return
   newUserData.name = `${newUserData.firstName} ${newUserData.lastName}`.trim()
@@ -1202,6 +1209,12 @@ const addUser = async () => {
                 </button>
               </div>
             </div>
+
+            <CommissionChainEditor
+              v-if="currentUser?.role === 'ADMIN'"
+              :user-id="node.id"
+              @saved="onCommissionSaved"
+            />
           </div>
 
           <div v-if="node.isTeamNode && selectedNodeId === node.id && canAddGlobal && !searchQuery" class="bg-slate-50/50 p-4 border-t border-slate-200/50" @click.stop>
