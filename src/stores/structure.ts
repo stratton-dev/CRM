@@ -328,7 +328,7 @@ export const useStructureStore = defineStore('structure', () => {
     data.logAction(initiatorId, 'AUTENTI_SENT', `Wysłano dokumenty do ${user.name}`, user.id)
   }
 
-  const updateUserAdmin = async (userId: string, partial: Partial<User>, initiatorId: string) => {
+  const updateUserAdmin = async (userId: string, partial: Partial<User> & { password?: string }, initiatorId: string) => {
     const oldUser = users.value.find((user) => user.id === userId)
     if (!oldUser) return
 
@@ -351,6 +351,7 @@ export const useStructureStore = defineStore('structure', () => {
         points: partial.points,
         active: partial.active,
       }
+      if (partial.password) payload.password = partial.password
       if (partial.renewalCommissionRate !== undefined) {
         payload.renewal_commission_rate = partial.renewalCommissionRate
       }

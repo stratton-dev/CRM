@@ -40,6 +40,7 @@ const { commissionConfig } = storeToRefs(finance)
 const userSearchQuery = ref('')
 const roleFilter = ref<string>('ALL')
 const selectedUserForEdit = ref<User | null>(null)
+const editPasswordOverride = ref<string>('')
 const config = ref({ ...commissionConfig.value })
 const isCreating = ref(false)
 const isSaving = ref(false)
@@ -155,10 +156,12 @@ const submitNewUser = async () => {
 
 const editUser = (user: User) => {
   selectedUserForEdit.value = { ...user }
+  editPasswordOverride.value = ''
 }
 
 const closeEditPanel = () => {
   selectedUserForEdit.value = null
+  editPasswordOverride.value = ''
 }
 
 const toggleBlock = async (user: User) => {
@@ -210,10 +213,19 @@ const saveUser = async () => {
   const me = currentUser.value
   const userToSave = selectedUserForEdit.value
   if (userToSave && me) {
+    if (editPasswordOverride.value && editPasswordOverride.value.length < 8) {
+      toast.error('Hasło musi mieć min. 8 znaków.')
+      return
+    }
     isSaving.value = true
     try {
-      await structure.updateUserAdmin(userToSave.id, userToSave, me.id)
-      toast.success('Zaktualizowano dane użytkownika.')
+      const partial: any = { ...userToSave }
+      if (editPasswordOverride.value) partial.password = editPasswordOverride.value
+      await structure.updateUserAdmin(userToSave.id, partial, me.id)
+      const msg = editPasswordOverride.value
+        ? 'Zaktualizowano dane użytkownika + hasło ustawione w Supabase.'
+        : 'Zaktualizowano dane użytkownika.'
+      toast.success(msg)
       closeEditPanel()
     } catch (e: any) {
       toast.error(e?.response?.data?.message || e?.message || 'Błąd zapisu.')
@@ -538,6 +550,17 @@ const saveConfig = () => {
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon</label>
               <input v-model="selectedUserForEdit.phone" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nowe hasło (opcjonalnie)</label>
+              <input
+                v-model="editPasswordOverride"
+                type="text"
+                placeholder="pozostaw puste żeby nie zmieniać"
+                class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:outline-none focus:border-stratton-gold"
+              />
+              <p class="text-xs text-slate-400 mt-1">Min. 8 znaków. Hasło zostanie zapisane bezpośrednio w Supabase Auth.</p>
             </div>
           </div>
 
