@@ -47,7 +47,8 @@ const isSaving = ref(false)
 const isDeleting = ref(false)
 
 interface NewUserDraft {
-  name: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
   role: UserRole
@@ -57,7 +58,8 @@ interface NewUserDraft {
 }
 
 const blankDraft = (): NewUserDraft => ({
-  name: '',
+  firstName: '',
+  lastName: '',
   email: '',
   phone: '',
   role: 'SALES',
@@ -116,8 +118,20 @@ const submitNewUser = async () => {
   const me = currentUser.value
   if (!me) return
   const draft = newUser.value
-  if (!draft.name.trim() || !draft.email.trim()) {
-    toast.error('Imię i email są wymagane.')
+  const firstName = draft.firstName.trim()
+  const lastName = draft.lastName.trim()
+  const email = draft.email.trim().toLowerCase()
+  const phone = draft.phone.trim()
+  if (!firstName || !lastName) {
+    toast.error('Imię i nazwisko są wymagane.')
+    return
+  }
+  if (!email) {
+    toast.error('Email jest wymagany (jest jednocześnie loginem).')
+    return
+  }
+  if (!phone) {
+    toast.error('Numer telefonu jest wymagany.')
     return
   }
   if (draft.password && draft.password.length < 8) {
@@ -128,9 +142,11 @@ const submitNewUser = async () => {
   try {
     const created = await structure.addUser(
       {
-        name: draft.name.trim(),
-        email: draft.email.trim().toLowerCase(),
-        phone: draft.phone.trim() || undefined,
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`,
+        email,
+        phone,
         role: draft.role,
         parentSupabaseId: draft.parentSupabaseId,
         password: draft.password || undefined,
@@ -143,7 +159,7 @@ const submitNewUser = async () => {
     } else if ((created as any)?.supabaseUserCreated === false) {
       toast.success('Użytkownik dodany (DB only — Supabase admin nieskonfigurowany).')
     } else {
-      toast.success(`Dodano ${draft.name}.`)
+      toast.success(`Dodano ${firstName} ${lastName}.`)
     }
     closeAddUser()
   } catch (e: any) {
@@ -155,7 +171,15 @@ const submitNewUser = async () => {
 }
 
 const editUser = (user: User) => {
-  selectedUserForEdit.value = { ...user }
+  // Hydrate firstName/lastName from existing name when individual fields are missing
+  let firstName = user.firstName ?? ''
+  let lastName = user.lastName ?? ''
+  if (!firstName && !lastName && user.name) {
+    const parts = user.name.trim().split(/\s+/)
+    firstName = parts[0] || ''
+    lastName = parts.slice(1).join(' ') || ''
+  }
+  selectedUserForEdit.value = { ...user, firstName, lastName }
   editPasswordOverride.value = ''
 }
 
@@ -213,13 +237,36 @@ const saveUser = async () => {
   const me = currentUser.value
   const userToSave = selectedUserForEdit.value
   if (userToSave && me) {
+    const firstName = (userToSave.firstName ?? '').trim()
+    const lastName = (userToSave.lastName ?? '').trim()
+    const email = (userToSave.email ?? '').trim().toLowerCase()
+    const phone = (userToSave.phone ?? '').trim()
+    if (!firstName || !lastName) {
+      toast.error('Imię i nazwisko są wymagane.')
+      return
+    }
+    if (!email) {
+      toast.error('Email jest wymagany (login).')
+      return
+    }
+    if (!phone) {
+      toast.error('Numer telefonu jest wymagany.')
+      return
+    }
     if (editPasswordOverride.value && editPasswordOverride.value.length < 8) {
       toast.error('Hasło musi mieć min. 8 znaków.')
       return
     }
     isSaving.value = true
     try {
-      const partial: any = { ...userToSave }
+      const partial: any = {
+        ...userToSave,
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`,
+        email,
+        phone,
+      }
       if (editPasswordOverride.value) partial.password = editPasswordOverride.value
       await structure.updateUserAdmin(userToSave.id, partial, me.id)
       const msg = editPasswordOverride.value
@@ -431,16 +478,22 @@ const saveConfig = () => {
 
         <div class="flex-1 overflow-y-auto p-6 space-y-5">
           <div class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imię i Nazwisko *</label>
-              <input v-model="newUser.name" placeholder="Np. Jan Kowalski" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imię *</label>
+                <input v-model="newUser.firstName" placeholder="Jan" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nazwisko *</label>
+                <input v-model="newUser.lastName" placeholder="Kowalski" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+              </div>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email *</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email * <span class="normal-case font-medium text-slate-400">(login do CRM)</span></label>
               <input v-model="newUser.email" type="email" placeholder="user@stratton-prime.pl" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon *</label>
               <input v-model="newUser.phone" placeholder="+48 ..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
             </div>
             <div>
@@ -507,9 +560,19 @@ const saveConfig = () => {
 
         <div class="flex-1 overflow-y-auto p-6 space-y-5">
           <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imię *</label>
+                <input v-model="selectedUserForEdit.firstName" placeholder="Jan" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nazwisko *</label>
+                <input v-model="selectedUserForEdit.lastName" placeholder="Kowalski" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+              </div>
+            </div>
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imię i Nazwisko</label>
-              <input v-model="selectedUserForEdit.name" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email * <span class="normal-case font-medium text-slate-400">(login do CRM)</span></label>
+              <input v-model="selectedUserForEdit.email" type="email" placeholder="user@stratton-prime.pl" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rola</label>
@@ -548,8 +611,8 @@ const saveConfig = () => {
             </template>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon</label>
-              <input v-model="selectedUserForEdit.phone" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Telefon *</label>
+              <input v-model="selectedUserForEdit.phone" placeholder="+48 ..." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold" />
             </div>
 
             <div>

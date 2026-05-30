@@ -170,6 +170,8 @@ export const useStructureStore = defineStore('structure', () => {
       const key = idempotencyKey || createIdempotencyKey()
       const payload: Record<string, unknown> = {
         name: userData.name,
+        first_name: userData.firstName ?? null,
+        last_name: userData.lastName ?? null,
         email: userData.email,
         phone: userData.phone || null,
         role: userData.role,
@@ -335,6 +337,8 @@ export const useStructureStore = defineStore('structure', () => {
     if (auth.enabled) {
       const payload: Record<string, unknown> = {
         name: partial.name,
+        first_name: partial.firstName,
+        last_name: partial.lastName,
         email: partial.email,
         phone: partial.phone,
         role: partial.role,
