@@ -140,8 +140,16 @@ class User extends Authenticatable
             return $query->where($field, $value)->firstOrFail();
         }
 
-        return $query->where('id', $value)
-            ->orWhere('supabase_id', $value)
-            ->firstOrFail();
+        // Differentiate UUID-shaped values from numeric IDs. Comparing a UUID
+        // against the bigint `id` column blows up on Postgres (SQLSTATE 22P02).
+        if (is_string($value) && preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $value)) {
+            return $query->where('supabase_id', $value)->firstOrFail();
+        }
+
+        if (is_numeric($value)) {
+            return $query->where('id', $value)->firstOrFail();
+        }
+
+        return $query->where('supabase_id', $value)->firstOrFail();
     }
 }
