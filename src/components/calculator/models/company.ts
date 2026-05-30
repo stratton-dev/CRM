@@ -78,9 +78,21 @@ export interface Config {
     stawkaPit: number;
     odplatnosc: number;
   };
+  /**
+   * Eliton Prime commission rates (the single Eliton Prime offer, post 2026-05-30):
+   * - `zewnetrzna` (default 22%) — client uses an external accounting office.
+   *   Breakdown: 20% Stratton + 2% accounting office.
+   * - `wlasna` (20%) — client runs their own HR/accounting. Stratton-only.
+   *
+   * Field names `standard` / `plus` are kept as legacy aliases so existing
+   * historical calculations + PDF templates that read them still resolve.
+   * `standard` now maps to `zewnetrzna` (22), `plus` maps to `wlasna` (20).
+   */
   prowizja: {
     standard: number;
     plus: number;
+    zewnetrzna?: number;
+    wlasna?: number;
   };
   offerValidDays: number;
 }
