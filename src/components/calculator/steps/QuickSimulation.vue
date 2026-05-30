@@ -119,7 +119,7 @@ const simulation = computed(() => {
     const std = obliczWariantStandard(dummyEmployee, store.firma.stawkaWypadkowa, store.config);
     const opt = obliczWariantPodzial(dummyEmployee, store.firma.stawkaWypadkowa, dummyEmployee.nettoZasadnicza, store.config);
 
-    const provPercent = strategy.value === 'SAVINGS' ? 28 : 26;
+    const provPercent = store.activeCommissionRate;
     const provision = opt.swiadczenie.netto * (provPercent / 100);
 
     return {
@@ -199,7 +199,7 @@ const handleTransfer = () => {
   for (let i = 0; i < genUOP; i++) newEmployees.push(createEmp('UOP', i));
   for (let i = 0; i < genUZ; i++) newEmployees.push(createEmp('UZ', genUOP + i));
 
-  store.prowizjaProc = strategy.value === 'SAVINGS' ? 28 : 26;
+  store.prowizjaProc = store.activeCommissionRate;
   store.pracownicy = newEmployees;
   emit('transfer');
 };
@@ -526,7 +526,7 @@ const generateQuickOffer = async () => {
             <div class="text-right leading-tight">
               <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Oszczędność miesięczna</div>
               <div class="text-[10px] text-slate-400 font-medium">
-                {{ strategy === 'WIN_WIN' ? 'Po wypłaceniu podwyżek' : 'Netto dla firmy' }}
+                Netto dla firmy
               </div>
             </div>
             <div class="px-3 py-1.5 rounded-md bg-white border border-stratton-gold/40 shadow-sm">
@@ -555,10 +555,8 @@ const generateQuickOffer = async () => {
 
     <div class="p-4 md:p-6 space-y-4 md:space-y-6">
 
-      <div v-if="strategy === 'WIN_WIN'" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-        <AppIcon name="users" class="w-3 h-3" />
-        + Zadowoleni pracownicy
-      </div>
+      <!-- Employee raises moved to the standalone 'Kalkulator podwyżek' Excel (Etap 1F) -->
+
 
       <!-- Bottom Module: Structure + Comparison -->
       <div class="max-w-screen-2xl mx-auto">
@@ -672,32 +670,64 @@ const generateQuickOffer = async () => {
 
             <div class="space-y-3">
               <label class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <AppIcon name="layers" class="w-4 h-4 text-stratton-gold/60" />
-                Model optymalizacji
+                <AppIcon name="briefcase" class="w-4 h-4 text-stratton-gold/60" />
+                Księgowość klienta
               </label>
-              <div class="relative p-4 rounded-2xl border-2 bg-slate-800 border-stratton-gold shadow-[0_0_30px_rgba(197,160,89,0.15)] ring-1 ring-stratton-gold/20 flex items-start gap-4 overflow-hidden">
-                <div class="absolute inset-0 bg-linear-to-br from-stratton-gold/5 to-transparent pointer-events-none"></div>
-                <div class="mt-0.5 p-2 rounded-xl bg-stratton-gold text-white shrink-0">
-                  <AppIcon name="arrow-trending-up" class="w-4 h-4" />
-                </div>
-                <div class="relative z-10">
-                  <div class="text-sm font-black text-white uppercase tracking-wider">
-                    Eliton Prime<sup class="text-[8px] ml-0.5 opacity-50">TM</sup>
-                  </div>
-                  <div class="mt-1.5 space-y-0.5">
-                    <div class="text-[11px] text-stratton-gold font-extrabold uppercase tracking-widest">
-                      Opłata serwisowa: 28%
+
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  class="relative p-3 rounded-2xl border-2 transition-all flex flex-col items-start gap-1 text-left"
+                  :class="store.hasExternalAccounting
+                    ? 'bg-slate-800 border-stratton-gold shadow-[0_0_30px_rgba(197,160,89,0.15)] ring-1 ring-stratton-gold/20'
+                    : 'bg-slate-800/40 border-slate-700 hover:border-slate-600'"
+                  @click="store.setHasExternalAccounting(true)"
+                >
+                  <div class="flex items-center gap-2 w-full">
+                    <div class="p-1.5 rounded-lg shrink-0" :class="store.hasExternalAccounting ? 'bg-stratton-gold text-white' : 'bg-slate-700 text-slate-400'">
+                      <AppIcon name="building-office" class="w-3.5 h-3.5" />
                     </div>
-                    <div class="text-[10px] text-slate-400 font-semibold">
-                      od wartości nominalnej świadczenia
+                    <div class="text-[10px] font-black uppercase tracking-widest" :class="store.hasExternalAccounting ? 'text-white' : 'text-slate-400'">
+                      Zewnętrzna
+                    </div>
+                    <div v-if="store.hasExternalAccounting" class="ml-auto w-4 h-4 rounded-full bg-stratton-gold flex items-center justify-center shrink-0">
+                      <AppIcon name="check" class="w-2.5 h-2.5 text-white" />
                     </div>
                   </div>
-                </div>
-                <div class="ml-auto shrink-0 flex items-center self-center">
-                  <div class="w-5 h-5 rounded-full bg-stratton-gold flex items-center justify-center shadow-[0_0_12px_rgba(197,160,89,0.5)]">
-                    <AppIcon name="check" class="w-3 h-3 text-white" />
+                  <div class="text-base font-extrabold tracking-tight" :class="store.hasExternalAccounting ? 'text-stratton-gold' : 'text-slate-500'">
+                    22%
                   </div>
-                </div>
+                  <div class="text-[9px] leading-tight font-semibold" :class="store.hasExternalAccounting ? 'text-slate-400' : 'text-slate-500'">
+                    20% Stratton + 2% biuro księgowe
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  class="relative p-3 rounded-2xl border-2 transition-all flex flex-col items-start gap-1 text-left"
+                  :class="!store.hasExternalAccounting
+                    ? 'bg-slate-800 border-stratton-gold shadow-[0_0_30px_rgba(197,160,89,0.15)] ring-1 ring-stratton-gold/20'
+                    : 'bg-slate-800/40 border-slate-700 hover:border-slate-600'"
+                  @click="store.setHasExternalAccounting(false)"
+                >
+                  <div class="flex items-center gap-2 w-full">
+                    <div class="p-1.5 rounded-lg shrink-0" :class="!store.hasExternalAccounting ? 'bg-stratton-gold text-white' : 'bg-slate-700 text-slate-400'">
+                      <AppIcon name="user-group" class="w-3.5 h-3.5" />
+                    </div>
+                    <div class="text-[10px] font-black uppercase tracking-widest" :class="!store.hasExternalAccounting ? 'text-white' : 'text-slate-400'">
+                      Własna
+                    </div>
+                    <div v-if="!store.hasExternalAccounting" class="ml-auto w-4 h-4 rounded-full bg-stratton-gold flex items-center justify-center shrink-0">
+                      <AppIcon name="check" class="w-2.5 h-2.5 text-white" />
+                    </div>
+                  </div>
+                  <div class="text-base font-extrabold tracking-tight" :class="!store.hasExternalAccounting ? 'text-stratton-gold' : 'text-slate-500'">
+                    20%
+                  </div>
+                  <div class="text-[9px] leading-tight font-semibold" :class="!store.hasExternalAccounting ? 'text-slate-400' : 'text-slate-500'">
+                    Tylko Stratton
+                  </div>
+                </button>
               </div>
             </div>
           </div>
@@ -738,7 +768,7 @@ const generateQuickOffer = async () => {
                 <div class="flex items-baseline justify-between mb-1.5">
                   <span class="text-[10px] font-black uppercase tracking-widest text-stratton-gold flex items-center gap-1">
                     Eliton Prime<sup class="text-[7px] ml-0.5">TM</sup>
-                    <span class="ml-1 text-slate-400 font-semibold normal-case tracking-normal text-[9px]">· opłata 28%</span>
+                    <span class="ml-1 text-slate-400 font-semibold normal-case tracking-normal text-[9px]">· opłata {{ store.activeCommissionRate }}%</span>
                   </span>
                   <span class="text-sm font-extrabold text-slate-800">{{ formatPLN(simulation.totalNew) }}</span>
                 </div>
