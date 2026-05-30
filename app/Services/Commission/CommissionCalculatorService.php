@@ -2,25 +2,29 @@
 
 namespace App\Services\Commission;
 
+use App\Models\CrmCommissionChainOverride;
 use App\Models\CrmCommissionDistribution;
 use App\Models\CrmCommissionDistributionItem;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Override commission engine.
+ * Override commission engine — per-relacja edition.
  *
- * Reguła ustalona z biznesem:
- *  • Każdy ancestor (rekurencyjnie po `parent_supabase_id`) dostaje
- *    procent z TEJ SAMEJ kwoty bazowej — modele niezależne, nie kaskadowe.
- *  • Stawka brana z `users.override_commission_rate` (per użytkownik).
- *  • Self (handlowiec, level 0) też dostaje swoje % z własnego dealu.
- *  • Usunięci ze struktury / zablokowani są pomijani.
- *  • Brak ancestor.rate (NULL) → 0% (zapisujemy pozycję dla audytu).
+ * Reguły:
+ *  • Self (level 0): stawka z `users.override_commission_rate` na profilu
+ *    sub-membera (np. handlowca). To „własna stawka" z własnych dealów.
+ *  • Ancestor (level >= 1): lookup w `crm_commission_chain_overrides`
+ *    po PARZE (sub_member_supabase_id = źródło dealu, ancestor_supabase_id).
+ *    Brak rekordu = 0% (ancestor nic nie dostaje od tego sub-membera).
+ *  • Chain idzie rekurencyjnie po `parent_supabase_id` aż do roota.
+ *  • Modele niezależne — wszyscy liczeni od tej samej kwoty bazowej.
+ *  • Pomijani: blocked + is_removed_from_structure.
+ *  • Safeguard max depth = 32.
  */
 class CommissionCalculatorService
 {
-    private const MAX_DEPTH = 32; // safeguard przeciw pętli w danych
+    private const MAX_DEPTH = 32;
 
     /**
      * @return array<int, array{
@@ -30,14 +34,24 @@ class CommissionCalculatorService
      */
     public function calculate(string $sourceUserSupabaseId, float $baseAmount): array
     {
-        $items = [];
         $source = User::query()->where('supabase_id', $sourceUserSupabaseId)->first();
         if (!$source) {
             return [];
         }
 
-        $items[] = $this->buildItem($source, 0, $baseAmount);
+        // Pobierz wszystkie override-y per-relacja dla tego sub-membera (1 query)
+        $overrides = CrmCommissionChainOverride::query()
+            ->where('sub_member_supabase_id', $sourceUserSupabaseId)
+            ->pluck('rate', 'ancestor_supabase_id')
+            ->toArray();
 
+        $items = [];
+
+        // Level 0 — self
+        $selfRate = (float) ($source->override_commission_rate ?? 0);
+        $items[] = $this->buildItem($source, 0, $baseAmount, $selfRate);
+
+        // Level 1..N — chain w górę
         $cursor = $source;
         $level = 1;
         $visited = [$source->supabase_id => true];
@@ -45,14 +59,14 @@ class CommissionCalculatorService
         while ($level < self::MAX_DEPTH && $cursor->parent_supabase_id) {
             $parentUuid = $cursor->parent_supabase_id;
             if (isset($visited[$parentUuid])) {
-                // Wykryto cykl — przerwij.
                 break;
             }
             $parent = User::query()->where('supabase_id', $parentUuid)->first();
             if (!$parent) {
                 break;
             }
-            $items[] = $this->buildItem($parent, $level, $baseAmount);
+            $rate = isset($overrides[$parentUuid]) ? (float) $overrides[$parentUuid] : 0.0;
+            $items[] = $this->buildItem($parent, $level, $baseAmount, $rate);
             $visited[$parentUuid] = true;
             $cursor = $parent;
             $level++;
@@ -107,7 +121,7 @@ class CommissionCalculatorService
      *   rate:float, amount:float, skipped:bool, skip_reason:?string
      * }
      */
-    private function buildItem(User $user, int $level, float $baseAmount): array
+    private function buildItem(User $user, int $level, float $baseAmount, float $rate): array
     {
         $skipped = false;
         $skipReason = null;
@@ -120,7 +134,6 @@ class CommissionCalculatorService
             $skipReason = 'removed_from_structure';
         }
 
-        $rate = (float) ($user->override_commission_rate ?? 0);
         $amount = $skipped ? 0.0 : round($baseAmount * $rate, 2);
 
         return [
