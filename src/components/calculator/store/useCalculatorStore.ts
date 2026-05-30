@@ -11,8 +11,14 @@ import { ZapisanaKalkulacja } from '../models/history';
 import { DEFAULT_CONFIG } from '../tax-engine/constants';
 import { obliczWariantPodzial, obliczWariantStandard } from '../tax-engine';
 import { excelGenerator } from '../utils/excelGenerator';
-import { offerPdfGenerator, buildOfferPdfHtml } from '../utils/offer-generator';
+import { offerPdfGenerator as legacyOfferPdfGenerator, buildOfferPdfHtml as buildLegacyOfferPdfHtml } from '../utils/offer-generator';
+import { ebsOfferPdfGenerator, buildEbsOfferHtml } from '../utils/offer-ebs';
 import { buildOfferPdfHtml as buildTestOfferPdfHtml, offerPdfGenerator as testOfferPdfGenerator } from '../utils/offer-generator-test';
+
+const offerPdfGenerator = ebsOfferPdfGenerator;
+const buildOfferPdfHtml = buildEbsOfferHtml;
+void legacyOfferPdfGenerator;
+void buildLegacyOfferPdfHtml;
 
 interface ComparisonState {
   activeCard: 'STANDARD' | 'PRIME';
