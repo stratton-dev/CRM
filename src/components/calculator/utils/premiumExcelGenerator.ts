@@ -181,14 +181,14 @@ export const generatePremiumExcel = async ({ firma, wyniki, prowizjaProc }: Gene
     const feeValue = totalBenefitNetto * 0.20; 
     addRow("Opłata Success Fee za obsługę modelu", 0, feeValue);
 
-    // Row 4: Podwyżka finansowana w (Stratton 4%)
-    addRow("Podwyżka finansowana w (Stratton 4%)", 0, { formula: "SUM('Kalkulator Podwyżek'!F:F)" }, {
+    // Row 4: Rezerwa Stratton (0%)
+    addRow("Rezerwa Stratton (0%)", 0, { formula: "SUM('Kalkulator Podwyżek'!F:F)" }, {
         labelFont: styles.greenFont,
         elitonFill: styles.greenBg
     });
 
-    // Row 5: Bonus dla administracji w (Stratton 2%)
-    addRow("Bonus dla administracji w (Stratton 2%)", 0, { formula: "SUM('Kalkulator Podwyżek'!G:G)" }, {
+    // Row 5: Bonus dla biura księgowego (2%)
+    addRow("Bonus dla biura księgowego (2%)", 0, { formula: "SUM('Kalkulator Podwyżek'!G:G)" }, {
         labelFont: { color: { argb: 'FF1E40AF' }, italic: true },
         elitonFill: styles.blueBg
     });
@@ -277,7 +277,7 @@ export const generatePremiumExcel = async ({ firma, wyniki, prowizjaProc }: Gene
         { label: 'Obecne\nNetto', col: 'C', width: 15 },
         { label: 'Kwota\noZUSowana', col: 'D', width: 18 }, // New Base (Reduced Gross)
         { label: 'Świadczenie\n(Benefit)', col: 'E', width: 15 }, // Benefit Netto (Not taxed)
-        { label: 'Podwyżka\nFinansowana\n(Stratton 4%)', col: 'F', width: 15 }, 
+        { label: 'Rezerwa\n(0%)', col: 'F', width: 15 }, 
         { label: 'Bonus dla działu\nKsięgowo -\nKadrowego', col: 'G', width: 15 },
         { label: 'Oszczędność Firmy\n(Na czysto)', col: 'H', width: 15, color: 'green' },
         { label: 'Podwyżka Dodatkowa\n(Edytowalna)', col: 'I', width: 15 },
@@ -420,8 +420,8 @@ export const generatePremiumExcel = async ({ firma, wyniki, prowizjaProc }: Gene
     wsSim.getCell(`N${budgetStartRow}`).font = styles.navyFont;
     wsSim.getCell(`N${budgetStartRow}`).alignment = styles.centerAlign;
 
-    // Row 6: Podwyżki finansowana (Stratton 4%)
-    wsSim.getCell(`N${budgetStartRow+1}`).value = "Podwyżki finansowana (Stratton 4%)";
+    // Row 6: Rezerwa Stratton (0%)
+    wsSim.getCell(`N${budgetStartRow+1}`).value = "Rezerwa Stratton (0%)";
     wsSim.getCell(`N${budgetStartRow+1}`).font = { color: { argb: 'FF059669' }, bold: true, size: 9 };
     // Value: Sum of F
     wsSim.getCell(`O${budgetStartRow+1}`).value = { formula: `F${simRow}` }; // Sum Row
@@ -463,7 +463,7 @@ export const generatePremiumExcel = async ({ firma, wyniki, prowizjaProc }: Gene
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `Analiza Finansowa Podwyżek - ${firma.nazwa || 'Firma'}.xlsx`;
+    anchor.download = `Kalkulator Podwyżek - ${firma.nazwa || 'Firma'}.xlsx`;
     anchor.click();
     window.URL.revokeObjectURL(url);
 };

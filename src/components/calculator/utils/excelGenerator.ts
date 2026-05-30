@@ -191,12 +191,15 @@ export const excelGenerator = {
     wsSummary.getColumn('E').width = 25;
 
     const wsDetails = workbook.addWorksheet('Kalkulator Podwyżek');
-    const isPlusVariant = true;
+    // Stratton's systemic 4% raise was retired alongside the 28/26 split
+    // (Etap 1B). Employer-driven raises are entered manually below via
+    // the 'Podwyżka Dodatkowa' column + the K2 percent input.
+    const isPlusVariant = false;
     const dataStartRow = 5;
     const dataEndRow = dataStartRow + wyniki.szczegoly.length - 1;
 
     wsDetails.mergeCells('B2:F2');
-    wsDetails.getCell('B2').value = 'SYMULACJA PODZIAŁU NADWYŻKI I PODWYŻEK';
+    wsDetails.getCell('B2').value = 'KALKULATOR PODWYŻEK';
     wsDetails.getCell('B2').font = { bold: true, size: 14, color: { argb: 'FF1E40AF' } };
 
     wsDetails.getCell('M1').value = 'SUMA PODWYŻEK (TECH)';
@@ -225,9 +228,9 @@ export const excelGenerator = {
       'Obecne\nNetto',
       'Nowa Baza\n(ZUS)',
       'Świadczenie\n(Benefit)',
-      isPlusVariant ? 'Podwyżka Systemowa\n(4%)' : 'Podwyżka Systemowa\n(0%)',
-      'Bonus HR/Admin\n(Stratton 2%)',
-      'Podwyżka Dodatkowa\n(Od Pracodawcy)',
+      'Rezerwa\n(0%)',
+      'Bonus HR/Admin\n(2%)',
+      'Podwyżka\n(Od Pracodawcy)',
       'NOWE ŁĄCZNE\nNETTO PRACOWNIKA',
       'ZMIANA\n(ZYSK PRACOWNIKA)',
     ];
@@ -321,9 +324,7 @@ export const excelGenerator = {
     sumTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
     sumTitle.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 1}`).value = isPlusVariant
-      ? 'Podwyżki Systemowe (Stratton 4%)'
-      : 'Podwyżki Systemowe (Brak)';
+    wsDetails.getCell(`${summaryStartCol}${sumStartRow + 1}`).value = 'Podwyżki Systemowe (Brak)';
     wsDetails.getCell(`${summaryStartCol}${sumStartRow + 1}`).font = { size: 10 };
     wsDetails.getCell(`${summaryValueCol}${sumStartRow + 1}`).value = { formula: `SUM(F${dataStartRow}:F${dataEndRow})` };
     wsDetails.getCell(`${summaryValueCol}${sumStartRow + 1}`).numFmt = styles.currency;
