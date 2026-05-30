@@ -519,7 +519,7 @@ const generateQuickOffer = async () => {
 <template>
   <div class="animate-fade-in flex flex-col">
 
-    <TabHeader icon="chart-bar" title="Wyniki Symulacji" :on-back="handleBack">
+    <TabHeader icon="calculator" title="Wyniki Symulacji" :on-back="handleBack">
       <template #actions>
         <div class="flex items-center gap-3 md:gap-5">
           <div class="flex items-center gap-2">
