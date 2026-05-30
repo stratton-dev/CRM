@@ -519,50 +519,45 @@ const generateQuickOffer = async () => {
 <template>
   <div class="animate-fade-in flex flex-col">
 
-    <TabHeader icon="chart-bar" title="Wyniki Symulacji" :on-back="handleBack" />
-
-    <div class="p-4 md:p-6 space-y-4 md:space-y-6">
-
-      <!-- KPI Cards (light theme) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
-        <div class="bg-white rounded-card border border-slate-200 shadow-sm p-5">
-          <div class="flex justify-between items-start mb-3">
-            <div>
-              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Oszczędność miesięczna</div>
-              <div class="text-sm text-slate-400 font-medium mt-1">
+    <TabHeader icon="chart-bar" title="Wyniki Symulacji" :on-back="handleBack">
+      <template #actions>
+        <div class="flex items-center gap-3 md:gap-5">
+          <div class="flex items-center gap-2">
+            <div class="text-right leading-tight">
+              <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Oszczędność miesięczna</div>
+              <div class="text-[10px] text-slate-400 font-medium">
                 {{ strategy === 'WIN_WIN' ? 'Po wypłaceniu podwyżek' : 'Netto dla firmy' }}
               </div>
             </div>
-            <div class="p-2 bg-stratton-gold/10 text-stratton-gold rounded-xl border border-stratton-gold/20">
-              <AppIcon name="arrow-trending-up" class="w-5 h-5" />
+            <div class="px-3 py-1.5 rounded-md bg-white border border-stratton-gold/40 shadow-sm">
+              <div class="text-base md:text-lg font-extrabold text-slate-800 tracking-tight whitespace-nowrap">
+                {{ formatPLN(simulation.monthlySavings) }}
+              </div>
             </div>
           </div>
-          <div class="text-2xl md:text-4xl font-extrabold text-slate-800 tracking-tight">
-            {{ formatPLN(simulation.monthlySavings) }}
-          </div>
-          <div v-if="strategy === 'WIN_WIN'" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-            <AppIcon name="users" class="w-3 h-3" />
-            + Zadowoleni pracownicy
-          </div>
-        </div>
 
-        <div class="bg-white rounded-card border border-slate-200 shadow-sm p-5">
-          <div class="flex justify-between items-start mb-3">
-            <div>
-              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Potencjał roczny</div>
-              <div class="text-sm text-slate-400 font-medium mt-1">Skumulowana oszczędność</div>
+          <div class="h-8 w-px bg-slate-200"></div>
+
+          <div class="flex items-center gap-2">
+            <div class="text-right leading-tight">
+              <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Potencjał roczny</div>
+              <div class="text-[10px] text-slate-400 font-medium">Skumulowana oszczędność</div>
             </div>
-            <div class="p-2 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
-              <AppIcon name="chart-pie" class="w-5 h-5" />
+            <div class="px-3 py-1.5 rounded-md bg-white border border-slate-300 shadow-sm">
+              <div class="text-base md:text-lg font-extrabold text-slate-800 tracking-tight whitespace-nowrap">
+                {{ formatPLN(simulation.yearlySavings) }}
+              </div>
             </div>
-          </div>
-          <div class="text-2xl md:text-4xl font-extrabold text-slate-800 tracking-tight">
-            {{ formatPLN(simulation.yearlySavings) }}
-          </div>
-          <div class="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-            <div class="h-full bg-linear-to-r from-stratton-gold to-[#D4AF37] w-[70%]"></div>
           </div>
         </div>
+      </template>
+    </TabHeader>
+
+    <div class="p-4 md:p-6 space-y-4 md:space-y-6">
+
+      <div v-if="strategy === 'WIN_WIN'" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
+        <AppIcon name="users" class="w-3 h-3" />
+        + Zadowoleni pracownicy
       </div>
 
       <!-- Bottom Module: Structure + Comparison -->
