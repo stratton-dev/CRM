@@ -109,10 +109,16 @@ class UsersController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
+        // Merge first_name/last_name → name (and vice-versa) before validation
+        // so the rest of the flow can rely on a single canonical `name`.
+        $this->mergeNameFields($request);
+
         if ($isAdmin) {
             // Admins and directors may update every field, including password.
             $data = $request->validate([
                 'name'                        => 'sometimes|required|string|max:255',
+                'first_name'                  => 'nullable|string|max:100',
+                'last_name'                   => 'nullable|string|max:150',
                 'email'                       => 'sometimes|required|email|max:255',
                 'phone'                       => 'nullable|string|max:255',
                 'password'                    => 'nullable|string|min:8|max:128',
@@ -166,6 +172,8 @@ class UsersController extends Controller
             // Non-admins may only update basic profile fields — no role, status, or financial fields.
             $data = $request->validate([
                 'name'         => 'sometimes|required|string|max:255',
+                'first_name'   => 'nullable|string|max:100',
+                'last_name'    => 'nullable|string|max:150',
                 'phone'        => 'nullable|string|max:255',
                 'address_json' => 'nullable|array',
                 'rank'         => 'nullable|string|max:255',
@@ -274,6 +282,31 @@ class UsersController extends Controller
         ]);
     }
 
+    /**
+     * Keep `name`, `first_name`, `last_name` in sync on incoming requests so
+     * controllers can rely on whichever the caller sent.
+     */
+    private function mergeNameFields(Request $request): void
+    {
+        $first = trim((string) $request->input('first_name'));
+        $last  = trim((string) $request->input('last_name'));
+        $name  = trim((string) $request->input('name'));
+
+        if (($first !== '' || $last !== '') && $name === '') {
+            $request->merge(['name' => trim($first . ' ' . $last)]);
+        }
+
+        if ($name !== '' && $first === '' && $last === '') {
+            $parts = preg_split('/\s+/u', $name) ?: [];
+            $f = array_shift($parts) ?? '';
+            $l = trim(implode(' ', $parts));
+            $request->merge([
+                'first_name' => $f !== '' ? $f : null,
+                'last_name'  => $l !== '' ? $l : null,
+            ]);
+        }
+    }
+
     private function resolveRole(string $roleCode): ?Role
     {
         $normalized = Str::upper($roleCode);
@@ -316,6 +349,8 @@ class UsersController extends Controller
             'teamGroupPath' => $user->team_group_path,
             'leadowiecOpiekunId' => $user->leadowiec_opiekun_id,
             'leadowiecCommissionRate' => $user->leadowiec_commission_rate,
+            'firstName' => $user->first_name,
+            'lastName' => $user->last_name,
         ];
     }
 

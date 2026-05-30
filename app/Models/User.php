@@ -42,6 +42,8 @@ class User extends Authenticatable
         'team_group_path',
         'role_cached',
         'name',
+        'first_name',
+        'last_name',
         'email',
         'phone',
         'password',

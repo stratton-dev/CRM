@@ -18,6 +18,26 @@ class StructureUserStoreRequest extends FormRequest
                 'role' => strtoupper((string) $this->input('role')),
             ]);
         }
+
+        $first = trim((string) $this->input('first_name'));
+        $last  = trim((string) $this->input('last_name'));
+        $name  = trim((string) $this->input('name'));
+
+        // If client sent first_name/last_name (or both), assemble name.
+        if (($first !== '' || $last !== '') && $name === '') {
+            $this->merge(['name' => trim($first . ' ' . $last)]);
+        }
+
+        // If only name sent, split it for first_name/last_name backfill.
+        if ($name !== '' && $first === '' && $last === '') {
+            $parts = preg_split('/\s+/u', $name) ?: [];
+            $f = array_shift($parts) ?? '';
+            $l = trim(implode(' ', $parts));
+            $this->merge([
+                'first_name' => $f !== '' ? $f : null,
+                'last_name'  => $l !== '' ? $l : null,
+            ]);
+        }
     }
 
     public function rules(): array
@@ -25,6 +45,8 @@ class StructureUserStoreRequest extends FormRequest
         return [
             'supabase_id' => 'nullable|string|max:255',
             'name' => 'required|string|max:255',
+            'first_name' => 'nullable|string|max:100',
+            'last_name' => 'nullable|string|max:150',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:255',
             'role' => 'required|string|in:ADMIN,DIRECTOR,MANAGER,SALES,LEADOWIEC,CLIENT_HR',

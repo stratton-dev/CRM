@@ -174,6 +174,8 @@ class StructureService
             'hierarchical_code' => $hierarchicalCode,
             'hierarchical_id' => $hierarchicalCode,
             'name' => $data['name'],
+            'first_name' => $data['first_name'] ?? null,
+            'last_name' => $data['last_name'] ?? null,
             'email' => $data['email'],
             'phone' => $data['phone'] ?? null,
             'contract_status' => $data['contract_status'] ?? null,

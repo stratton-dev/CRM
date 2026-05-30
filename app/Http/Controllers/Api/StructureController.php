@@ -166,6 +166,8 @@ class StructureController extends Controller
             'renewalCommissionRate' => $user->renewal_commission_rate,
             'overrideCommissionRate' => $user->override_commission_rate,
             'name' => $user->name,
+            'firstName' => $user->first_name,
+            'lastName' => $user->last_name,
             'email' => $user->email,
             'phone' => $user->phone,
             'enabled' => $user->enabled,
