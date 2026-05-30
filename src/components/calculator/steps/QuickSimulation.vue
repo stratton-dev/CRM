@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import AppIcon from '@/components/AppIcon.vue';
+import TabHeader from '@/components/ui/TabHeader.vue';
 import { formatPLN } from '../utils/formatters';
 import { useCalculatorStore } from '../store/useCalculatorStore';
 import { useMailboxStore } from '@/stores/mailbox';
@@ -516,72 +517,51 @@ const generateQuickOffer = async () => {
 };</script>
 
 <template>
-  <div class="animate-fade-in">
-    <div class="space-y-4 md:space-y-8">
+  <div class="animate-fade-in flex flex-col">
 
-      <!-- Top Header Area: Results & Controls (Full Width) -->
-      <div class="rounded-card shadow-card-hover border border-[#003366] p-4 md:p-6" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-3 md:gap-6">
-            <!-- Left: Back Button + Title -->
-            <div class="flex items-center gap-3 md:gap-6 self-start md:self-center">
-                <button type="button" class="hidden md:inline-flex items-center justify-center w-12 h-12 bg-slate-800 border border-slate-700 rounded-md text-slate-400 hover:bg-slate-700 hover:text-white transition-all shadow-sm group" @click="handleBack">
-                    <AppIcon name="arrow-left" class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-                </button>
-                <div>
-                    <h2 class="font-serif font-bold text-xl md:text-3xl text-white tracking-tight">Wyniki Symulacji</h2>
-                    <p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Podsumowanie Oszczędności</p>
-                </div>
-            </div>
+    <TabHeader icon="chart-bar" title="Wyniki Symulacji" :on-back="handleBack" />
 
-            <!-- Right: Action Buttons -->
-            <div class="flex flex-col sm:flex-row items-end sm:items-center gap-3 self-end md:self-center">
+    <div class="p-4 md:p-6 space-y-4 md:space-y-6">
+
+      <!-- KPI Cards (light theme) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
+        <div class="bg-white rounded-card border border-slate-200 shadow-sm p-5">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Oszczędność miesięczna</div>
+              <div class="text-sm text-slate-400 font-medium mt-1">
+                {{ strategy === 'WIN_WIN' ? 'Po wypłaceniu podwyżek' : 'Netto dla firmy' }}
+              </div>
             </div>
+            <div class="p-2 bg-stratton-gold/10 text-stratton-gold rounded-xl border border-stratton-gold/20">
+              <AppIcon name="arrow-trending-up" class="w-5 h-5" />
+            </div>
+          </div>
+          <div class="text-2xl md:text-4xl font-extrabold text-slate-800 tracking-tight">
+            {{ formatPLN(simulation.monthlySavings) }}
+          </div>
+          <div v-if="strategy === 'WIN_WIN'" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
+            <AppIcon name="users" class="w-3 h-3" />
+            + Zadowoleni pracownicy
+          </div>
         </div>
 
-        <!-- Content: Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-6">
-            <!-- Card 1: Monthly Savings (Dark Mode) -->
-            <div class="rounded-2xl p-5 border border-[#003366] shadow-sm relative overflow-hidden group transition-colors" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
-                <div class="flex justify-between items-start mb-3">
-                    <div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Oszczędność miesięczna</div>
-                        <div class="text-sm text-slate-500 font-medium mt-1">
-                            {{ strategy === 'WIN_WIN' ? 'Po wypłaceniu podwyżek' : 'Netto dla firmy' }}
-                        </div>
-                    </div>
-                    <div class="p-2 bg-stratton-gold/10 text-stratton-gold rounded-xl border border-stratton-gold/20">
-                        <AppIcon name="arrow-trending-up" class="w-6 h-6" />
-                    </div>
-                </div>
-                <div class="text-2xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
-                    {{ formatPLN(simulation.monthlySavings) }}
-                </div>
-                 <div v-if="strategy === 'WIN_WIN'" class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-bold border border-blue-500/30">
-                    <AppIcon name="users" class="w-3 h-3" />
-                     + Zadowoleni pracownicy
-                 </div>
+        <div class="bg-white rounded-card border border-slate-200 shadow-sm p-5">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <div class="text-xs font-bold text-slate-500 uppercase tracking-widest">Potencjał roczny</div>
+              <div class="text-sm text-slate-400 font-medium mt-1">Skumulowana oszczędność</div>
             </div>
-
-            <!-- Card 2: Yearly Potential (Dark Mode) -->
-            <div class="rounded-2xl p-5 border border-[#003366] shadow-sm text-white relative overflow-hidden group transition-colors" style="background: linear-gradient(135deg, #001f3d 0%, #002a52 50%, #003366 100%)">
-                <div class="absolute -right-10 -top-10 w-40 h-40 bg-stratton-gold rounded-full blur-[80px] opacity-10 group-hover:opacity-20 transition-opacity"></div>
-
-                <div class="flex justify-between items-start mb-3 relative z-10">
-                    <div>
-                        <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Potencjał roczny</div>
-                        <div class="text-sm text-slate-500 font-medium mt-1">Skumulowana oszczędność</div>
-                    </div>
-                    <div class="p-2 bg-slate-700 text-white rounded-lg">
-                         <AppIcon name="chart-pie" class="w-6 h-6" />
-                    </div>
-                </div>
-                <div class="text-2xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tight relative z-10">
-                    {{ formatPLN(simulation.yearlySavings) }}
-                </div>
-                <div class="mt-4 h-1.5 w-full bg-slate-700 rounded-full overflow-hidden relative z-10">
-                    <div class="h-full bg-linear-to-r from-stratton-gold to-[#D4AF37] w-[70%] animate-pulse"></div>
-                </div>
+            <div class="p-2 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
+              <AppIcon name="chart-pie" class="w-5 h-5" />
             </div>
+          </div>
+          <div class="text-2xl md:text-4xl font-extrabold text-slate-800 tracking-tight">
+            {{ formatPLN(simulation.yearlySavings) }}
+          </div>
+          <div class="mt-4 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-linear-to-r from-stratton-gold to-[#D4AF37] w-[70%]"></div>
+          </div>
         </div>
       </div>
 
