@@ -110,11 +110,12 @@ class UsersController extends Controller
         }
 
         if ($isAdmin) {
-            // Admins and directors may update every field.
+            // Admins and directors may update every field, including password.
             $data = $request->validate([
                 'name'                        => 'sometimes|required|string|max:255',
                 'email'                       => 'sometimes|required|email|max:255',
                 'phone'                       => 'nullable|string|max:255',
+                'password'                    => 'nullable|string|min:8|max:128',
                 'role'                        => 'nullable|string|max:100',
                 'role_id'                     => 'nullable|integer|exists:roles,id',
                 'parent_id'                   => 'nullable|integer|exists:users,id',
@@ -134,6 +135,11 @@ class UsersController extends Controller
                 'leadowiec_opiekun_id'        => 'nullable|exists:users,id',
                 'leadowiec_commission_rate'   => 'nullable|numeric|min:0|max:1',
             ]);
+
+            // Password update goes only to Supabase, NOT to the local DB
+            // (the DB column is unused for auth — we authenticate via Supabase).
+            $newPassword = $data['password'] ?? null;
+            unset($data['password']);
 
             if (!isset($data['role_id']) && isset($data['role'])) {
                 $role = $this->resolveRole($data['role']);
@@ -169,8 +175,9 @@ class UsersController extends Controller
         $user->fill($data)->save();
         $user->load('role:id,code,name');
 
-        // Sync role/email/phone to Supabase Auth so login + role enforcement
-        // stay consistent. Failures here are not fatal — DB is source of truth.
+        // Sync role/email/phone/password to Supabase Auth so login + role
+        // enforcement stay consistent. Failures here are not fatal — DB is
+        // source of truth except for password (Supabase-only).
         if ($isAdmin && $user->supabase_id) {
             $admin = app(SupabaseAdminService::class);
             if ($admin->isConfigured()) {
@@ -181,6 +188,9 @@ class UsersController extends Controller
                 if (array_key_exists('name', $data)) $patch['name'] = $data['name'];
                 if (array_key_exists('is_blocked', $data)) {
                     $patch['ban_duration'] = $data['is_blocked'] ? '876000h' : 'none';
+                }
+                if (!empty($newPassword)) {
+                    $patch['password'] = $newPassword;
                 }
                 if (!empty($patch)) {
                     try {
