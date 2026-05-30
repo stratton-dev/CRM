@@ -7,17 +7,26 @@ import { formatPLN } from '../utils/formatters';
 const store = useCalculatorStore();
 
 const handleSelectStandard = () => {
+  // STANDARD now means 'external accounting' (22%).
+  store.setHasExternalAccounting(true);
   store.comparisonState.activeCard = 'STANDARD';
   store.prowizjaProc = store.comparisonState.customStandardRate;
 };
 
 const handleSelectPrime = () => {
+  // PRIME now means 'own accounting' (20%).
+  store.setHasExternalAccounting(false);
   store.comparisonState.activeCard = 'PRIME';
   store.prowizjaProc = store.comparisonState.customPrimeRate;
 };
 
-
 const syncRates = () => {
+  // Keep the comparisonState.activeCard mirror in sync with the
+  // accounting toggle so the BusinessCase view + downstream PDF
+  // template (which still keys off activeCard) match the calculator
+  // state. The admin override of customStandardRate / customPrimeRate
+  // still flows through prowizjaProc.
+  store.comparisonState.activeCard = store.hasExternalAccounting ? 'STANDARD' : 'PRIME';
   if (store.comparisonState.activeCard === 'STANDARD' && store.prowizjaProc !== store.comparisonState.customStandardRate) {
     store.comparisonState.customStandardRate = store.prowizjaProc;
   }
@@ -28,6 +37,7 @@ const syncRates = () => {
 
 onMounted(syncRates);
 watch(() => store.prowizjaProc, syncRates);
+watch(() => store.hasExternalAccounting, syncRates);
 
 const stats = computed(() => {
   if (!store.wyniki) return null;
@@ -43,13 +53,14 @@ const stats = computed(() => {
   const oszczednoscBrutto = sumaKosztStandard - sumaKosztPodzial;
   const totalCommissionAmount = benefitNettoTotal * (store.prowizjaProc / 100);
 
-  const isStandard = store.comparisonState.activeCard === 'STANDARD';
-  const raiseRate = isStandard ? 0 : 4;
-  const adminRate = 2;
-
-  const raiseAmount = benefitNettoTotal * (raiseRate / 100);
+  // New 22%/20% model — Etap 1B/1C/1D:
+  // - external accounting (22%): 20% Stratton fee + 2% accounting office
+  // - own accounting (20%):      20% Stratton fee only
+  // Employee raises moved to the standalone Kalkulator podwyżek Excel.
+  const adminRate = store.hasExternalAccounting ? 2 : 0;
+  const raiseAmount = 0;
   const adminAmount = benefitNettoTotal * (adminRate / 100);
-  const feeAmount = Math.max(0, totalCommissionAmount - raiseAmount - adminAmount);
+  const feeAmount = Math.max(0, totalCommissionAmount - adminAmount);
 
   return {
     sumaKosztStandard,
