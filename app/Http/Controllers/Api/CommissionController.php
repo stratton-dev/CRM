@@ -125,6 +125,175 @@ class CommissionController extends Controller
         return response()->json(['deleted' => true]);
     }
 
+    /**
+     * GET /v1/commission/my-settlements?period=YYYY-MM
+     *
+     * Zwraca wszystkie items distribution-ów gdzie current user (lub ktoś
+     * z jego subtree dla MANAGER/DIRECTOR/ADMIN) jest receiverem.
+     */
+    public function mySettlements(Request $request, TokenContext $context): JsonResponse
+    {
+        $actorUuid = $context->actorSupabaseId();
+        if ($actorUuid === '') {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $actor = User::query()->where('supabase_id', $actorUuid)->first();
+        if (!$actor) {
+            return response()->json(['message' => 'User not found in CRM.'], 404);
+        }
+
+        $role = $context->primaryRole();
+        $receiverScope = $this->buildReceiverScope($actor, $role);
+
+        $query = \App\Models\CrmCommissionDistributionItem::query()
+            ->whereIn('receiver_user_supabase_id', $receiverScope)
+            ->with('distribution');
+
+        if ($period = $request->string('period')->toString()) {
+            $query->whereHas('distribution', fn ($q) => $q->where('period', $period));
+        }
+
+        $items = $query->orderByDesc('created_at')->limit(500)->get();
+
+        // Preload source + receiver users (bulk)
+        $userIds = $items
+            ->flatMap(fn ($it) => [$it->receiver_user_supabase_id, $it->distribution?->source_user_supabase_id])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $users = User::query()->whereIn('supabase_id', $userIds)->get()->keyBy('supabase_id');
+
+        $rows = $items->map(function ($it) use ($users) {
+            $d = $it->distribution;
+            $source = $d ? ($users[$d->source_user_supabase_id] ?? null) : null;
+            $receiver = $users[$it->receiver_user_supabase_id] ?? null;
+            $sourceRole = $source?->role_cached;
+            $receiverRole = $receiver?->role_cached;
+            $context = $this->classifyContext($sourceRole, $receiverRole, (int) $it->level);
+
+            return [
+                'id' => $it->id,
+                'distributionId' => $it->distribution_id,
+                'period' => $d?->period,
+                'sourceKind' => $d?->source,
+                'sourceReference' => $d?->source_reference,
+                'baseAmount' => (float) ($d?->base_amount ?? 0),
+                'rate' => (float) $it->rate,
+                'amount' => (float) $it->amount,
+                'level' => (int) $it->level,
+                'context' => $context,
+                'source' => $source ? [
+                    'userSupabaseId' => $source->supabase_id,
+                    'name' => $source->name,
+                    'role' => $source->role_cached,
+                ] : null,
+                'receiver' => $receiver ? [
+                    'userSupabaseId' => $receiver->supabase_id,
+                    'name' => $receiver->name,
+                    'role' => $receiver->role_cached,
+                    'isAgentAuthorized' => (bool) $receiver->is_agent_authorized,
+                ] : null,
+                'createdAt' => optional($it->created_at)->toIso8601String(),
+            ];
+        })->values();
+
+        // Aggregate summary per receiver
+        $byReceiver = [];
+        foreach ($rows as $r) {
+            $rid = $r['receiver']['userSupabaseId'] ?? 'unknown';
+            if (!isset($byReceiver[$rid])) {
+                $byReceiver[$rid] = [
+                    'receiverUserSupabaseId' => $rid,
+                    'name' => $r['receiver']['name'] ?? 'Brak',
+                    'role' => $r['receiver']['role'] ?? null,
+                    'isAgentAuthorized' => $r['receiver']['isAgentAuthorized'] ?? false,
+                    'totalAmount' => 0.0,
+                    'selfAmount' => 0.0,
+                    'overrideAmount' => 0.0,
+                    'agentAmount' => 0.0,
+                    'leadowiecChainAmount' => 0.0,
+                    'distributionCount' => 0,
+                ];
+            }
+            $byReceiver[$rid]['totalAmount'] += $r['amount'];
+            $byReceiver[$rid]['distributionCount']++;
+            switch ($r['context']) {
+                case 'SELF':              $byReceiver[$rid]['selfAmount'] += $r['amount']; break;
+                case 'AGENT':             $byReceiver[$rid]['agentAmount'] += $r['amount']; break;
+                case 'LEADOWIEC_CHAIN':   $byReceiver[$rid]['leadowiecChainAmount'] += $r['amount']; break;
+                default:                  $byReceiver[$rid]['overrideAmount'] += $r['amount']; break;
+            }
+        }
+
+        return response()->json([
+            'actor' => [
+                'userSupabaseId' => $actor->supabase_id,
+                'name' => $actor->name,
+                'role' => $actor->role_cached,
+                'isAgentAuthorized' => (bool) $actor->is_agent_authorized,
+            ],
+            'scopeUserCount' => count($receiverScope),
+            'period' => $request->string('period')->toString() ?: null,
+            'totals' => [
+                'grossPaid' => $rows->sum('amount'),
+                'distributionCount' => $rows->pluck('distributionId')->unique()->count(),
+                'itemCount' => $rows->count(),
+            ],
+            'byReceiver' => array_values($byReceiver),
+            'rows' => $rows,
+        ]);
+    }
+
+    /**
+     * Określa kogo widzi current user.
+     *
+     * @return array<int, string>  Lista supabase_id którzy mogą być receiverami
+     */
+    private function buildReceiverScope(User $actor, ?string $role): array
+    {
+        if ($role === 'ADMIN') {
+            return User::query()->pluck('supabase_id')->all();
+        }
+        if (in_array($role, ['DIRECTOR', 'MANAGER'], true)) {
+            $scope = [$actor->supabase_id];
+            $this->collectSubtree($actor->supabase_id, $scope);
+            return $scope;
+        }
+        return [$actor->supabase_id];
+    }
+
+    /**
+     * @param array<int, string> $bag
+     */
+    private function collectSubtree(string $rootUuid, array &$bag, int $depth = 0): void
+    {
+        if ($depth > 32) return;
+        $children = User::query()->where('parent_supabase_id', $rootUuid)->pluck('supabase_id')->all();
+        foreach ($children as $childUuid) {
+            $bag[] = $childUuid;
+            $this->collectSubtree($childUuid, $bag, $depth + 1);
+        }
+    }
+
+    /**
+     * SELF | LEADOWIEC_CHAIN | AGENT | STANDARD_OVERRIDE
+     */
+    private function classifyContext(?string $sourceRole, ?string $receiverRole, int $level): string
+    {
+        if ($level === 0) {
+            return 'SELF';
+        }
+        if ($sourceRole === 'LEADOWIEC' && $receiverRole === 'LEADOWIEC') {
+            return 'LEADOWIEC_CHAIN';
+        }
+        if ($sourceRole === 'LEADOWIEC' && $receiverRole !== 'LEADOWIEC') {
+            return 'AGENT';
+        }
+        return 'STANDARD_OVERRIDE';
+    }
+
     private function authorizeAdmin(TokenContext $context): void
     {
         if ($context->primaryRole() !== 'ADMIN') {
