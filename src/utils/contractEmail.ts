@@ -57,15 +57,20 @@ export function pickContactName(client: ContractClientData): string {
 /**
  * Pełny HTML umowy ramowej (gotowy do konwersji HTML → PDF przez backend
  * mailbox attachment z `convert_to_pdf: true`).
+ *
+ * Treść 1:1 z oficjalnego dokumentu „Umowa_Ramowa_Wspolpracy_ElitonPrime_v2
+ * _rev KZS.pdf" (wersja marzec 2026), z podstawionymi danymi klienta:
+ *   - nazwa, adres siedziby, KRS, REGON, NIP, osoba reprezentująca
+ *   - email do otrzymywania faktur (kontakt)
+ *   - stawka opłaty serwisowej (% z karty klienta lub default 22)
  */
 export function buildContractHtml(client: ContractClientData): string {
   const today = new Date()
   const year = today.getFullYear()
-  const offerNum = `STR/${year}/${String(client.nip || '0000').slice(0, 4)}`
   const dateStr = fmtDate(today)
-  const employees = client.employeesTotal ?? '—'
   const fee = client.serviceFeePercent != null ? `${client.serviceFeePercent}` : '22'
-  const contactName = pickContactName(client) || '[osoba upoważniona]'
+  const contactName = pickContactName(client) || '………………………………………………………'
+  const contactEmail = pickContactEmail(client) || '………………………………………'
 
   const addrLine = [
     client.street,
@@ -73,6 +78,7 @@ export function buildContractHtml(client: ContractClientData): string {
     client.localeNr,
   ].filter(Boolean).join(' ').trim()
   const cityLine = [client.zip, client.city].filter(Boolean).join(' ').trim()
+  const fullAddr = [addrLine, cityLine].filter(Boolean).join(', ').trim()
 
   return `<!DOCTYPE html>
 <html lang="pl">
@@ -80,101 +86,288 @@ export function buildContractHtml(client: ContractClientData): string {
 <meta charset="UTF-8">
 <title>Umowa Ramowa Współpracy — ${escapeHtml(client.name || 'Klient')}</title>
 <style>
-  @page { size: A4; margin: 18mm 16mm; }
+  @page { size: A4; margin: 18mm 16mm 24mm 16mm; }
   * { box-sizing: border-box; }
-  body { font-family: 'Georgia', 'Times New Roman', serif; color: #1e293b; font-size: 11pt; line-height: 1.55; }
-  .header { text-align: center; margin-bottom: 24px; }
-  .header h1 { font-size: 16pt; font-weight: 800; text-transform: uppercase; margin: 0 0 6px; letter-spacing: 1px; }
-  .header .num { color: #64748b; font-size: 10pt; font-family: 'Courier New', monospace; }
-  .draft-mark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 96pt; color: rgba(220, 38, 38, 0.10); font-weight: 900; pointer-events: none; z-index: 0; letter-spacing: 8px; }
-  .parties { margin-bottom: 24px; }
-  .parties p { margin: 4px 0; }
-  .party-box { margin: 12px 0 12px 18px; padding-left: 14px; border-left: 3px solid #C5A059; }
-  .party-box .name { font-weight: 800; }
-  section { margin-top: 18px; }
-  section h2 { font-size: 10pt; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #94a3b8; padding-bottom: 4px; margin: 0 0 8px; }
+  body { font-family: 'Calibri', 'Segoe UI', 'Arial', sans-serif; color: #1e293b; font-size: 10.5pt; line-height: 1.45; margin: 0; }
+
+  /* Page header (every page) */
+  .page-header {
+    border-bottom: 2px solid #1e3a5f;
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 8pt;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+  .page-header .right { font-weight: 400; color: #475569; }
+
+  /* Title block */
+  h1.doc-title {
+    font-size: 32pt;
+    font-weight: 900;
+    text-align: center;
+    color: #1e293b;
+    margin: 20px 0 6px;
+    letter-spacing: -0.5px;
+  }
+  .doc-subtitle {
+    text-align: center;
+    font-size: 11pt;
+    font-style: italic;
+    color: #1e3a5f;
+    margin: 0 0 4px;
+  }
+  .doc-note {
+    text-align: center;
+    font-size: 10pt;
+    color: #64748b;
+    margin: 0 0 22px;
+  }
+
+  /* Parties block */
+  .parties { margin-bottom: 18px; }
+  .parties .intro { margin: 8px 0; }
+  .party-block {
+    margin: 10px 0;
+    padding: 6px 0;
+  }
+  .party-block strong { font-weight: 700; }
+  .a-sep { text-align: center; font-style: italic; margin: 8px 0; }
+
+  /* Sections */
+  section { margin-top: 18px; page-break-inside: avoid; }
+  section h2 {
+    font-size: 13pt;
+    font-weight: 800;
+    color: #1e293b;
+    border-bottom: 1.5px solid #1e3a5f;
+    padding-bottom: 4px;
+    margin: 0 0 10px;
+  }
   section p { margin: 6px 0; text-align: justify; }
-  .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 60px; }
-  .sig { text-align: center; }
-  .sig .line { border-bottom: 2px dotted #1e293b; height: 56px; margin-bottom: 6px; background: rgba(197, 160, 89, 0.04); }
-  .sig .label { font-size: 9pt; text-transform: uppercase; font-weight: 700; letter-spacing: 2px; color: #475569; }
-  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 8pt; color: #94a3b8; text-align: center; line-height: 1.4; }
-  .strong { font-weight: 800; }
-  .gold { color: #C5A059; }
+  section ol, section ul { margin: 6px 0 6px 20px; padding: 0; }
+  section li { margin: 4px 0; text-align: justify; }
+  .num { font-weight: 700; }
+  .iban { font-weight: 800; text-align: center; font-size: 12pt; margin: 8px 0; letter-spacing: 1px; }
+  .highlight-box {
+    background: #f1f5f9;
+    border-left: 3px solid #1e3a5f;
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-style: italic;
+    color: #1e293b;
+  }
+
+  /* Signatures table */
+  .sig-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 28px;
+  }
+  .sig-table th, .sig-table td {
+    border: 1px solid #1e293b;
+    padding: 16px 12px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .sig-table th {
+    background: #f1f5f9;
+    font-size: 11pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .sig-table td.sig-cell { height: 56px; font-style: italic; color: #475569; }
+  .sig-line { border-bottom: 1px solid #1e293b; width: 80%; margin: 0 auto 6px; height: 32px; }
+
+  /* Footer */
+  .doc-footer {
+    margin-top: 30px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 8.5pt;
+    color: #94a3b8;
+  }
+
+  .strong { font-weight: 700; }
+  .blank { color: #94a3b8; }
+  .field { display: inline-block; min-width: 180px; border-bottom: 1px dotted #94a3b8; padding: 0 4px; }
 </style>
 </head>
 <body>
-<div class="draft-mark">DRAFT</div>
 
-<div class="header">
-  <h1>Umowa Ramowa o Współpracy</h1>
-  <p class="num">Nr ${offerNum} · ${dateStr}</p>
+<div class="page-header">
+  <span>ELITON PRIME™ | UMOWA RAMOWA WSPÓŁPRACY</span>
+  <span class="right">Stratton Prime Sp. z o.o. | stratton-prime.pl</span>
 </div>
+
+<h1 class="doc-title">UMOWA RAMOWA WSPÓŁPRACY</h1>
+<p class="doc-subtitle">Eliton Prime™ / Eliton Benefits System (EBS)</p>
+<p class="doc-note">WZÓR – do uzupełnienia przed podpisaniem</p>
 
 <div class="parties">
-  <p>Zawarta w dniu <span class="strong">${dateStr}</span> w Gdańsku, pomiędzy:</p>
+  <p class="intro">Umowa zawarta w dniu <span class="strong">${dateStr}</span> w Warszawie, pomiędzy:</p>
 
-  <div class="party-box">
-    <p class="name">Stratton Prime Sp. z o.o.</p>
-    <p>ul. Nowy Świat 42/44, 80-299 Gdańsk</p>
-    <p>NIP: 5842867357, REGON: 525000000</p>
-    <p>zwaną dalej <span class="strong">„Zleceniobiorcą"</span>,</p>
+  <div class="party-block">
+    <p><strong>Stratton Prime Sp. z o.o.</strong> z siedzibą przy ul. Junony 23/11, 80-299 Gdańsk, wpisaną do rejestru przedsiębiorców Krajowego Rejestru Sądowego prowadzonego przez Sąd Rejestrowy dla Gdańska-Południe w Gdańsku, XIII Wydział Gospodarczy Krajowego Rejestru Sądowego pod numerem KRS: 0001169520, NIP: 5842867357, REGON: 541537557, reprezentowaną przez: <strong>Natalię Juszkiewicz – Prezesa Zarządu</strong>, zwaną dalej <strong>„Usługodawcą"</strong> oraz <strong>„Sprzedawcą"</strong></p>
   </div>
 
-  <p>a</p>
+  <p class="a-sep">a</p>
 
-  <div class="party-box">
-    <p class="name">${escapeHtml(client.name || '[Nazwa Firmy]')}</p>
-    <p>${escapeHtml(addrLine || '[Adres]')}${addrLine && cityLine ? ', ' : ''}${escapeHtml(cityLine)}</p>
-    <p>NIP: ${escapeHtml(client.nip || '[NIP]')}${client.regon ? ' · REGON: ' + escapeHtml(client.regon) : ''}${client.krs ? ' · KRS: ' + escapeHtml(client.krs) : ''}</p>
-    <p>reprezentowaną przez: <span class="strong">${escapeHtml(contactName)}</span></p>
-    <p>zwaną dalej <span class="strong">„Zleceniodawcą"</span>.</p>
+  <div class="party-block">
+    <p><strong>${escapeHtml(client.name || '____________________________________')}</strong> z siedzibą w ${escapeHtml(client.city || '________________________')}, adres: ${escapeHtml(fullAddr || '_________________________')}, wpisaną do rejestru KRS pod numerem ${escapeHtml(client.krs || '____________________')}, REGON: ${escapeHtml(client.regon || '_________________')}, NIP: ${escapeHtml(client.nip || '_____________________')}, reprezentowaną przez: <strong>${escapeHtml(contactName)}</strong> zwaną dalej <strong>„Klientem"</strong> oraz <strong>„Kupującym"</strong></p>
   </div>
+
+  <p>o następującej treści:</p>
 </div>
 
 <section>
-  <h2>§1 Przedmiot Umowy</h2>
-  <p>1. Przedmiotem niniejszej umowy jest świadczenie przez Zleceniobiorcę usług optymalizacji kosztów pracowniczych oraz udostępnienie autorskiego systemu benefitowego <span class="strong gold">Eliton Prime™</span>.</p>
-  <p>2. Zleceniobiorca zobowiązuje się do rzetelnego wykonywania powierzonych zadań, zgodnie z przyjętym harmonogramem wdrożenia i wewnętrzną dokumentacją systemu.</p>
-  <p>3. Usługa realizowana jest w modelu opartym o akty prawne obowiązujące w polskim systemie prawnym nieprzerwanie od 1998 roku (Rozp. MPiPS z dnia 18.12.1998 r. §2 ust. 1 pkt 26).</p>
+  <h2>§ 1 Przedmiot Umowy</h2>
+  <p><span class="num">1.</span> Przedmiotem umowy jest stała współpraca polegająca na zakupie oraz sprzedaży voucherów cyfrowych (znaków legitymacyjnych) uprawniających do korzystania z usług i towarów dostępnych w zamkniętym katalogu na platformie <strong>Eliton Benefits System (EBS)</strong>, prowadzonej przez Sprzedawcę.</p>
+  <p><span class="num">2.</span> Vouchery dystrybuowane w ramach niniejszej umowy stanowią znaki legitymacyjne w rozumieniu art. 921¹⁵ Kodeksu cywilnego oraz spełniają warunki zwolnienia z podstawy wymiaru składek ZUS na podstawie §2 ust. 1 pkt 26 rozporządzenia MPiPS z dnia 18 grudnia 1998 r. (Dz.U.1998.161.1106).</p>
+  <p><span class="num">3.</span> Wartość transakcji voucherów będących przedmiotem umowy będzie każdorazowo ustalana na podstawie Załącznika nr 1 (umowa zlecenia nabycia voucherów).</p>
 </section>
 
 <section>
-  <h2>§2 Oświadczenia Stron</h2>
-  <p>1. Zleceniodawca oświadcza, że zatrudnia pracowników (${employees} os.) i jest uprawniony do zawarcia niniejszej umowy.</p>
-  <p>2. Strony ustalają, że wdrożenie systemu obejmie ${employees} użytkowników w pierwszym etapie.</p>
-  <p>3. Zleceniobiorca oświadcza, że dysponuje wiedzą, doświadczeniem oraz infrastrukturą umożliwiającymi należyte wykonanie umowy.</p>
+  <h2>§ 2 Wykonywanie zobowiązania</h2>
+  <p><span class="num">1.</span> Sprzedawca zobowiązuje się do przeprowadzenia bezpłatnego szkolenia dla działu księgowego oraz działu kadrowo-płacowego Kupującego, obejmującego:</p>
+  <ol type="a" style="margin-left: 24px;">
+    <li>zasady funkcjonowania voucherów i platformy EBS,</li>
+    <li>sposób ich przydzielania pracownikom/zleceniobiorcom,</li>
+    <li>podstawowe kwestie podatkowe i prawne (ZUS, PIT, VAT), mające charakter wyłącznie informacyjny i niewiążący,</li>
+    <li>obsługę platformy benefitowej EBS i raportowanie wewnętrzne.</li>
+  </ol>
+  <p><span class="num">2.</span> Szkolenie zostanie przeprowadzone w formie zdalnej lub stacjonarnej, według ustaleń stron i w terminie przez nie uzgodnionym. Szkolenie odbędzie się po zawarciu niniejszej umowy.</p>
+  <p><span class="num">3.</span> Strony zgodnie ustalają, że od momentu założenia kont indywidualnych na platformie EBS przez dedykowanego opiekuna, wszelkie wsparcie techniczne w zakresie jego obsługi zapewnia Pomoc Techniczna. Wszelkie pytania, problemy techniczne oraz zgłoszenia związane z funkcjonowaniem portfela należy kierować do:</p>
+  <p style="margin-left: 24px;"><strong>Pomoc Techniczna:</strong> bok@stratton-prime.pl</p>
+  <p><span class="num">4.</span> Wszelkie procedury związane z ewentualną rezygnacją uczestnika z programu EBS prowadzone są wyłącznie przez operatora platformy EBS bezpośrednio z uczestnikiem, na warunkach Regulaminu EBS. Kupujący (pracodawca/zleceniodawca) nie jest stroną tych procedur i nie uczestniczy w żadnych rozliczeniach związanych z rezygnacją.</p>
+  <p><span class="num">5.</span> Sprzedawca oświadcza, że nie świadczy usług doradztwa podatkowego ani prawnego. Kupujący ponosi wyłączną odpowiedzialność za sposób rozliczenia voucherów zgodnie z obowiązującymi przepisami prawa.</p>
 </section>
 
 <section>
-  <h2>§3 Wynagrodzenie</h2>
-  <p>1. Z tytułu realizacji umowy Zleceniodawca zapłaci Zleceniobiorcy wynagrodzenie prowizyjne (opłatę serwisową) w wysokości <span class="strong">${fee}%</span> wartości netto zamówionych świadczeń.</p>
-  <p>2. Płatność nastąpi na podstawie faktury VAT w terminie 7 dni od dnia wystawienia.</p>
-  <p>3. Faktury wystawiane są przez Zleceniobiorcę w systemie EBS po zakończeniu każdego miesiąca rozliczeniowego.</p>
+  <h2>§ 3 Płatność</h2>
+  <p><span class="num">1.</span> Rozliczenie każdego zamówienia realizowanego na podstawie Załącznika nr 1 następuje na podstawie dwóch odrębnych dokumentów księgowych:</p>
+  <ol type="a" style="margin-left: 24px;">
+    <li><strong>noty księgowej</strong> — wystawianej przez Sprzedawcę na wartość nabytych voucherów, stanowiącej iloczyn liczby voucherów i ich wartości jednostkowej (1 voucher = 1 PLN). Nota księgowa nie zawiera podatku VAT, gdyż voucher stanowi bon wieloprzeznaczeniowy (MPV) w rozumieniu art. 8b ustawy z dnia 11 marca 2004 r. o podatku od towarów i usług — obowiązek podatkowy w zakresie VAT powstaje wyłącznie w momencie realizacji vouchera przez uczestnika u dostawcy usługi;</li>
+    <li><strong>faktury VAT</strong> — wystawianej przez Sprzedawcę za usługę obsługi i serwisu programu EBS, w wysokości <strong>${fee}%</strong> wartości netto voucherów wskazanej w nocie księgowej, powiększonej o podatek VAT według stawki właściwej dla tej usługi.</li>
+  </ol>
+  <p><span class="num">2.</span> Sprzedawca zobowiązuje się do wystawienia i przesłania obu dokumentów jednocześnie, drogą elektroniczną, na adres e-mail Kupującego:</p>
+  <p style="margin-left: 24px;"><strong>e-mail Sprzedawcy:</strong> faktury@stratton-prime.pl</p>
+  <p style="margin-left: 24px;"><strong>e-mail Kupującego:</strong> ${escapeHtml(contactEmail)}</p>
+  <p><span class="num">3.</span> Kupujący dokonuje płatności za oba dokumenty łącznie, przelewem na konto Sprzedawcy w Millennium Bank:</p>
+  <p class="iban">IBAN PL 66 1160 2202 0000 0006 6619 4064</p>
+  <p>w terminie <strong>7 dni</strong> od daty otrzymania przez Kupującego obu dokumentów.</p>
+  <p><span class="num">4.</span> Wynagrodzenie Sprzedawcy obejmuje wszystkie koszty realizacji umowy leżące po jego stronie.</p>
+  <p><span class="num">5.</span> W przypadku opóźnienia w płatności Sprzedawca ma prawo:</p>
+  <ol type="a" style="margin-left: 24px;">
+    <li>naliczyć odsetki ustawowe za opóźnienie w transakcjach handlowych,</li>
+    <li>wstrzymać realizację kolejnych zamówień,</li>
+    <li>czasowo zablokować dostęp do platformy EBS.</li>
+  </ol>
 </section>
 
 <section>
-  <h2>§4 Postanowienia Końcowe</h2>
-  <p>1. Umowa zostaje zawarta na czas nieokreślony z 1-miesięcznym okresem wypowiedzenia.</p>
-  <p>2. Wszelkie zmiany umowy wymagają formy pisemnej lub elektronicznej pod rygorem nieważności.</p>
-  <p>3. W sprawach nieuregulowanych niniejszą umową stosuje się przepisy Kodeksu Cywilnego oraz innych obowiązujących aktów prawa polskiego.</p>
-  <p>4. Umowę sporządzono w dwóch jednobrzmiących egzemplarzach po jednym dla każdej ze Stron.</p>
+  <h2>§ 4 Brak ryzyka – cena zakupu voucherów</h2>
+  <p><span class="num">1.</span> Strony zgodnie oświadczają, że cena zakupu voucherów wynosi 1 voucher = 1 PLN w dniu podpisania umowy zlecenia nabycia voucherów (Załącznik nr 1) i pozostanie niezmieniona przez minimum 12 miesięcy od daty zakupu.</p>
+  <p><span class="num">2.</span> Jednoczesne podpisanie Zlecenia zakupu stanowi gwarancję, że Kupujący nie ponosi żadnego ryzyka związanego z wartością vouchera. Transakcja ma charakter zamknięty, a jej warunki są z góry określone i niezmienne niezależnie od późniejszych zmian cenowych.</p>
+  <p><span class="num">3.</span> Kupujący potwierdza, że rozumie powyższe warunki i ma świadomość, iż nie ponosi ryzyka utraty wartości nabytych voucherów.</p>
 </section>
 
-<div class="signatures">
-  <div class="sig">
-    <div class="line"></div>
-    <div class="label">Zleceniodawca</div>
+<section>
+  <h2>§ 5 Odpowiedzialność</h2>
+  <p><span class="num">1.</span> Odpowiedzialność Sprzedawcy wobec Kupującego z tytułu niewykonania lub nienależytego wykonania Umowy ograniczona jest do łącznej wysokości wynagrodzenia netto zapłaconego przez Kupującego na rzecz Sprzedawcy w okresie 3 miesięcy poprzedzających zdarzenie powodujące szkodę.</p>
+  <p><span class="num">2.</span> Sprzedawca nie ponosi odpowiedzialności za:</p>
+  <ol type="a" style="margin-left: 24px;">
+    <li>utracone korzyści <em>(lucrum cessans)</em>,</li>
+    <li>szkody pośrednie, następcze lub wynikowe,</li>
+    <li>decyzje podatkowe, księgowe lub kadrowe Kupującego,</li>
+    <li>działania lub zaniechania uczestników programu,</li>
+    <li>brak możliwości realizacji voucherów wynikający z przyczyn leżących po stronie dostawców usług lub towarów dostępnych w katalogu EBS.</li>
+  </ol>
+  <p><span class="num">3.</span> Przerwy techniczne, aktualizacje oraz awarie nie stanowią niewykonania umowy.</p>
+  <p><span class="num">4.</span> Sprzedawca nie ponosi odpowiedzialności za:</p>
+  <ol type="a" style="margin-left: 24px;">
+    <li>przerwy wynikające z działania siły wyższej,</li>
+    <li>problemy po stronie użytkownika,</li>
+    <li>działanie dostawców zewnętrznych.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>§ 6 Zawiadomienia</h2>
+  <p><span class="num">1.</span> Wszystkie zawiadomienia i inne informacje wymagane przez niniejszą Umowę będą pisemne i będą uważane za właściwie doręczone jeżeli:</p>
+  <ol type="a" style="margin-left: 24px;">
+    <li>przesłane pocztą kurierską (za zwrotnym potwierdzeniem odbioru),</li>
+    <li>przekazane pocztą elektroniczną zgodnie z adresami:</li>
+  </ol>
+  <p style="margin-left: 48px;"><strong>Sprzedawca:</strong> biuro@stratton-prime.pl</p>
+  <p style="margin-left: 48px;"><strong>Klient:</strong> ${escapeHtml(contactEmail)}</p>
+</section>
+
+<section>
+  <h2>§ 7 Oświadczenia i gwarancje</h2>
+  <p><span class="num">1.</span> Klient przeczytał, rozumie i akceptuje postanowienia niniejszej umowy w całości, bez jakichkolwiek zastrzeżeń i uzupełnień.</p>
+  <p><span class="num">2.</span> Klient otrzymał wystarczającą ilość informacji o voucherach i platformie EBS, aby podjąć świadomą decyzję o ich zakupie.</p>
+  <p><span class="num">3.</span> Klient przyjmuje do wiadomości i akceptuje, że voucher nie jest:</p>
+  <ol type="a" style="margin-left: 24px;">
+    <li>detalicznym produktem zbiorowego inwestowania w rozumieniu Rozporządzenia PRIIP (UE) nr 1286/2014,</li>
+    <li>jednostką uczestnictwa ani certyfikatem inwestycyjnym w rozumieniu ustawy z 27.05.2004 r. o funduszach inwestycyjnych,</li>
+    <li>dokumentem osobistym, na żądanie lub wydawanym na okaziciela w rozumieniu art. 174 Kodeksu Spółek Handlowych,</li>
+    <li>instrumentem finansowym w rozumieniu art. 2 pkt 1 ustawy z 29.07.2005 r. o obrocie instrumentami finansowymi.</li>
+  </ol>
+  <p><span class="num">4.</span> Klient przyjmuje do wiadomości i akceptuje, że proces dystrybucji vouchera nie stanowi: działalności w zakresie zarządzania funduszami inwestycyjnymi, oferty publicznej, usług płatniczych, działalności bankowej, działalności ubezpieczeniowej ani żadnej innej działalności regulowanej lub koncesjonowanej, w rozumieniu właściwych przepisów prawa polskiego i unijnego.</p>
+  <p><span class="num">5.</span> Strony zgodnie oświadczają, że voucher jest znakiem legitymacyjnym zgodnie z art. 921¹⁵ Kodeksu cywilnego, który nie spełnia przesłanek określonych w Rozporządzeniu Parlamentu Europejskiego i Rady (UE) 2023/1114 (MiCA), a w szczególności nie jest walutą wirtualną w rozumieniu art. 2 ust. 2 pkt 26 ustawy o przeciwdziałaniu praniu pieniędzy oraz finansowaniu terroryzmu (ustawa AML).</p>
+  <div class="highlight-box">
+    Voucher jest przypisany imiennie do uczestnika programu; nie może być przekazany osobie trzeciej ani wymieniony na środki płatnicze u pracodawcy. Architektura platformy EBS technicznie wyklucza cesję, sprzedaż i wymianę vouchera na gotówkę u pracodawcy – co stanowi warunek kwalifikacji AML/KNF oraz ZUS.
   </div>
-  <div class="sig">
-    <div class="line"></div>
-    <div class="label">Zleceniobiorca</div>
-  </div>
+</section>
+
+<section>
+  <h2>§ 8 Obowiązywanie Umowy</h2>
+  <p><span class="num">1.</span> Niniejsza Umowa wchodzi w życie z dniem jej podpisania.</p>
+  <p><span class="num">2.</span> Umowa niniejsza została zawarta na czas nieokreślony.</p>
+  <p><span class="num">3.</span> Umowa może zostać wypowiedziana przez każdą ze Stron z zachowaniem 1-miesięcznego okresu wypowiedzenia.</p>
+  <p><span class="num">4.</span> Stronom przysługuje prawo do odstąpienia od Umowy ze skutkiem natychmiastowym w przypadku naruszenia postanowień niniejszej Umowy przez Strony, w okresie 7 dni od uzyskania informacji o takim naruszeniu.</p>
+</section>
+
+<section>
+  <h2>§ 9 Postanowienia końcowe</h2>
+  <p><span class="num">1.</span> Wszelkie zmiany niniejszej Umowy wymagają dla swej skuteczności formy pisemnej. W sprawach nieuregulowanych niniejszą Umową zastosowanie znajdą przepisy prawa polskiego, w szczególności ustawy z 23.04.1964 r. – Kodeks cywilny (t.j. Dz. U. z ${year} r. poz. 1071 z późn. zm.).</p>
+  <p><span class="num">2.</span> Wszelkie spory wynikłe pomiędzy Stronami na skutek zawarcia niniejszej Umowy rozstrzygane będą przez sąd powszechny właściwy ze względu na siedzibę Sprzedawcy.</p>
+  <p><span class="num">3.</span> Umowa niniejsza została sporządzona w dwóch jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron.</p>
+  <p><span class="num">4.</span> W razie sprzeczności między postanowieniami niniejszej Umowy Ramowej a postanowieniami Załącznika nr 1, rozstrzygające znaczenie mają postanowienia niniejszej Umowy Ramowej, chyba że Załącznik nr 1 wyraźnie stanowi inaczej.</p>
+</section>
+
+<table class="sig-table">
+  <thead>
+    <tr>
+      <th>SPRZEDAWCA</th>
+      <th>KUPUJĄCY</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="sig-cell">
+        <div style="height: 32px;"></div>
+        <strong>Stratton Prime Sp. z o.o.</strong><br>
+        <em>Natalia Juszkiewicz – Prezes Zarządu</em>
+      </td>
+      <td class="sig-cell">
+        <div class="sig-line"></div>
+        <em>imię, nazwisko, stanowisko</em>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="doc-footer">
+  Stratton Prime Sp. z o.o. • stratton-prime.pl • Eliton Prime™ • Marzec 2026
 </div>
 
-<div class="footer">
-  Stratton Prime Sp. z o.o. · ul. Nowy Świat 42/44 · 80-299 Gdańsk · NIP: 5842867357 · biuro@stratton-prime.pl · www.stratton-prime.pl
-</div>
 </body>
 </html>`
 }
