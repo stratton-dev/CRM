@@ -86,9 +86,18 @@ export function buildContractHtml(client: ContractClientData): string {
 <meta charset="UTF-8">
 <title>Umowa Ramowa Współpracy — ${escapeHtml(client.name || 'Klient')}</title>
 <style>
-  @page { size: A4; margin: 18mm 16mm 24mm 16mm; }
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
-  body { font-family: 'Calibri', 'Segoe UI', 'Arial', sans-serif; color: #1e293b; font-size: 10.5pt; line-height: 1.45; margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Calibri', 'Segoe UI', 'Arial', sans-serif;
+    color: #1e293b;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    /* explicit padding = wizualne marginesy zachowywane przy html2canvas
+       (które ignoruje @page margin). Top 18mm / boki 16mm / dół 24mm. */
+    padding: 68px 60px 90px 60px;
+  }
 
   /* Page header (every page) */
   .page-header {
