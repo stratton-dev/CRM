@@ -89,11 +89,11 @@ const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ')
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-3">
 
     <!-- D365 Page Header -->
-    <div class="mb-1">
-      <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
+    <div class="mb-2">
+      <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
         <AppIcon name="building" class="w-3 h-3" />
         <span>{{ store.firma.nazwa || 'Firma' }}</span>
         <span class="text-slate-300">/</span>
@@ -101,7 +101,7 @@ const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ')
         <span class="text-slate-300">/</span>
         <span class="text-slate-600">Krok 2 — Pracownicy</span>
       </div>
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 class="text-xl font-black text-slate-900 tracking-tight">Lista pracowników</h1>
           <p class="text-[11px] text-slate-400 mt-0.5">

@@ -347,9 +347,9 @@ onMounted(async () => {
       <!-- ══════════════════════════════════════════════════════════ -->
       <!-- PAGE HEADER — firma + model badge + action command bar    -->
       <!-- ══════════════════════════════════════════════════════════ -->
-      <div class="mb-5">
+      <div class="mb-2">
         <!-- breadcrumb / context row -->
-        <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
+        <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
           <AppIcon name="building" class="w-3 h-3" />
           <span>{{ store.firma.nazwa || 'Firma' }}</span>
           <span class="text-slate-300">/</span>
@@ -358,7 +358,7 @@ onMounted(async () => {
           <span class="text-slate-600">Podsumowanie</span>
         </div>
         <!-- title + command bar -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div class="flex items-center gap-3">
             <h1 class="text-xl font-black text-slate-900 tracking-tight">Raport Kalkulacji</h1>
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-[10px] font-black uppercase tracking-widest text-amber-700">

@@ -56,12 +56,12 @@ const closeNewCalcModal = () => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-3">
 
-    <!-- D365 Page Header — matches SummaryStep layout -->
-    <div class="mb-5">
+    <!-- D365 Page Header — matches CompanyStep layout -->
+    <div class="mb-2">
       <!-- breadcrumb -->
-      <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
+      <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
         <AppIcon name="shield-check" class="w-3 h-3" />
         <span>Stratton Prime</span>
         <span class="text-slate-300">/</span>
@@ -70,7 +70,7 @@ const closeNewCalcModal = () => {
         <span class="text-slate-600">Pulpit</span>
       </div>
       <!-- title + command bar -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 class="text-xl font-black text-slate-900 tracking-tight">Kalkulator Eliton Prime™</h1>
           <p class="text-[11px] text-slate-400 mt-0.5">Symulacja oszczędności w kosztach zatrudnienia · Stratton Prime</p>
