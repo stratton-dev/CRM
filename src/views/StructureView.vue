@@ -1227,11 +1227,11 @@ const addUser = async () => {
                 <button
                   v-if="!node.isTeamNode && node.id !== currentUser?.id"
                   type="button"
-                  class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition shadow-sm"
+                  class="p-2 bg-sky-50 text-sky-600 border border-sky-200 rounded-lg hover:bg-sky-100 transition shadow-sm"
                   :title="`Wyślij wiadomość do: ${node.name}`"
                   @click.stop="openMsgModal(node)"
                 >
-                  <AppIcon name="chat-bubble-left-ellipsis" class="w-4 h-4" />
+                  <AppIcon name="chat-bubble" class="w-4 h-4" />
                 </button>
                 <button
                   v-if="!node.isTeamNode && node.id !== currentUser?.id && canImpersonate(node)"
