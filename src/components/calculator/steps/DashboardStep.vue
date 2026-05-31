@@ -56,6 +56,7 @@ const closeNewCalcModal = () => {
 </script>
 
 <template>
+  <div>
   <div class="space-y-3">
 
     <!-- D365 Page Header — matches CompanyStep layout -->
@@ -179,10 +180,13 @@ const closeNewCalcModal = () => {
 
   </div>
 
-  <!-- Modals -->
-  <HistoryModal v-if="showHistory" @close="showHistory = false" />
+  <!-- Modals (Teleport to body so they don't affect step layout) -->
+  <Teleport to="body">
+    <HistoryModal v-if="showHistory" @close="showHistory = false" />
+  </Teleport>
 
   <!-- New Calc Confirmation Modal -->
+  <Teleport to="body">
   <div v-if="showNewCalcModal" class="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center p-0 md:p-4" @click="closeNewCalcModal">
     <div class="bg-white rounded-t-xl md:rounded-xl w-full md:max-w-md shadow-2xl overflow-hidden border border-slate-200" @click.stop>
       <!-- Header -->
@@ -214,5 +218,7 @@ const closeNewCalcModal = () => {
         </div>
       </div>
     </div>
+  </div>
+  </Teleport>
   </div>
 </template>

@@ -89,6 +89,7 @@ const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ')
 </script>
 
 <template>
+  <div>
   <div class="space-y-3">
 
     <!-- D365 Page Header -->
@@ -518,5 +519,8 @@ const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ')
 
   </div>
 
-  <ImportModal v-if="showImport" @close="showImport = false" />
+  <Teleport to="body">
+    <ImportModal v-if="showImport" @close="showImport = false" />
+  </Teleport>
+  </div>
 </template>

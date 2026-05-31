@@ -103,6 +103,7 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
 </script>
 
 <template>
+  <div>
   <div v-if="stats" class="space-y-3">
 
     <!-- D365 Page Header -->
@@ -354,5 +355,6 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
   </div>
   <div v-else class="bg-white border border-slate-200 rounded-xl px-5 py-8 text-center text-xs text-slate-400 uppercase tracking-widest">
     Brak danych — oblicz wyniki w poprzednich krokach
+  </div>
   </div>
 </template>
