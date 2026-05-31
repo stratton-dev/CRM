@@ -10,6 +10,7 @@ import { useToastStore } from '@/stores/toast'
 import AppIcon from '@/components/AppIcon.vue'
 import StructureChartView from '@/components/StructureChartView.vue'
 import CommissionChainEditor from '@/components/structure/CommissionChainEditor.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 import type { EntityType, User, UserRole } from '@/types/models'
 
 type TreeNode = User & { level: number; hasChildren: boolean; isLast: boolean; parentChain: boolean[]; isTeamNode?: boolean }
@@ -916,78 +917,74 @@ const addUser = async () => {
 </script>
 
 <template>
-  <div class="space-y-3 md:space-y-6">
-    <div class="flex flex-wrap justify-between items-start gap-2">
-      <div v-if="!embedded">
-        <h1 class="text-xl md:text-2xl font-bold text-slate-900">Struktura Organizacji</h1>
-        <p class="text-xs md:text-sm text-slate-500">
-          <span v-if="currentUser?.role === 'ADMIN'">Widok globalny (Super Admin) - Zarządzaj całą organizacją</span>
-          <span v-else>Zarządzaj swoim zespołem i monitoruj strukturę.</span>
-        </p>
-      </div>
-      <div v-else>
-         <!-- Spacer if header is hidden -->
-      </div>
-      <div class="flex space-x-3 items-center">
+  <div :class="embedded ? 'space-y-3 md:space-y-6' : 'flex flex-col h-[calc(100vh-112px)]'">
+
+    <TabHeader v-if="!embedded" icon="sitemap" title="Struktura Organizacji">
+      <template #actions>
         <button
           v-if="currentUser?.role === 'ADMIN'"
           type="button"
-          class="px-3 py-2 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition shadow-sm"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition shadow-sm"
           @click="openTeamModal"
         >
+          <AppIcon name="user-plus" class="w-3.5 h-3.5" />
           Dodaj zespół
         </button>
 
-        <div class="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
-          <button 
-            @click="viewMode = 'list'" 
-            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center"
-            :class="viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-700'"
+        <div class="flex items-center bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+          <button
+            type="button"
+            class="px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center"
+            :class="viewMode === 'list' ? 'bg-slate-900 text-white shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-700'"
+            @click="viewMode = 'list'"
           >
             <AppIcon name="list" class="h-3.5 w-3.5 mr-1.5" />
             Lista
           </button>
-          <button 
-            @click="viewMode = 'chart'" 
-            class="px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center"
-            :class="viewMode === 'chart' ? 'bg-white text-slate-900 shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-700'"
+          <button
+            type="button"
+            class="px-3 py-1 text-xs font-bold rounded-md transition-all flex items-center"
+            :class="viewMode === 'chart' ? 'bg-slate-900 text-white shadow-sm' : 'bg-transparent text-slate-500 hover:text-slate-700'"
+            @click="viewMode = 'chart'"
           >
             <AppIcon name="chart-network" class="h-3.5 w-3.5 mr-1.5" />
             Schemat
           </button>
         </div>
 
-        <div class="relative w-64 lg:w-80">
+        <div class="relative">
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Szukaj w strukturze..."
-            class="w-full border border-slate-200 rounded-lg py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-900 shadow-sm placeholder-slate-400 text-right font-bold"
+            placeholder="Szukaj..."
+            class="pl-8 pr-3 py-1.5 w-56 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-stratton-gold shadow-sm"
           />
-          <AppIcon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+          <AppIcon name="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
+
         <button
           v-if="currentUser?.role === 'ADMIN'"
           type="button"
-          class="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm"
           @click="showInactive = !showInactive"
         >
-          <span class="flex items-center gap-2">
-            <AppIcon :name="showInactive ? 'xmark' : 'eye'" class="h-3.5 w-3.5 text-slate-500" />
-            {{ showInactive ? 'Ukryj usuniętych' : 'Pokaż usuniętych' }}
-          </span>
+          <AppIcon :name="showInactive ? 'xmark' : 'eye'" class="h-3.5 w-3.5" />
+          {{ showInactive ? 'Ukryj usuniętych' : 'Pokaż usuniętych' }}
         </button>
         <button
           v-if="currentUser?.role === 'ADMIN'"
           type="button"
-          class="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 bg-white text-primary hover:bg-slate-50 transition shadow-sm disabled:opacity-60"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-200 bg-white text-primary hover:bg-slate-50 transition shadow-sm disabled:opacity-60"
           :disabled="isSyncing"
           @click="syncUsers"
         >
+          <AppIcon name="refresh" class="h-3.5 w-3.5" :class="{ 'animate-spin': isSyncing }" />
           {{ isSyncing ? 'Synchronizuję...' : 'Synchronizuj' }}
         </button>
-      </div>
-    </div>
+      </template>
+    </TabHeader>
+
+    <div :class="embedded ? '' : 'flex-1 overflow-y-auto p-4 md:p-6'">
 
     <div class="bg-surface shadow-card rounded-card overflow-hidden border border-slate-200 relative">
       <div class="bg-slate-50/50 px-6 py-3 border-b border-slate-200 grid grid-cols-12 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -1673,5 +1670,7 @@ const addUser = async () => {
         </div>
       </div>
     </div>
+
+    </div><!-- /scroll wrapper -->
   </div>
 </template>
