@@ -26,7 +26,7 @@ const {
 } = storeToRefs(chat)
 
 // ── Theme ──────────────────────────────────────────────────────────────────
-const isDark = ref(true)
+const isDark = ref(false)
 
 const theme = computed(() => isDark.value ? {
   panel:       'chat-dark-panel',
@@ -441,7 +441,7 @@ const handleLeave = async () => {
                 :class="theme.closebtn"
                 @click="openCreateGroup"
               >
-                <AppIcon name="user-group" class="w-4 h-4" />
+                <AppIcon name="users" class="w-4 h-4" />
               </button>
               <!-- Theme toggle -->
               <button
