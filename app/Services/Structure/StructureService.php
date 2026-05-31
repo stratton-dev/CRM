@@ -97,6 +97,13 @@ class StructureService
         // pipeline. Admins are global; CLIENT_HR is attached to an external
         // organization; LEADOWIEC chains under a sales rep without team scope.
         if (in_array($role, ['LEADOWIEC', 'ADMIN', 'CLIENT_HR'], true)) {
+            // LEADOWIEC może mieć tylko uprawnionego agenta jako parenta.
+            if ($role === 'LEADOWIEC' && $parent && !(bool) $parent->is_agent_authorized) {
+                throw ValidationException::withMessages([
+                    'parent_supabase_id' => ['Leadowiec może być tworzony tylko pod uprawnionym agentem (is_agent_authorized=true).'],
+                ]);
+            }
+
             $teamPath = $parent?->team_group_path ?? ($data['team_group_path'] ?? '');
             $teamId   = $parent?->team_id ?? null;
             try {
@@ -354,6 +361,15 @@ class StructureService
         if ($newParent && $newParent->supabase_id === $user->supabase_id) {
             throw ValidationException::withMessages([
                 'new_parent_supabase_id' => ['Cannot move user under itself.'],
+            ]);
+        }
+
+        // LEADOWIEC może mieć tylko uprawnionego AGENTA jako parenta.
+        // Filtr: parent musi mieć is_agent_authorized=true (niezależnie od roli).
+        // Wyjątek: parent=null (usunięcie z chain) zawsze dozwolony.
+        if (($user->role_cached ?? '') === 'LEADOWIEC' && $newParent && !(bool) $newParent->is_agent_authorized) {
+            throw ValidationException::withMessages([
+                'new_parent_supabase_id' => ['Leadowiec może mieć tylko uprawnionego agenta jako przełożonego (is_agent_authorized=true).'],
             ]);
         }
 
