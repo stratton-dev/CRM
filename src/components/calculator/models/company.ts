@@ -93,6 +93,7 @@ export interface Config {
     plus: number;
     zewnetrzna?: number;
     wlasna?: number;
+    legalizacja?: number;
   };
   offerValidDays: number;
 }

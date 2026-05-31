@@ -70,7 +70,7 @@ export function renderEbsOfferHtml(data: EbsOfferData): string {
   } = data;
 
   const offerNo = offerNumber || shortId();
-  const accountingLabel = hasExternalAccounting === false ? 'Własna księgowość · 20%' : 'Zewnętrzna księgowość · 22%';
+  const accountingLabel = hasExternalAccounting === false ? 'Legalizacja Gotówki · 15%' : 'Eliton Prime™ · 22%';
 
   const standardPct = 100;
   const ofertowyPct = p.sumaKosztStandard > 0 ? (p.sumaKosztSplit / p.sumaKosztStandard) * 100 : 0;

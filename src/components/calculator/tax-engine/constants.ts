@@ -43,17 +43,18 @@ export const DEFAULT_CONFIG: Config = {
     stawkaPit: 12,
     odplatnosc: 1.0,
   },
-  // Single Eliton Prime offer (post 2026-05-30). Two paths driven by the
-  // 'has_external_accounting' flag on crm_client_profiles:
-  //   - external accounting (default): 22% = 20% Stratton + 2% accounting
-  //   - own accounting:                 20% = Stratton only
-  // The legacy keys (standard/plus) stay populated as aliases so older
-  // historical calculations + PDF templates that read them keep working.
+  // Two offers (post 2026-05-31). Two paths driven by `has_external_accounting`
+  // flag on crm_client_profiles:
+  //   - Eliton Prime (external accounting, default):  22% = 20% Stratton + 2% accounting
+  //   - Legalizacja Gotówki (no accounting bonus):    15% = 100% Stratton
+  // Legacy aliases (standard / plus / wlasna at 20%) kept for older historical
+  // calculations + PDF templates that still read them.
   prowizja: {
-    standard: 22,    // alias for zewnetrzna
-    plus: 20,        // alias for wlasna
+    standard: 22,      // alias for zewnetrzna
+    plus: 15,          // alias for legalizacja (formerly 20% own-accounting)
     zewnetrzna: 22,
-    wlasna: 20,
+    wlasna: 15,        // semantic: previously "własna księgowość 20%", now Legalizacja Gotówki 15%
+    legalizacja: 15,
   },
   offerValidDays: 14,
 };

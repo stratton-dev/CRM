@@ -134,17 +134,17 @@ export const useCalculatorStore = defineStore('calculator', () => {
     return saved ? JSON.parse(saved) : [];
   })());
 
-  // Default = external accounting → 22%. When the sales rep toggles
-  // 'własna księgowość' in the UI, this flips to false and the active
-  // rate drops to 20%. Synced to crm_client_profiles.has_external_accounting
-  // (Etap 1A migration) when a client context is set.
+  // Default = Eliton Prime (22%, external accounting + biuro księgowe).
+  // When the sales rep picks 'Legalizacja Gotówki' in the UI, this flips
+  // to false and the active rate drops to 15% (100% Stratton, no
+  // accounting bonus). Synced to crm_client_profiles.has_external_accounting.
   const hasExternalAccounting = ref<boolean>(true);
 
   const prowizjaProc = ref(22);
   const comparisonState = ref<ComparisonState>({
     activeCard: 'STANDARD',
-    customStandardRate: 22, // external accounting (was 28%)
-    customPrimeRate: 20,    // own accounting (was 26%)
+    customStandardRate: 22, // Eliton Prime (was 28%, 20% Stratton + 2% biuro)
+    customPrimeRate: 15,    // Legalizacja Gotówki (was 26%/20%, 100% Stratton)
   });
 
   // The single active commission percent that drives every calculation

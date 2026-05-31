@@ -124,7 +124,7 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
         <div class="flex items-center gap-2">
           <div class="h-8 px-3 flex items-center gap-2 rounded-md" :class="isStandard ? 'bg-white border border-stratton-gold/40' : 'bg-amber-50 border border-amber-200'">
             <span class="text-amber-400 text-xs">⭐</span>
-            <span class="text-[10px] font-black uppercase tracking-widest" :class="isStandard ? 'text-stratton-gold' : 'text-amber-700'">{{ isStandard ? 'Eliton Prime™' : 'Prime Plus' }}</span>
+            <span class="text-[10px] font-black uppercase tracking-widest" :class="isStandard ? 'text-stratton-gold' : 'text-amber-700'">{{ isStandard ? 'Eliton Prime™' : 'Legalizacja Gotówki' }}</span>
           </div>
           <div v-if="stats.excludedCount > 0" class="h-8 px-3 flex items-center border border-slate-200 rounded-md bg-white">
             <span class="text-[9px] font-bold uppercase tracking-widest text-slate-400">{{ stats.excludedCount }} wykluczone</span>
@@ -153,6 +153,7 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
               <div v-if="isStandard" class="w-1.5 h-1.5 rounded-full bg-white"></div>
             </div>
             <span class="text-sm font-black uppercase tracking-widest" :class="isStandard ? 'text-stratton-gold' : 'text-slate-600'">Eliton Prime™</span>
+            <span class="text-[8px] font-black uppercase tracking-widest text-stratton-gold border border-stratton-gold/30 bg-amber-50 rounded px-1.5 py-0.5">Rekomendowany</span>
           </div>
           <span v-if="isStandard" class="text-[8px] font-black uppercase tracking-widest text-stratton-gold border border-stratton-gold/30 bg-amber-50 rounded px-1.5 py-0.5">Wybrany</span>
         </div>
@@ -211,8 +212,7 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
             <div class="w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors" :class="!isStandard ? 'border-amber-500 bg-amber-500' : 'border-slate-300 bg-white'">
               <div v-if="!isStandard" class="w-1.5 h-1.5 rounded-full bg-white"></div>
             </div>
-            <span class="text-xl font-black uppercase tracking-widest" :class="!isStandard ? 'text-amber-700' : 'text-slate-600'">Eliton Prime™ Plus</span>
-            <span class="text-[8px] font-black uppercase tracking-widest text-amber-600 border border-amber-200 bg-amber-50 rounded px-1.5 py-0.5">Rekomendowany</span>
+            <span class="text-xl font-black uppercase tracking-widest" :class="!isStandard ? 'text-amber-700' : 'text-slate-600'">Legalizacja Gotówki</span>
           </div>
           <span v-if="!isStandard" class="text-[8px] font-black uppercase tracking-widest text-amber-700 border border-amber-300 bg-amber-50 rounded px-1.5 py-0.5">Wybrany</span>
         </div>
@@ -239,15 +239,15 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
           <ul class="space-y-2">
             <li class="flex items-start gap-2">
               <span class="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-              <span class="text-[11px] text-slate-600">Wdrożenie priorytetowe max do 14 dni</span>
+              <span class="text-[11px] text-slate-600">Legalny transfer wynagrodzenia</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-              <span class="text-[11px] text-slate-600">Podwyżki <strong>{{ formatPLN(stats.raiseAmount) }}</strong> finansowane przez Stratton Prime</span>
+              <span class="text-[11px] text-slate-600">Wdrożenie priorytetowe</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-              <span class="text-[11px] text-slate-600">Bonus <strong>{{ formatPLN(stats.adminAmount) }}</strong> dla działu HR/księgowości</span>
+              <span class="text-[11px] text-slate-600">Usługa zaliczana jako koszt uzyskania przychodu</span>
             </li>
           </ul>
         </div>
@@ -317,7 +317,7 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
           <div class="rounded-lg border border-amber-100 bg-amber-50/40 px-3 py-2.5">
             <div class="text-[8px] font-black uppercase tracking-widest text-amber-600 mb-1">Podwyżki i bonusy</div>
             <div class="text-sm font-black text-amber-700">{{ formatPLN(stats.raiseAmount + stats.adminAmount) }}</div>
-            <div class="text-[9px] text-slate-400 mt-0.5">{{ isStandard ? '2% bonus HR' : '4% podwyżki + 2% HR' }}</div>
+            <div class="text-[9px] text-slate-400 mt-0.5">{{ isStandard ? '2% bonus HR' : 'brak (100% Stratton)' }}</div>
           </div>
           <div class="rounded-lg border border-indigo-100 bg-indigo-50/30 px-3 py-2.5">
             <div class="text-[8px] font-black uppercase tracking-widest text-indigo-600 mb-1">Opłata serwisowa</div>
