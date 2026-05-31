@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useStructureStore } from '@/stores/structure'
-import { useFinanceStore } from '@/stores/finance'
 import { useSessionStore } from '@/stores/session'
 import { useToastStore } from '@/stores/toast'
 import TabHeader from '@/components/ui/TabHeader.vue'
@@ -30,19 +29,16 @@ const ROLE_BADGE: Record<string, string> = {
 }
 
 const structure = useStructureStore()
-const finance = useFinanceStore()
 const session = useSessionStore()
 const toast = useToastStore()
 
 const { currentUser } = storeToRefs(session)
 const { users } = storeToRefs(structure)
-const { commissionConfig } = storeToRefs(finance)
 
 const userSearchQuery = ref('')
 const roleFilter = ref<string>('ALL')
 const selectedUserForEdit = ref<User | null>(null)
 const editPasswordOverride = ref<string>('')
-const config = ref({ ...commissionConfig.value })
 const isCreating = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
@@ -286,11 +282,6 @@ const saveUser = async () => {
     }
   }
 }
-
-const saveConfig = () => {
-  finance.updateCommissionConfig(config.value)
-  toast.success('Konfiguracja zapisana.')
-}
 </script>
 
 <template>
@@ -331,10 +322,10 @@ const saveConfig = () => {
     </TabHeader>
 
     <div class="flex-1 overflow-y-auto p-4 md:p-6">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div>
 
         <!-- USERS TABLE -->
-        <div class="lg:col-span-2 bg-white rounded-card shadow-card border border-slate-100 overflow-hidden">
+        <div class="bg-white rounded-card shadow-card border border-slate-100 overflow-hidden">
           <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
             <div>
               <h3 class="font-bold text-slate-800">Użytkownicy Systemu</h3>
@@ -435,33 +426,6 @@ const saveConfig = () => {
           </div>
         </div>
 
-        <!-- COMMISSION CONFIG -->
-        <div class="bg-white rounded-card shadow-card border border-slate-100 h-fit">
-          <div class="px-6 py-4 border-b border-slate-100">
-            <h3 class="font-bold text-slate-800">Konfiguracja Prowizji</h3>
-            <p class="text-xs text-slate-500 mt-0.5">Globalne stawki dla handlowców</p>
-          </div>
-          <div class="p-6 space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Prowizja Handlowca (Umowa &lt;= 14 dni)</label>
-              <div class="flex items-center">
-                <input v-model.number="config.salesCommissionFirstMonthLt14" type="number" step="0.01" class="flex-1 border border-slate-300 p-2.5 rounded-lg text-sm bg-white focus:outline-none focus:border-stratton-gold" />
-                <span class="ml-2 text-xs font-bold text-slate-500 uppercase">% (dziesiętnie)</span>
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Prowizja Handlowca (Umowa &gt; 14 dni)</label>
-              <input v-model.number="config.salesCommissionFirstMonthGt14" type="number" step="0.01" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white focus:outline-none focus:border-stratton-gold" />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Prowizja Odnowieniowa (2 msc+)</label>
-              <input v-model.number="config.salesCommissionRenewal" type="number" step="0.01" class="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white focus:outline-none focus:border-stratton-gold" />
-            </div>
-            <button type="button" class="w-full bg-slate-900 text-white py-2.5 rounded-xl hover:bg-slate-800 text-sm font-bold mt-4 shadow-sm transition" @click="saveConfig">
-              Zapisz Konfigurację
-            </button>
-          </div>
-        </div>
       </div>
     </div>
 
