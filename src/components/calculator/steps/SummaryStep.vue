@@ -347,7 +347,7 @@ onMounted(async () => {
       <!-- ══════════════════════════════════════════════════════════ -->
       <!-- PAGE HEADER — firma + model badge + action command bar    -->
       <!-- ══════════════════════════════════════════════════════════ -->
-      <div class="mb-2">
+      <div class="mb-2 min-h-[68px]">
         <!-- breadcrumb / context row -->
         <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
           <AppIcon name="building" class="w-3 h-3" />

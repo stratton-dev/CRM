@@ -59,7 +59,7 @@ const closeNewCalcModal = () => {
   <div class="space-y-3">
 
     <!-- D365 Page Header — matches CompanyStep layout -->
-    <div class="mb-2">
+    <div class="mb-2 min-h-[68px]">
       <!-- breadcrumb -->
       <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
         <AppIcon name="shield-check" class="w-3 h-3" />

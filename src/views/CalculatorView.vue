@@ -316,8 +316,8 @@ onMounted(() => {
       >{{ step.id + 1 }}</button>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8">
-      <aside class="hidden lg:block lg:col-span-3 space-y-3">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 items-start">
+      <aside class="hidden lg:block lg:col-span-3 space-y-3 self-start">
         <button type="button" class="w-full p-4 rounded-xl border-2 text-left transition-all duration-300" :class="currentStep === -1 ? 'border-stratton-gold bg-linear-to-br from-[#D4AF37] to-[#C5A059] text-white shadow-[0_8px_20px_-4px_rgba(197,160,89,0.35)]' : 'border-slate-100 bg-white text-slate-500 hover:border-stratton-gold hover:bg-slate-50'" @click="currentStep = -1">
           <div class="flex items-center gap-3">
             <AppIcon name="dashboard" class="w-5 h-5" />
@@ -338,7 +338,7 @@ onMounted(() => {
         </button>
       </aside>
 
-      <section class="lg:col-span-9">
+      <section class="lg:col-span-9 self-start">
         <DashboardStep v-if="currentStep === -1" @start="currentStep = 0" />
         <CompanyStep v-else-if="currentStep === 0" />
         <EmployeesStep v-else-if="currentStep === 1" />

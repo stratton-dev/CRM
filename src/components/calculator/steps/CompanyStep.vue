@@ -96,7 +96,7 @@ watch(
   <div class="space-y-3">
 
     <!-- D365 Page Header -->
-    <div class="mb-2">
+    <div class="mb-2 min-h-[68px]">
       <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-1.5">
         <AppIcon name="building" class="w-3 h-3" />
         <span>{{ store.firma.nazwa || 'Firma' }}</span>
