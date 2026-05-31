@@ -7,31 +7,62 @@ import { formatPLN } from '../utils/formatters';
 const store = useCalculatorStore();
 
 const handleSelectStandard = () => {
-  // STANDARD now means 'external accounting' (22%).
-  store.setHasExternalAccounting(true);
+  // Eliton Prime — stawka 22% (z 2% księgowości) lub 20% (bez bonusu),
+  // sterowane przez checkbox `hasExternalAccounting`. Wybór karty nie
+  // resetuje stanu checkboxa — pozostaje to co user wpisał.
   store.comparisonState.activeCard = 'STANDARD';
-  store.prowizjaProc = store.comparisonState.customStandardRate;
+  store.prowizjaProc = store.hasExternalAccounting
+    ? store.comparisonState.customStandardRate
+    : store.comparisonState.customStandardRateNoBonus;
 };
 
+// Computed getter/setter dla inputu stawki — routuje do odpowiedniego
+// pola w zależności od stanu checkboxa.
+const standardRateModel = computed({
+  get: () => store.hasExternalAccounting
+    ? store.comparisonState.customStandardRate
+    : store.comparisonState.customStandardRateNoBonus,
+  set: (val: number) => {
+    if (store.hasExternalAccounting) {
+      store.comparisonState.customStandardRate = val;
+    } else {
+      store.comparisonState.customStandardRateNoBonus = val;
+    }
+  },
+});
+
 const handleSelectPrime = () => {
-  // PRIME now means 'own accounting' (20%).
-  store.setHasExternalAccounting(false);
+  // Legalizacja Gotówki — zawsze 15%, niezależnie od checkboxa księgowości.
   store.comparisonState.activeCard = 'PRIME';
   store.prowizjaProc = store.comparisonState.customPrimeRate;
 };
 
+const toggleAccountingBonus = () => {
+  // Toggle checkboxa 2% księgowości — działa tylko na karcie Eliton Prime.
+  store.setHasExternalAccounting(!store.hasExternalAccounting);
+};
+
 const syncRates = () => {
-  // Keep the comparisonState.activeCard mirror in sync with the
-  // accounting toggle so the BusinessCase view + downstream PDF
-  // template (which still keys off activeCard) match the calculator
-  // state. The admin override of customStandardRate / customPrimeRate
-  // still flows through prowizjaProc.
-  store.comparisonState.activeCard = store.hasExternalAccounting ? 'STANDARD' : 'PRIME';
-  if (store.comparisonState.activeCard === 'STANDARD' && store.prowizjaProc !== store.comparisonState.customStandardRate) {
-    store.comparisonState.customStandardRate = store.prowizjaProc;
-  }
-  if (store.comparisonState.activeCard === 'PRIME' && store.prowizjaProc !== store.comparisonState.customPrimeRate) {
-    store.comparisonState.customPrimeRate = store.prowizjaProc;
+  // activeCard i hasExternalAccounting są NIEZALEŻNE:
+  //   - activeCard: STANDARD (Eliton Prime) | PRIME (Legalizacja Gotówki)
+  //   - hasExternalAccounting: czy klient ma księgową zewn. (2% bonus)
+  //                            — działa tylko w Eliton Prime
+  // Synchronizujemy tylko admin override prowizjaProc do odpowiedniego
+  // pola customRate na bazie aktualnej karty + checkboxa.
+  const card = store.comparisonState.activeCard;
+  const hea = store.hasExternalAccounting;
+  if (card === 'PRIME') {
+    if (store.prowizjaProc !== store.comparisonState.customPrimeRate) {
+      store.comparisonState.customPrimeRate = store.prowizjaProc;
+    }
+  } else if (hea) {
+    if (store.prowizjaProc !== store.comparisonState.customStandardRate) {
+      store.comparisonState.customStandardRate = store.prowizjaProc;
+    }
+  } else {
+    if (store.prowizjaProc !== store.comparisonState.customStandardRateNoBonus) {
+      store.comparisonState.customStandardRateNoBonus = store.prowizjaProc;
+    }
   }
 };
 
@@ -82,7 +113,10 @@ const stats = computed(() => {
 
 const profitStandardCalc = computed(() => {
   if (!stats.value) return 0;
-  return stats.value.baseSavings - stats.value.benefitBase * (store.comparisonState.customStandardRate / 100);
+  const rate = store.hasExternalAccounting
+    ? store.comparisonState.customStandardRate
+    : store.comparisonState.customStandardRateNoBonus;
+  return stats.value.baseSavings - stats.value.benefitBase * (rate / 100);
 });
 
 const profitPrimeCalc = computed(() => {
@@ -163,13 +197,13 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
           <label class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Stawka prowizji (%)</label>
           <div class="flex items-center gap-2">
             <input
-              v-model.number="store.comparisonState.customStandardRate"
+              v-model.number="standardRateModel"
               type="number"
               step="0.5"
               min="0"
               max="100"
               class="w-24 h-8 border border-slate-200 rounded-md px-3 text-lg font-mono font-bold text-center focus:outline-none focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold transition-colors"
-              @change="isStandard ? store.prowizjaProc = store.comparisonState.customStandardRate : null"
+              @change="isStandard ? store.prowizjaProc = standardRateModel : null"
             />
             <span class="text-xs text-slate-400 font-semibold">% od wartości benefitu</span>
           </div>
@@ -186,11 +220,37 @@ const isStandard = computed(() => store.comparisonState.activeCard === 'STANDARD
               <span class="mt-1 w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
               <span class="text-[11px] text-slate-600">Wdrożenie do 14 dni</span>
             </li>
-            <li class="flex items-start gap-2">
+            <li v-if="store.hasExternalAccounting" class="flex items-start gap-2">
               <span class="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
               <span class="text-[11px] text-slate-600">Bonus <strong>{{ formatPLN(stats.adminAmount) }}</strong> dla działu HR/księgowości</span>
             </li>
           </ul>
+
+          <!-- Checkbox: 2% bonus dla księgowości -->
+          <label
+            class="mt-3 flex items-start gap-2 px-2.5 py-2 rounded-md border cursor-pointer transition-colors"
+            :class="store.hasExternalAccounting
+              ? 'bg-amber-50/60 border-amber-200 hover:bg-amber-50'
+              : 'bg-slate-50 border-slate-200 hover:bg-slate-100'"
+            @click.stop
+          >
+            <input
+              type="checkbox"
+              :checked="store.hasExternalAccounting"
+              class="mt-0.5 w-3.5 h-3.5 rounded border-slate-300 text-stratton-gold focus:ring-stratton-gold/50 cursor-pointer shrink-0"
+              @change="toggleAccountingBonus"
+            />
+            <div class="flex-1 min-w-0">
+              <div class="text-[10px] font-black uppercase tracking-widest" :class="store.hasExternalAccounting ? 'text-amber-700' : 'text-slate-500'">
+                2% Bonus dla księgowości
+              </div>
+              <div class="text-[10px] text-slate-500 leading-snug mt-0.5">
+                {{ store.hasExternalAccounting
+                  ? 'Klient ma zewnętrzną księgowość — przyznajemy 2% bonusu. Stawka 22%.'
+                  : 'Brak bonusa dla księgowości. Stawka spada do 20%.' }}
+              </div>
+            </div>
+          </label>
         </div>
 
         <!-- Savings footer -->

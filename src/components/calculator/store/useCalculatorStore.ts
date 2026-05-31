@@ -22,8 +22,9 @@ void buildLegacyOfferPdfHtml;
 
 interface ComparisonState {
   activeCard: 'STANDARD' | 'PRIME';
-  customStandardRate: number;
-  customPrimeRate: number;
+  customStandardRate: number;       // Eliton Prime z 2% księgowości (default 22)
+  customStandardRateNoBonus: number; // Eliton Prime bez bonusa (default 20)
+  customPrimeRate: number;          // Legalizacja Gotówki (default 15)
 }
 
 interface CalculatorContext {
@@ -143,24 +144,35 @@ export const useCalculatorStore = defineStore('calculator', () => {
   const prowizjaProc = ref(22);
   const comparisonState = ref<ComparisonState>({
     activeCard: 'STANDARD',
-    customStandardRate: 22, // Eliton Prime (was 28%, 20% Stratton + 2% biuro)
-    customPrimeRate: 15,    // Legalizacja Gotówki (was 26%/20%, 100% Stratton)
+    customStandardRate: 22,       // Eliton Prime z bonusem 2% (20% Stratton + 2% biuro)
+    customStandardRateNoBonus: 20, // Eliton Prime bez bonusu (100% Stratton)
+    customPrimeRate: 15,          // Legalizacja Gotówki (100% Stratton)
   });
 
-  // The single active commission percent that drives every calculation
-  // downstream. Reads hasExternalAccounting + the corresponding
-  // customRate (admin can override the default 22 / 20).
+  // Aktywna stawka prowizji.
+  //  - PRIME (Legalizacja Gotówki) → zawsze 15%, niezależnie od checkboxa
+  //  - STANDARD (Eliton Prime) → 22% z bonusem 2% księgowości
+  //                              20% bez bonusa (checkbox odznaczony)
+  // hasExternalAccounting opisuje "czy klient ma księgowość zewnętrzną
+  // której przyznajemy 2% bonusu" — niezależne od wybranego modelu.
   const activeCommissionRate = computed(() => {
+    if (comparisonState.value.activeCard === 'PRIME') {
+      return comparisonState.value.customPrimeRate; // Legalizacja Gotówki 15%
+    }
     return hasExternalAccounting.value
-      ? comparisonState.value.customStandardRate
-      : comparisonState.value.customPrimeRate;
+      ? comparisonState.value.customStandardRate        // Eliton Prime 22%
+      : comparisonState.value.customStandardRateNoBonus; // Eliton Prime 20%
   });
 
   const setHasExternalAccounting = async (value: boolean) => {
     hasExternalAccounting.value = value;
-    prowizjaProc.value = value
-      ? comparisonState.value.customStandardRate
-      : comparisonState.value.customPrimeRate;
+    // Update prowizjaProc tylko gdy jesteśmy na karcie STANDARD (Eliton Prime).
+    // W PRIME (Legalizacja Gotówki) checkbox nie wpływa na stawkę (zawsze 15%).
+    if (comparisonState.value.activeCard === 'STANDARD') {
+      prowizjaProc.value = value
+        ? comparisonState.value.customStandardRate
+        : comparisonState.value.customStandardRateNoBonus;
+    }
 
     // Persist to crm_client_profiles when there's a known client.
     if (!auth.enabled || !context.value.clientId) return;

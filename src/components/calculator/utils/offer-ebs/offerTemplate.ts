@@ -70,7 +70,14 @@ export function renderEbsOfferHtml(data: EbsOfferData): string {
   } = data;
 
   const offerNo = offerNumber || shortId();
-  const accountingLabel = hasExternalAccounting === false ? 'Legalizacja Gotówki · 15%' : 'Eliton Prime™ · 22%';
+  // provisionPct: 15 = Legalizacja Gotówki; 22 = Eliton Prime z bonusem;
+  // 20 (lub inne <22) = Eliton Prime bez 2% bonusu księgowości.
+  const rate = Number(provisionPct);
+  const accountingLabel = rate <= 15
+    ? `Legalizacja Gotówki · ${rate.toFixed(rate % 1 === 0 ? 0 : 1)}%`
+    : hasExternalAccounting === false
+      ? `Eliton Prime™ · ${rate.toFixed(rate % 1 === 0 ? 0 : 1)}% (bez bonusu księgowego)`
+      : `Eliton Prime™ · ${rate.toFixed(rate % 1 === 0 ? 0 : 1)}%`;
 
   const standardPct = 100;
   const ofertowyPct = p.sumaKosztStandard > 0 ? (p.sumaKosztSplit / p.sumaKosztStandard) * 100 : 0;
