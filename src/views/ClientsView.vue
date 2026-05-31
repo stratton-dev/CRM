@@ -17,6 +17,12 @@ import AppIcon from '@/components/AppIcon.vue'
 import NewClientSidebarForm from '@/components/clients/NewClientSidebarForm.vue'
 import ClientNotesPanel from '@/components/clients/ClientNotesPanel.vue'
 import TabHeader from '@/components/ui/TabHeader.vue'
+import {
+  buildContractHtml,
+  buildContractEmailBody,
+  buildContractFileName,
+  pickContactEmail,
+} from '@/utils/contractEmail'
 
 type ClientContact = {
   id: string
@@ -1193,6 +1199,87 @@ const generateContract = (clientId: string) => {
   router.push(`/app/contract-preview/${clientId}`)
 }
 
+const sendContractEmail = (client: any) => {
+  if (!client) return
+  const me = session.currentUser
+  const html = buildContractHtml(client)
+  const body = buildContractEmailBody(client, {
+    name: me?.name,
+    email: me?.email,
+    phone: me?.phone,
+  })
+  const fileName = buildContractFileName(client)
+  const to = pickContactEmail(client) || client.email || ''
+
+  mailboxStore.composeState = {
+    open: true,
+    to,
+    subject: `Draft Umowy Ramowej Współpracy — ${client.name || 'Klient'}`,
+    body,
+    attachments: [
+      {
+        filename: fileName,
+        html,
+        content_type: 'application/pdf',
+        convert_to_pdf: true,
+      },
+    ],
+  }
+}
+
+const downloadContract = async (client: any) => {
+  if (!client) return
+  try {
+    const html = buildContractHtml(client)
+    const fileName = buildContractFileName(client)
+
+    const { default: html2canvas } = await import('html2canvas')
+    const { jsPDF } = await import('jspdf')
+
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.left = '-10000px'
+    iframe.style.top = '0'
+    iframe.style.width = '794px'  // A4 width @ 96dpi
+    iframe.style.height = '1123px'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+
+    try {
+      const doc = iframe.contentDocument!
+      doc.open()
+      doc.write(html)
+      doc.close()
+      await new Promise((r) => setTimeout(r, 400))
+
+      const canvas = await html2canvas(doc.body, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' })
+      const imgData = canvas.toDataURL('image/jpeg', 0.92)
+      const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const pageH = pdf.internal.pageSize.getHeight()
+      const imgW = pageW
+      const imgH = (canvas.height * imgW) / canvas.width
+      let heightLeft = imgH
+      let position = 0
+      pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH)
+      heightLeft -= pageH
+      while (heightLeft > 0) {
+        position = heightLeft - imgH
+        pdf.addPage()
+        pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH)
+        heightLeft -= pageH
+      }
+      pdf.save(fileName)
+      toast.success('Umowa pobrana.')
+    } finally {
+      iframe.remove()
+    }
+  } catch (e: any) {
+    console.error('Contract PDF download failed', e)
+    toast.error('Nie udało się wygenerować PDF.')
+  }
+}
+
 const refreshAfterCreate = async (newId: string) => {
   await clientStore.refreshApiData()
   if (newId) {
@@ -1645,8 +1732,23 @@ if (route.query.expand) {
             >
               Wstrzymaj / przełóż
             </button>
-            <button type="button" class="bg-primary text-primary-foreground border border-transparent px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-primary-dark transition-colors" @click="generateContract(selectedClient.id)">
-              Generuj Umowę
+            <button
+              type="button"
+              class="bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
+              title="Pobierz draft umowy jako plik PDF"
+              @click="downloadContract(selectedClient)"
+            >
+              <AppIcon name="download" class="w-3.5 h-3.5" />
+              Pobierz umowę
+            </button>
+            <button
+              type="button"
+              class="bg-primary text-primary-foreground border border-transparent px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-primary-dark transition-colors inline-flex items-center gap-1.5"
+              title="Otwórz okno wysyłki maila z draftem umowy w załączniku"
+              @click="sendContractEmail(selectedClient)"
+            >
+              <AppIcon name="envelope" class="w-3.5 h-3.5" />
+              Wyślij maila z umową
             </button>
           </div>
         </div>
