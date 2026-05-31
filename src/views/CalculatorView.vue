@@ -250,18 +250,18 @@ onMounted(() => {
       </template>
     </TabHeader>
 
-    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-3">
 
-      <div class="relative rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white group hover:border-slate-300 transition-colors">
-        <div>
-          <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Firma dla kalkulacji</div>
-          <div class="text-xl font-bold text-slate-800 tracking-tight">
+      <div class="relative rounded-xl border border-slate-200 shadow-sm px-4 py-2.5 flex flex-col md:flex-row md:items-center md:justify-between gap-2 bg-white group hover:border-slate-300 transition-colors">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Firma:</div>
+          <div class="text-sm font-bold text-slate-800 tracking-tight">
             {{ store.firma.nazwa || 'Nie wybrano firmy' }}
           </div>
-          <div v-if="store.firma.nip" class="text-xs text-slate-500 font-mono mt-1">NIP: <span class="text-slate-700">{{ store.firma.nip }}</span></div>
+          <div v-if="store.firma.nip" class="text-[11px] text-slate-500 font-mono">NIP <span class="text-slate-700">{{ store.firma.nip }}</span></div>
         </div>
-        <div class="flex items-center gap-2">
-          <button type="button" class="px-4 py-2 text-xs font-bold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors" @click="showCompanyPicker = !showCompanyPicker">
+        <div class="flex items-center gap-2 shrink-0">
+          <button type="button" class="px-3 py-1.5 text-xs font-bold rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors" @click="showCompanyPicker = !showCompanyPicker">
             Zmień firmę
           </button>
         </div>
