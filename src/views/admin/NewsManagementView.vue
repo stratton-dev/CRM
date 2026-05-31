@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useNewsStore } from '@/stores/news'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import TabHeader from '@/components/ui/TabHeader.vue'
 
 const newsStore = useNewsStore()
 const isEditing = ref(false)
@@ -183,36 +184,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-3 md:p-4 max-w-7xl mx-auto space-y-3 md:space-y-6">
-    <!-- Premium Header -->
-    <div class="bg-slate-900 rounded-xl md:rounded-[2rem] shadow-xl border border-slate-800 p-4 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-6 relative overflow-hidden group isolate">
-      <!-- Background Decor -->
-      <div class="absolute inset-0 overflow-hidden pointer-events-none z-0">
-         <div class="absolute top-0 right-0 w-64 h-64 bg-stratton-gold rounded-full mix-blend-overlay filter blur-3xl opacity-10 -translate-y-1/2 translate-x-1/2 group-hover:opacity-20 transition-opacity duration-1000"></div>
-         <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500 rounded-full mix-blend-overlay filter blur-3xl opacity-5 translate-y-1/2 -translate-x-1/2"></div>
-      </div>
+  <div class="flex flex-col h-[calc(100vh-112px)]">
 
-      <div class="relative z-10 flex items-center gap-5">
-        <button @click="handleBack" class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-all shadow-sm group/btn">
-          <AppIcon name="arrow-left" class="w-4 h-4 transition-transform group-hover/btn:-translate-x-1" />
-        </button>
-        <div>
-          <h1 class="font-serif font-bold text-xl md:text-3xl text-white tracking-tight leading-none">Zarządzanie Aktualnościami</h1>
-          <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-2">Personalizacja komunikatów systemowych</p>
-        </div>
-      </div>
-      
-      <div class="relative z-10 flex items-center gap-4">
-        <button 
+    <TabHeader icon="megaphone" title="Zarządzanie Aktualnościami">
+      <template #actions>
+        <button
           v-if="!isEditing"
-          @click="openEditor()" 
-          class="bg-stratton-gold text-white px-6 py-2.5 rounded-xl font-bold hover:bg-amber-600 transition shadow-lg shadow-amber-900/20 flex items-center gap-2 group/add"
+          type="button"
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-bold text-white bg-primary hover:bg-primary-dark rounded-lg shadow-sm transition-colors"
+          @click="openEditor()"
         >
-          <AppIcon name="plus" class="w-4 h-4 group-hover/add:rotate-90 transition-transform duration-300" />
-          Dodaj Ogłoszenie
+          <AppIcon name="plus" class="w-4 h-4" />
+          Dodaj ogłoszenie
         </button>
-      </div>
-    </div>
+      </template>
+    </TabHeader>
+
+    <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 max-w-7xl mx-auto w-full">
 
     <!-- Editor Mode (Glassmorphism) -->
     <div v-if="isEditing" class="bg-white/90 backdrop-blur-md rounded-xl md:rounded-[2rem] shadow-xl border border-white/50 p-4 md:p-8 animate-fade-in-up">
@@ -381,5 +369,7 @@ onMounted(() => {
             </div>
         </div>
     </div>
+
+    </div><!-- /scroll container -->
   </div>
 </template>
