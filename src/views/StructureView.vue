@@ -238,7 +238,7 @@ watch(
 )
 
 const canAddGlobal = computed(() => currentUser.value?.role === 'ADMIN')
-const roleOptions: UserRole[] = ['DIRECTOR', 'MANAGER', 'SALES']
+const roleOptions: UserRole[] = ['DIRECTOR', 'MANAGER', 'SALES', 'LEADOWIEC']
 const roleOverrides = ref<Record<string, UserRole>>({})
 const parentOverrides = ref<Record<string, string | null | undefined>>({})
 const movingNodeId = ref<string | null>(null)
@@ -255,10 +255,22 @@ const setParentValue = (node: User, val: string) => {
 const validParentsFor = (node: User): User[] => {
   const allUsers = Array.isArray(users.value) ? users.value : []
   const descendants = new Set(structure.getSubtreeUserIds(node.id))
+
+  // Special rule: LEADOWIEC może mieć tylko uprawnionego AGENTA jako parenta
+  // (is_agent_authorized=true), niezależnie od jego roli (SALES/MANAGER/
+  // DIRECTOR/ADMIN). Inni leadowcy NIE mogą być parentami.
+  if (node.role === 'LEADOWIEC') {
+    return allUsers.filter(
+      (u) =>
+        !!u.isAgentAuthorized
+        && u.id !== node.id
+        && !descendants.has(u.id)
+    )
+  }
+
   const roleMap: Record<string, UserRole[]> = {
     MANAGER: ['DIRECTOR'],
     SALES: ['MANAGER'],
-    LEADOWIEC: ['SALES', 'MANAGER', 'DIRECTOR'],
   }
   const allowed = roleMap[node.role] ?? []
   return allUsers.filter(
