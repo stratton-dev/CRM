@@ -296,7 +296,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-  </div>
 
     <!-- Mobile step indicator -->
     <div class="lg:hidden flex items-center gap-1 overflow-x-auto py-1 -mx-1 px-1">
@@ -371,5 +370,6 @@ onMounted(() => {
         </div>
       </section>
     </div>
+    </div><!-- /scroll container -->
   </div>
 </template>
