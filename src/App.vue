@@ -82,7 +82,6 @@ const navLinks = computed(() => {
       { label: 'Klienci', path: '/app/clients', icon: 'users', viewKey: 'clients' },
       { label: 'Struktura', path: '/app/structure', icon: 'sitemap', viewKey: 'structure' },
       { label: 'Rozliczenia', path: '/app/settlements', icon: 'invoice', viewKey: 'settlements' },
-      { label: 'Faktury', path: '/app/admin-invoices', icon: 'file-invoice-dollar', viewKey: 'admin-invoices' },
       { label: 'Progi Prowizyjne', path: '/app/commission-thresholds', icon: 'sliders', viewKey: 'commission-thresholds' },
       { label: 'Autenti', path: '/app/autenti-panel', icon: 'signature', viewKey: 'autenti-panel' },
       { label: 'Rankingi', path: '/app/leaderboard', icon: 'trophy', viewKey: 'leaderboard' },

@@ -33,7 +33,6 @@ describe('UI layout consistency', () => {
     'src/views/admin/UsersManagementView.vue',
     'src/views/admin/SystemLogsView.vue',
     'src/views/admin/AutentiPanelView.vue',
-    'src/views/admin/AdminInvoicesView.vue',
     'src/views/NotificationsView.vue',
     'src/views/SettlementsView.vue',
     'src/views/hr/HrPanelView.vue',
@@ -51,7 +50,6 @@ describe('UI layout consistency', () => {
 
   const formViews = [
     'src/views/admin/AutentiPanelView.vue',
-    'src/views/admin/AdminInvoicesView.vue',
     'src/views/hr/HrPanelView.vue',
   ]
 
@@ -60,10 +58,5 @@ describe('UI layout consistency', () => {
       const content = read(file)
       expect(content).toMatch(/crm-input|crm-select/)
     })
-  })
-
-  it('AdminInvoices uses badge variants for invoice status', () => {
-    const content = read('src/views/admin/AdminInvoicesView.vue')
-    expect(content).toMatch(/crm-badge-(success|warn)/)
   })
 })

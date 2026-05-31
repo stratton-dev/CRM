@@ -24,7 +24,6 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/admin-analytics', name: 'admin-analytics', component: () => import('@/views/admin/AdminAnalyticsView.vue'), meta: { requiresAuth: true } },
   { path: '/app/admin-logs', name: 'admin-logs', component: () => import('@/views/admin/SystemLogsView.vue'), meta: { requiresAuth: true } },
   { path: '/app/admin', name: 'admin', component: () => import('@/views/admin/AdminPanelView.vue'), meta: { requiresAuth: true } },
-  { path: '/app/admin-invoices', name: 'admin-invoices', component: () => import('@/views/admin/AdminInvoicesView.vue'), meta: { requiresAuth: true } },
   { path: '/app/autenti-panel', name: 'autenti-panel', component: () => import('@/views/admin/AutentiPanelView.vue'), meta: { requiresAuth: true } },
   { path: '/app/commission-thresholds', name: 'commission-thresholds', component: () => import('@/views/admin/CommissionThresholdsView.vue'), meta: { requiresAuth: true } },
   { path: '/app/commission-distributions', name: 'commission-distributions', component: () => import('@/views/admin/CommissionDistributionsView.vue'), meta: { requiresAuth: true } },

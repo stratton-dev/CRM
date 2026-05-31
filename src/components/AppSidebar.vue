@@ -85,7 +85,6 @@ const navLinks = computed((): NavLink[] => {
       { label: 'Klienci', path: '/app/clients', icon: 'users', viewKey: 'clients' },
       { label: 'Struktura', path: '/app/structure', icon: 'sitemap', viewKey: 'structure' },
       { label: 'Rozliczenia', path: '/app/settlements', icon: 'invoice', viewKey: 'settlements' },
-      { label: 'Faktury', path: '/app/admin-invoices', icon: 'file-invoice-dollar', viewKey: 'admin-invoices' },
       { label: 'Progi Prowizyjne', path: '/app/commission-thresholds', icon: 'sliders', viewKey: 'commission-thresholds' },
       { label: 'Prowizje Override', path: '/app/commission-distributions', icon: 'chart-bar', viewKey: 'commission-distributions' },
       { label: 'Autenti', path: '/app/autenti-panel', icon: 'signature', viewKey: 'autenti-panel' },
@@ -159,7 +158,7 @@ const navLinks = computed((): NavLink[] => {
 const ADMIN_LINK_GROUPS: Array<{ title: string; viewKeys: string[] }> = [
   { title: '', viewKeys: ['dashboard'] },
   { title: 'Sprzedaż', viewKeys: ['clients', 'analytics', 'settlements', 'leaderboard'] },
-  { title: 'Finanse', viewKeys: ['admin-analytics', 'admin-invoices', 'commission-thresholds', 'commission-distributions', 'autenti-panel'] },
+  { title: 'Finanse', viewKeys: ['admin-analytics', 'commission-thresholds', 'commission-distributions', 'autenti-panel'] },
   { title: 'Zarządzanie', viewKeys: ['user-management', 'structure', 'admin-logs'] },
   { title: 'Treści & System', viewKeys: ['news-management', 'settings'] },
   { title: 'Komunikacja', viewKeys: ['calendar', 'notifications', 'mailbox', 'knowledge-base'] },

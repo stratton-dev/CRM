@@ -166,21 +166,6 @@ const logout = async () => {
             </div>
           </RouterLink>
 
-          <!-- Faktury admin -->
-          <RouterLink to="/app/admin-invoices" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
-            <div class="absolute inset-0 z-0">
-              <img src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-50 transition-transform duration-700 group-hover:scale-105" alt="Faktury" />
-              <div class="absolute inset-0 bg-linear-to-t from-slate-900/80 via-slate-900/30 to-slate-900/10"></div>
-            </div>
-            <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
-              <div class="text-stratton-gold"><AppIcon name="document-text" class="w-8 h-8" /></div>
-              <div>
-                <h3 class="crm-tile-title text-xl text-white mb-1">Faktury</h3>
-                <p class="crm-tile-desc text-xs text-slate-300 font-medium">Zarządzaj fakturami</p>
-              </div>
-            </div>
-          </RouterLink>
-
           <!-- Autenti -->
           <RouterLink to="/app/autenti-panel" class="crm-tile h-32 md:h-44 group relative overflow-hidden bg-slate-900 border border-slate-700">
             <div class="absolute inset-0 z-0">

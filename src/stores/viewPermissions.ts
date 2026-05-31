@@ -20,7 +20,6 @@ export type CrmViewKey =
   | 'admin-analytics'
   | 'admin-logs'
   | 'admin'
-  | 'admin-invoices'
   | 'autenti-panel'
   | 'commission-thresholds'
   | 'commission-distributions'
@@ -73,7 +72,6 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'user-management', label: 'Użytkownicy' },
   { key: 'admin-analytics', label: 'Analityka Finansowa' },
   { key: 'admin-logs', label: 'Logi Systemowe' },
-  { key: 'admin-invoices', label: 'Faktury (Admin)' },
   { key: 'autenti-panel', label: 'Autenti' },
   { key: 'commission-thresholds', label: 'Progi Prowizyjne' },
   { key: 'commission-distributions', label: 'Prowizje Override' },
@@ -128,7 +126,6 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   structure: ['ADMIN', 'DIRECTOR', 'MANAGER'],
   'hr-panel': ['ADMIN'],
   admin: ['ADMIN'],
-  'admin-invoices': ['ADMIN'],
   'autenti-panel': ['ADMIN'],
   'commission-thresholds': ['ADMIN'],
   'commission-distributions': ['ADMIN'],
