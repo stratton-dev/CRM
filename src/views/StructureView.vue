@@ -448,7 +448,11 @@ const visibleNodes = computed<TreeNode[]>(() => {
     if (user.isTeamNode) return user
     if (!user.parentSupabaseId) return user
     if (treeIds.has(user.parentSupabaseId)) return user
-    const fallbackTeamId = teamNodeId(user.teamGroupPath)
+    // Rodzic spoza zbioru (np. leadowiec widzi tylko swoją gałąź — jego przełożony
+    // nie jest w odpowiedzi). Gdy jest team-path → podpinamy pod węzeł zespołu;
+    // gdy brak team-path (leadowcy go nie mają) → promujemy na korzeń, inaczej
+    // węzeł jest sierotą i nic się nie renderuje.
+    const fallbackTeamId = user.teamGroupPath ? teamNodeId(user.teamGroupPath) : null
     return { ...user, parentSupabaseId: fallbackTeamId }
   })
   const childrenByParentId = new Map<string | null, User[]>()
