@@ -39,6 +39,7 @@ const userSearchQuery = ref('')
 const roleFilter = ref<string>('ALL')
 const selectedUserForEdit = ref<User | null>(null)
 const editPasswordOverride = ref<string>('')
+const editPasswordOriginal = ref<string>('')
 const isCreating = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
@@ -177,12 +178,32 @@ const editUser = (user: User) => {
     lastName = parts.slice(1).join(' ') || ''
   }
   selectedUserForEdit.value = { ...user, firstName, lastName }
-  editPasswordOverride.value = ''
+  // Pole "Hasło" pokazuje aktualne (jawne) hasło z bazy; edycja = ustawienie nowego.
+  editPasswordOverride.value = (user as any).plainPassword || ''
+  editPasswordOriginal.value = editPasswordOverride.value
 }
 
 const closeEditPanel = () => {
   selectedUserForEdit.value = null
   editPasswordOverride.value = ''
+  editPasswordOriginal.value = ''
+}
+
+const copyPassword = async () => {
+  if (!editPasswordOverride.value) return
+  try {
+    await navigator.clipboard.writeText(editPasswordOverride.value)
+    toast.success('Skopiowano hasło.')
+  } catch {
+    toast.error('Nie udało się skopiować.')
+  }
+}
+
+const generatePassword = () => {
+  const words = ['Sokol', 'Orzel', 'Lampart', 'Tygrys', 'Delfin', 'Kondor', 'Pantera', 'Rekin', 'Jaguar', 'Bizon', 'Gepard', 'Wilk', 'Feniks', 'Diament', 'Granit', 'Bursztyn', 'Szafir', 'Kobalt', 'Tytan']
+  const w = words[Math.floor(Math.random() * words.length)]
+  const d = String(Math.floor(Math.random() * 10000)).padStart(4, '0')
+  editPasswordOverride.value = `${w}-${d}`
 }
 
 const toggleBlock = async (user: User) => {
@@ -250,7 +271,8 @@ const saveUser = async () => {
       toast.error('Numer telefonu jest wymagany.')
       return
     }
-    if (editPasswordOverride.value && editPasswordOverride.value.length < 8) {
+    const passwordChanged = editPasswordOverride.value !== editPasswordOriginal.value
+    if (passwordChanged && editPasswordOverride.value && editPasswordOverride.value.length < 8) {
       toast.error('Hasło musi mieć min. 8 znaków.')
       return
     }
@@ -264,7 +286,8 @@ const saveUser = async () => {
         email,
         phone,
       }
-      if (editPasswordOverride.value) partial.password = editPasswordOverride.value
+      // Wyślij hasło tylko gdy zmienione względem aktualnego (pole jest prefillowane).
+      if (passwordChanged && editPasswordOverride.value) partial.password = editPasswordOverride.value
       // Self-rate (override_commission_rate) and per-relacja override-y
       // ustawiane teraz w widoku Struktura (CommissionChain section).
       // Tu nie wysyłamy overrideCommissionRate żeby przypadkiem nie nadpisać.
@@ -585,14 +608,18 @@ const saveUser = async () => {
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nowe hasło (opcjonalnie)</label>
-              <input
-                v-model="editPasswordOverride"
-                type="text"
-                placeholder="pozostaw puste żeby nie zmieniać"
-                class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:outline-none focus:border-stratton-gold"
-              />
-              <p class="text-xs text-slate-400 mt-1">Min. 8 znaków. Hasło zostanie zapisane bezpośrednio w Supabase Auth.</p>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Hasło</label>
+              <div class="flex gap-2">
+                <input
+                  v-model="editPasswordOverride"
+                  type="text"
+                  placeholder="hasło logowania do CRM"
+                  class="flex-1 border border-slate-300 rounded-lg p-2.5 text-sm font-mono focus:outline-none focus:border-stratton-gold"
+                />
+                <button type="button" @click="copyPassword" class="px-3 text-xs font-bold border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">Kopiuj</button>
+                <button type="button" @click="generatePassword" class="px-3 text-xs font-bold border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition">Generuj</button>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">Aktualne hasło logowania do CRM (czytane z bazy). Edycja zapisuje nowe hasło w Supabase Auth. Min. 8 znaków.</p>
             </div>
 
             <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">

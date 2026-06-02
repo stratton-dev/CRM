@@ -71,6 +71,7 @@ export interface User {
   isTeamNode?: boolean
   leadowiecOpiekunId?: number | null
   leadowiecCommissionRate?: number | null
+  plainPassword?: string | null
 }
 
 export interface SavedOffer {
