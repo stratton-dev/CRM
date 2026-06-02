@@ -61,6 +61,14 @@ class Company extends Model
         return $this->hasMany(PayrollCalculation::class);
     }
 
+    // Tabela 'companies' jest współdzielona przez Client (extends Company).
+    // Relacja na Company, by `whereHas('meetings')` działało także gdy model
+    // jest typu Company (np. CrmSavedOffer::client() -> Company) — bez tego 500.
+    public function meetings(): HasMany
+    {
+        return $this->hasMany(Meeting::class, 'client_id');
+    }
+
     public function crmProfile(): HasOne
     {
         return $this->hasOne(CrmClientProfile::class, 'client_id');

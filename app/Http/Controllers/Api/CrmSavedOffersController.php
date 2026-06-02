@@ -14,8 +14,15 @@ class CrmSavedOffersController extends Controller
     {
         $q = CrmSavedOffer::query();
 
+        $authUser = $request->user();
         $role = $context->primaryRole();
-        if ($role !== 'ADMIN') {
+
+        // LEADOWIEC (read-only): zapisane oferty klientów, których sam zgłosił.
+        if ($authUser && $authUser->role_cached === 'LEADOWIEC') {
+            $q->whereHas('client', function ($c) use ($authUser) {
+                $c->where('added_by_user_id', $authUser->id);
+            });
+        } elseif ($role !== 'ADMIN') {
             $users = $structure->listUsers($context);
             $userIds = collect($users)->pluck('id')->unique()->values()->all();
 

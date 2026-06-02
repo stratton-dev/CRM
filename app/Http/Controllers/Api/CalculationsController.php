@@ -15,8 +15,16 @@ class CalculationsController extends Controller
     {
         $q = Calculation::query()->with('meeting:id,client_id,user_id');
 
+        $authUser = $request->user();
         $role = $context->primaryRole();
-        if ($role !== 'ADMIN') {
+
+        // LEADOWIEC (read-only): kalkulacje klientów, których sam zgłosił.
+        // Meetingi prowadzi agent, więc scope po meeting.client.added_by_user_id.
+        if ($authUser && $authUser->role_cached === 'LEADOWIEC') {
+            $q->whereHas('meeting.client', function ($c) use ($authUser) {
+                $c->where('added_by_user_id', $authUser->id);
+            });
+        } elseif ($role !== 'ADMIN') {
             $users = $structure->listUsers($context);
             $userIds = collect($users)->pluck('id')->unique()->values()->all();
 

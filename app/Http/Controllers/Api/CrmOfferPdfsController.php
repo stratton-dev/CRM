@@ -15,6 +15,14 @@ class CrmOfferPdfsController extends Controller
         $q = CrmOfferPdf::query()
             ->with(['user:id,name,email']);
 
+        // LEADOWIEC (read-only): PDF-y ofert tylko dla klientów, których sam zgłosił.
+        $authUser = $request->user();
+        if ($authUser && $authUser->role_cached === 'LEADOWIEC') {
+            $q->whereHas('client', function ($c) use ($authUser) {
+                $c->where('added_by_user_id', $authUser->id);
+            });
+        }
+
         if ($clientId = $request->integer('client_id')) {
             $q->where('client_id', $clientId);
         }
