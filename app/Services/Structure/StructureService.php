@@ -195,6 +195,9 @@ class StructureService
             'team_id' => $teamId,
             'team_group_path' => $teamPath ?: null,
             'role_cached' => $role,
+            // LEADOWIEC tworzony pod kimś w strukturze dostaje od razu opiekuna:
+            // najbliższego przełożonego (handlowca/menedżera/dyrektora) w górę łańcucha.
+            'leadowiec_opiekun_id' => $role === 'LEADOWIEC' ? $this->resolveLeadowiecOpiekunId($parent) : null,
             'hierarchical_code' => $hierarchicalCode,
             'hierarchical_id' => $hierarchicalCode,
             'name' => $data['name'],
@@ -572,13 +575,24 @@ class StructureService
         ?string $newParentSupabaseId,
         ?string $newCode
     ): void {
-        $user->fill([
+        $fill = [
             'parent_supabase_id' => $newParentSupabaseId,
             'team_group_path' => $teamGroupPath,
             'team_id' => $teamId,
             'hierarchical_code' => $newCode,
             'hierarchical_id' => $newCode,
-        ])->save();
+        ];
+
+        // Przy przenoszeniu leadowca (lub jego pod-leadowców) przelicz opiekuna
+        // wg nowego przełożonego — żeby pole było zawsze spójne ze strukturą.
+        if (($user->role_cached ?? '') === 'LEADOWIEC') {
+            $newParent = $newParentSupabaseId
+                ? User::query()->where('supabase_id', $newParentSupabaseId)->first()
+                : null;
+            $fill['leadowiec_opiekun_id'] = $this->resolveLeadowiecOpiekunId($newParent);
+        }
+
+        $user->fill($fill)->save();
 
         $children = User::query()
             ->where('parent_supabase_id', $user->supabase_id)
@@ -590,6 +604,33 @@ class StructureService
                 : null;
             $this->updateSubtreeCodes($child, $teamGroupPath, $teamId, $user->supabase_id, $childCode);
         }
+    }
+
+    /**
+     * Wyznacza opiekuna leadowca = najbliższy przełożony NIE-leadowiec w górę łańcucha
+     * (handlowiec/menedżer/dyrektor). Pomija kolejnych leadowców (łańcuch MLM).
+     * Zwraca users.id albo null (gdy w górę jest tylko ADMIN lub nikt).
+     */
+    private function resolveLeadowiecOpiekunId(?User $parent): ?int
+    {
+        $cursor = $parent;
+        $visited = [];
+
+        while ($cursor) {
+            $role = $cursor->role_cached ?? '';
+            if ($role !== 'LEADOWIEC') {
+                return in_array($role, ['SALES', 'MANAGER', 'DIRECTOR'], true)
+                    ? (int) $cursor->id
+                    : null;
+            }
+            if (!$cursor->parent_supabase_id || isset($visited[$cursor->parent_supabase_id])) {
+                break;
+            }
+            $visited[$cursor->parent_supabase_id] = true;
+            $cursor = User::query()->where('supabase_id', $cursor->parent_supabase_id)->first();
+        }
+
+        return null;
     }
 
     private function initialsFromName(?string $name): string
