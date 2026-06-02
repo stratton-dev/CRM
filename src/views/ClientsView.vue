@@ -174,6 +174,10 @@ const baseClients = computed(() => {
   const u = currentUser.value
   if (!u) return []
   const base = Array.isArray(clients.value) ? clients.value : []
+  // LEADOWIEC: backend już zawęża listę do klientów zgłoszonych przez tego leadowca
+  // (added_by_user_id). Właścicielem jest AGENT, więc NIE filtrujemy po ownerId tutaj —
+  // inaczej znikają wszystkie klienty leadowca. Zwracamy całość z API.
+  if (u.role === 'LEADOWIEC') return base
   if (auth.enabled) {
     if (u.role === 'ADMIN') return base
     if (u.role === 'MANAGER' || u.role === 'DIRECTOR') {
