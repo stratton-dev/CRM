@@ -110,6 +110,14 @@ const navLinks = computed(() => {
       { label: 'Moje Prowizje', path: '/app/settlements', icon: 'hand-holding-dollar', viewKey: 'settlements' },
       { label: 'Ranking', path: '/app/leaderboard', icon: 'award', viewKey: 'leaderboard' }
     )
+  } else if (role === 'LEADOWIEC') {
+    // Pozycje odpowiadające aktywnym kafelkom w panelu leadowca.
+    links.push(
+      { label: 'Moje rozliczenia', path: '/app/leadowiec/settlements', icon: 'hand-holding-dollar', viewKey: 'leadowiec-settlements' },
+      { label: 'Klienci w obsłudze', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
+      { label: 'Struktura', path: '/app/structure', icon: 'sitemap', viewKey: 'structure' },
+      { label: 'Kalendarz', path: '/app/leadowiec/calendar', icon: 'calendar', viewKey: 'leadowiec-calendar' }
+    )
   }
 
   links.push(
