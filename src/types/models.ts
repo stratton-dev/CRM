@@ -72,6 +72,7 @@ export interface User {
   leadowiecOpiekunId?: number | null
   leadowiecCommissionRate?: number | null
   plainPassword?: string | null
+  dbId?: number | null
 }
 
 export interface SavedOffer {

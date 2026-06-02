@@ -581,7 +581,7 @@ const saveUser = async () => {
                   class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold cursor-pointer bg-white"
                 >
                   <option :value="null">— brak opiekuna —</option>
-                  <option v-for="op in opiekunList" :key="op.id" :value="Number(op.id)">
+                  <option v-for="op in opiekunList" :key="op.id" :value="(op as any).dbId">
                     {{ op.name }} ({{ op.role }})
                   </option>
                 </select>
