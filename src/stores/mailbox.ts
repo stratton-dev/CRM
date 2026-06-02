@@ -113,7 +113,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
 
   const PAGE_SIZE = 50
 
-  const fetchEmails = async (folders?: Array<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM'>, page = 1) => {
+  const fetchEmails = async (folders?: Array<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM'>, page = 1, refresh = false) => {
     if (!auth.enabled) {
       emails.value = Array.isArray(localEmails.value) ? localEmails.value : []
       return
@@ -129,7 +129,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
         for (const folder of targetFolders) {
           const offset = (page - 1) * PAGE_SIZE
           const response = await api.get('/v1/crm-mailbox/messages', {
-            params: { folder, limit: PAGE_SIZE, offset },
+            params: { folder, limit: PAGE_SIZE, offset, ...(refresh ? { refresh: 1 } : {}) },
             timeout: 60000, // IMAP bywa wolny — nie ucinaj na globalnych 15s
           })
           const payload = response?.data?.data ?? response?.data ?? []
@@ -352,7 +352,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
     moveMessage,
     markAsRead,
     fetchEmails,
-    fetchEmailsForFolder: (folder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM', page = 1) => fetchEmails([folder], page),
+    fetchEmailsForFolder: (folder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM', page = 1, refresh = false) => fetchEmails([folder], page, refresh),
     fetchMailSettings,
     startPolling,
     stopPolling,

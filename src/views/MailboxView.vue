@@ -935,7 +935,7 @@ watch(searchQuery, () => {
              <span v-if="hasActiveFilters" class="ml-1 px-2 py-0.5 bg-sky-100 text-sky-600 text-[10px] font-black rounded-full uppercase tracking-wide">filtr</span>
            </h2>
            <div class="flex items-center gap-2">
-             <button class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors" :class="{'animate-spin': emailsLoading}" @click="mailboxStore.fetchEmailsForFolder(currentFolder, currentPage)">
+             <button class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-colors" :class="{'animate-spin': emailsLoading}" @click="mailboxStore.fetchEmailsForFolder(currentFolder, currentPage, true)">
                <AppIcon name="refresh" class="w-4 h-4" />
              </button>
              <button
