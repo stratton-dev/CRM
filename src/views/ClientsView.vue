@@ -360,9 +360,13 @@ const selectClient = (client: Client) => {
   selectedClient.value = client
   activePanelTab.value = 'details'
   if (auth.enabled) {
-    void fetchClientConsents(client.id)
     void fetchClientContacts(client.id)
-    void fetchClientCalculations(client.id)
+    // LEADOWIEC nie ma uprawnień do zgód ani kalkulacji (zarządza nimi agent) —
+    // pomijamy te wywołania, by nie wywoływać 403 ("This action is unauthorized").
+    if (!isLeadowiec.value) {
+      void fetchClientConsents(client.id)
+      void fetchClientCalculations(client.id)
+    }
   }
 }
 
