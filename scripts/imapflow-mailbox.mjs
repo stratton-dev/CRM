@@ -275,19 +275,34 @@ const sendMessage = async ({ config, params }) => {
     port: config.smtp.port,
     secure: config.smtp.secure,
     auth: config.smtp.auth,
+    // Bez tych limitów sendMail wisi w nieskończoność gdy port SMTP jest
+    // zablokowany/nieosiągalny (proces Node ginie dopiero na globalnym 60s).
+    connectionTimeout: 20000,
+    greetingTimeout: 15000,
+    socketTimeout: 25000,
   })
 
+  process.stderr.write(`[send] SMTP connect ${config.smtp.host}:${config.smtp.port} secure=${config.smtp.secure}\n`)
+  const smtpStart = Date.now()
   const info = await transport.sendMail(mailOptions)
+  process.stderr.write(`[send] SMTP ok in ${Date.now() - smtpStart}ms id=${info.messageId}\n`)
+  transport.close()
 
-  const composer = new MailComposer(mailOptions)
-  const raw = await composer.compile().build()
-
+  // Zapis do "Wysłane" jest best-effort — gdy IMAP append zawiśnie/odmówi,
+  // mail i tak został wysłany przez SMTP, więc NIE wywalamy całej wysyłki.
   if (config.imap && config.folderName) {
-    const client = await connectImap(config.imap)
     try {
-      await client.append(config.folderName, raw, ['\\Seen'], new Date())
-    } finally {
-      await client.logout().catch(() => {})
+      const composer = new MailComposer(mailOptions)
+      const raw = await composer.compile().build()
+      const client = await connectImap(config.imap)
+      try {
+        await withTimeout(client.append(config.folderName, raw, ['\\Seen'], new Date()), 15000, 'append')
+      } finally {
+        await client.logout().catch(() => {})
+      }
+      process.stderr.write(`[send] saved to Sent (${config.folderName})\n`)
+    } catch (appendErr) {
+      process.stderr.write(`[send] append-to-Sent failed (non-fatal): ${appendErr?.message || appendErr}\n`)
     }
   }
 
