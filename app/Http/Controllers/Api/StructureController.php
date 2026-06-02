@@ -152,6 +152,7 @@ class StructureController extends Controller
     {
         return [
             'id' => (string) $user->supabase_id,
+            'dbId' => $user->id,
             'parentSupabaseId' => $user->parent_supabase_id,
             'hierarchicalCode' => $user->hierarchical_code,
             'hierarchicalId' => $user->hierarchical_code,
