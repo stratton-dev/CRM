@@ -38,6 +38,19 @@ class StructureService
             return $query->get();
         }
 
+        // LEADOWIEC bypassuje team-path (jak ADMIN) — musi być PRZED guardem $teamPath,
+        // bo leadowcy nie mają team_group_path i inaczej dostaliby pustą listę.
+        // Widzi swoją gałąź: siebie + zrekrutowaną podstrukturę (kolejni leadowcy pod nim).
+        // Read-only — mutacje blokuje StructureAuthorization.
+        if ($role === 'LEADOWIEC') {
+            $actor = User::query()->where('supabase_id', $context->actorSupabaseId())->first();
+            if (!$actor) {
+                return $query->whereRaw('1 = 0')->get();
+            }
+
+            return collect($this->collectSubtreeUsers($actor))->values();
+        }
+
         $teamPath = $context->teamGroupPath();
         if (!$teamPath) {
             return $query->whereRaw('1 = 0')->get();
@@ -72,17 +85,6 @@ class StructureService
 
         if ($role === 'SALES') {
             return $query->where('supabase_id', $context->actorSupabaseId())->get();
-        }
-
-        // LEADOWIEC widzi tylko swoją gałąź: siebie + zrekrutowaną podstrukturę
-        // (kolejni leadowcy pod nim). Read-only — mutacje i tak blokuje StructureAuthorization.
-        if ($role === 'LEADOWIEC') {
-            $actor = User::query()->where('supabase_id', $context->actorSupabaseId())->first();
-            if (!$actor) {
-                return $query->whereRaw('1 = 0')->get();
-            }
-
-            return collect($this->collectSubtreeUsers($actor))->values();
         }
 
         return $query->whereRaw('1 = 0')->get();
