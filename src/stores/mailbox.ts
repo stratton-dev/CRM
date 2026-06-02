@@ -130,6 +130,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
           const offset = (page - 1) * PAGE_SIZE
           const response = await api.get('/v1/crm-mailbox/messages', {
             params: { folder, limit: PAGE_SIZE, offset },
+            timeout: 60000, // IMAP bywa wolny — nie ucinaj na globalnych 15s
           })
           const payload = response?.data?.data ?? response?.data ?? []
           if (Array.isArray(payload)) list.push(...payload)
@@ -210,7 +211,11 @@ export const useMailboxStore = defineStore('mailbox', () => {
           from_name: senderName,
           from_email: senderEmail,
           attachments: attachments && attachments.length ? attachments : undefined,
-        }).then(() => fetchEmails(['INBOX', 'SENT'])).catch((error) => {
+        }, { timeout: 60000 }).then(() => {
+          // Wysyłka OK. Odśwież skrzynkę W TLE — ewentualny timeout/błąd odświeżania
+          // NIE może oznaczać, że wiadomość się nie wysłała (wcześniej tak właśnie było).
+          void fetchEmails(['INBOX', 'SENT']).catch(() => {})
+        }).catch((error) => {
           const message = error?.response?.data?.message || error?.message || 'Nie udało się wysłać wiadomości.'
           notifyError(message)
           throw error
@@ -290,7 +295,7 @@ export const useMailboxStore = defineStore('mailbox', () => {
     if (!mailSettingsLoaded.value) await fetchMailSettings()
     const fromName = mailSettings.value?.from_name?.trim() || undefined
     const fromEmail = mailSettings.value?.from_email?.trim() || undefined
-    return api.post('/v1/crm-mailbox/draft', { to, subject, body, from_name: fromName, from_email: fromEmail })
+    return api.post('/v1/crm-mailbox/draft', { to, subject, body, from_name: fromName, from_email: fromEmail }, { timeout: 60000 })
   }
 
   const moveMessage = async (emailId: string, toFolder: 'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM') => {
