@@ -96,6 +96,7 @@ const computedTeamCode = computed(() => {
 const newUserData = reactive({
   type: 'PRIVATE' as EntityType,
   role: 'DIRECTOR' as UserRole,
+  sendInvite: true,
   email: '',
   phone: '',
   name: '',
@@ -585,6 +586,7 @@ const handleDrop = async (event: DragEvent, node: TreeNode) => {
 
 const resetForm = () => {
   newUserData.type = 'PRIVATE'
+  newUserData.sendInvite = true
   if (isTeamNode(targetParent.value)) {
     newUserData.role = 'DIRECTOR'
   } else if (targetParent.value?.role === 'ADMIN') {
@@ -817,8 +819,9 @@ const availableRoles = computed(() => {
     return [{ val: 'DIRECTOR', label: 'Dyrektor' }]
   }
   if (targetParent.value.role === 'ADMIN') return [{ val: 'ADMIN', label: 'Super Admin' }]
-  if (targetParent.value.role === 'DIRECTOR') return [{ val: 'MANAGER', label: 'Manager' }]
-  if (targetParent.value.role === 'MANAGER') return [{ val: 'SALES', label: 'Handlowiec' }]
+  // Pod DIRECTOR/MANAGER/SALES można też podpiąć leadowca (MLM) — nie tylko kolejny szczebel.
+  if (targetParent.value.role === 'DIRECTOR') return [{ val: 'MANAGER', label: 'Manager' }, { val: 'LEADOWIEC', label: 'Leadowiec' }]
+  if (targetParent.value.role === 'MANAGER') return [{ val: 'SALES', label: 'Handlowiec' }, { val: 'LEADOWIEC', label: 'Leadowiec' }]
   if (targetParent.value.role === 'SALES') return [{ val: 'LEADOWIEC', label: 'Leadowiec' }]
   // Pod leadowcem można dodać kolejnego leadowca (łańcuch MLM L1/L2).
   if (targetParent.value.role === 'LEADOWIEC') return [{ val: 'LEADOWIEC', label: 'Leadowiec' }]
@@ -891,6 +894,7 @@ const addUser = async () => {
         name,
         email: newUserData.email,
         role: newUserData.role,
+        sendPasswordReset: newUserData.sendInvite,
         phone: newUserData.phone || undefined,
         parentSupabaseId: newUserData.role === 'ADMIN' ? undefined : isTeamNode(targetParent.value) ? undefined : targetParent.value?.id,
         hierarchicalId: generatedId.value || undefined,
@@ -1523,6 +1527,14 @@ const addUser = async () => {
               </select>
             </div>
           </div>
+
+          <label class="flex items-start gap-2 mt-4 cursor-pointer select-none">
+            <input type="checkbox" v-model="newUserData.sendInvite" class="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary" />
+            <span class="text-xs text-slate-600 leading-snug">
+              Wyślij zaproszenie e-mail z linkiem do ustawienia hasła
+              <span class="block text-[10px] text-slate-400">Użytkownik będzie mógł od razu zalogować się do CRM.</span>
+            </span>
+          </label>
 
           <div class="pt-4 border-t border-slate-100 flex justify-end space-x-3 sticky bottom-0 bg-white p-4 -mx-6 -mb-6 shadow-up">
             <button type="button" class="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition" @click="showAddModal = false">Anuluj</button>
