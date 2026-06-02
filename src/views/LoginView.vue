@@ -4,6 +4,21 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import logoUrl from '@/assets/logo.svg'
 import AppIcon from '@/components/AppIcon.vue'
+
+// Logo to raster (PNG w SVG) — nie da się zmienić koloru fillem. Renderujemy
+// kształt logo jako maskę i wypełniamy złotem (#C5A059), żeby tarcza była
+// widoczna na ciemnym tle. Złoty kolor jak wszędzie w CRM.
+const goldLogoStyle = {
+  backgroundColor: '#C5A059',
+  maskImage: `url(${logoUrl})`,
+  WebkitMaskImage: `url(${logoUrl})`,
+  maskRepeat: 'no-repeat',
+  WebkitMaskRepeat: 'no-repeat',
+  maskPosition: 'center',
+  WebkitMaskPosition: 'center',
+  maskSize: 'contain',
+  WebkitMaskSize: 'contain',
+}
 import { useDataStore } from '@/stores/data'
 import { storeToRefs } from 'pinia'
 import { useSessionStore } from '@/stores/session'
@@ -85,7 +100,7 @@ onMounted(async () => {
         <!-- Brand mark -->
         <div class="hero-brand">
           <div class="hero-shield">
-            <img :src="logoUrl" alt="Stratton Prime" class="w-12 h-12 drop-shadow-lg" />
+            <div class="w-12 h-12 drop-shadow-lg" role="img" aria-label="Stratton Prime" :style="goldLogoStyle"></div>
           </div>
           <div class="hero-brand-words">
             <span class="hero-brand-main font-cinzel">STRATTON PRIME</span>
@@ -138,7 +153,7 @@ onMounted(async () => {
         <!-- Small logo for mobile / top of form -->
         <div class="form-logo-row">
           <div class="form-logo-badge">
-            <img :src="logoUrl" alt="Stratton" class="w-6 h-6" />
+            <div class="w-6 h-6" role="img" aria-label="Stratton" :style="goldLogoStyle"></div>
           </div>
           <span class="font-cinzel text-[11px] font-bold text-slate-400 tracking-[0.3em] uppercase">Stratton Prime</span>
         </div>
