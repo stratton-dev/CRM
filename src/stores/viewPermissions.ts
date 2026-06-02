@@ -45,7 +45,6 @@ export type CrmViewKey =
   | 'news-management'
   | 'leads'
   | 'payroll'
-  | 'leadowiec-clients'
   | 'leadowiec-calendar'
   | 'leadowiec-settlements'
 
@@ -97,7 +96,6 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'news-management', label: 'Zarządzanie Aktualnościami' },
   { key: 'leads', label: 'Zarządzanie Leadami' },
   { key: 'payroll', label: 'Lista Płac' },
-  { key: 'leadowiec-clients', label: 'Leadowiec: Moi Klienci' },
   { key: 'leadowiec-calendar', label: 'Leadowiec: Kalendarz' },
   { key: 'leadowiec-settlements', label: 'Leadowiec: Rozliczenia' },
 ]
@@ -118,12 +116,12 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'sales-start': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   'sales-email-compose': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   analytics: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
-  clients: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
+  clients: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'LEADOWIEC'],
   'offer-tool': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   'sales-contract-preview': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   'contract-preview': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   'invoice-preview': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
-  structure: ['ADMIN', 'DIRECTOR', 'MANAGER'],
+  structure: ['ADMIN', 'DIRECTOR', 'MANAGER', 'LEADOWIEC'],
   'hr-panel': ['ADMIN'],
   admin: ['ADMIN'],
   'autenti-panel': ['ADMIN'],
@@ -137,7 +135,7 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   calendar: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   mailbox: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'knowledge-base': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
-  recruitment: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR', 'LEADOWIEC'],
+  recruitment: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'quick-calculator': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'LEADOWIEC'],
   calculator: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   meetings: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
@@ -154,7 +152,6 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'news-management': ['ADMIN'],
   leads: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   payroll: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
-  'leadowiec-clients': ['LEADOWIEC'],
   'leadowiec-calendar': ['LEADOWIEC'],
   'leadowiec-settlements': ['LEADOWIEC'],
 }
@@ -252,7 +249,7 @@ export const useViewPermissionsStore = defineStore('view-permissions', () => {
 
     // Hardcoded bypass for LEADOWIEC — API permissions may override defaults with empty arrays
     if (normalizedRole === 'LEADOWIEC') {
-      const leadowiecBaseViews = ['leadowiec-clients', 'leadowiec-calendar', 'leadowiec-settlements', 'recruitment', 'quick-calculator', 'dashboard']
+      const leadowiecBaseViews = ['clients', 'leadowiec-calendar', 'leadowiec-settlements', 'structure', 'quick-calculator', 'dashboard']
       if (leadowiecBaseViews.includes(viewKey)) return true
     }
 

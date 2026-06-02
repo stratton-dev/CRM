@@ -571,7 +571,7 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink :to="isLeadowiec ? '/app/leadowiec/clients' : '/app/clients'" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <RouterLink to="/app/clients" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1521791136064-7986c2920216?q=80&w=2669&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Klienci" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>

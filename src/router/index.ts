@@ -39,8 +39,8 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/settings', name: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
   // /app/meetings removed — clients view + activity panel replaces it
   { path: '/app/admin/knowledge-base', name: 'admin-knowledge-base', component: () => import('@/views/admin/KnowledgeBaseView.vue'), meta: { requiresAuth: true } },
-  { path: '/app/leadowiec', redirect: '/app/leadowiec/clients' },
-  { path: '/app/leadowiec/clients', name: 'leadowiec-clients', component: () => import('@/views/LeadowiecClientsView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/leadowiec', redirect: '/app/clients' },
+  { path: '/app/leadowiec/clients', redirect: '/app/clients' },
   { path: '/app/leadowiec/calendar', name: 'leadowiec-calendar', component: () => import('@/views/LeadowiecCalendarView.vue'), meta: { requiresAuth: true } },
   { path: '/app/leadowiec/settlements', name: 'leadowiec-settlements', component: () => import('@/views/LeadowiecSettlementsView.vue'), meta: { requiresAuth: true } },
 ]
@@ -84,12 +84,11 @@ router.beforeEach(async (to) => {
 
   // LEADOWIEC: redirect to their equivalent page when accessing non-allowed routes
   const LEADOWIEC_ROUTE_MAP: Record<string, string> = {
-    'clients': '/app/leadowiec/clients',
     'calendar': '/app/leadowiec/calendar',
     'settlements': '/app/leadowiec/settlements',
   }
   if (String(role || '').toUpperCase() === 'LEADOWIEC' && !viewPermissions.isViewAllowed(String(to.name || ''), role)) {
-    const redirect = LEADOWIEC_ROUTE_MAP[String(to.name || '')] ?? '/app/leadowiec/clients'
+    const redirect = LEADOWIEC_ROUTE_MAP[String(to.name || '')] ?? '/app/clients'
     return { path: redirect }
   }
 

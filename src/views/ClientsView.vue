@@ -59,7 +59,9 @@ const { clients } = storeToRefs(clientStore)
 const { invoices } = storeToRefs(finance)
 const { users: dataUsers } = storeToRefs(structure)
 const { users: structureUsers } = storeToRefs(structure)
-const { currentUser, isReadOnly } = storeToRefs(session)
+const { currentUser, isReadOnly, isLeadowiec } = storeToRefs(session)
+// Leadowiec: kanban read-only (bez zmiany statusu / przeciągania / wysyłki maili).
+const isStatusLocked = computed(() => isReadOnly.value || isLeadowiec.value)
 
 const VIEW_MODE_STORAGE_KEY = 'clients-view-mode'
 const isAdmin = computed(() => currentUser.value?.role === 'ADMIN')
@@ -1009,7 +1011,7 @@ const toggleClientConsent = async (consentId: string, checked: boolean) => {
 }
 
 const changeStatus = (event: Event, clientId: string) => {
-  if (isReadOnly.value) return
+  if (isStatusLocked.value) return
   const newStatus = (event.target as HTMLSelectElement).value as Client['status']
   const client = (Array.isArray(clients.value) ? clients.value : []).find((c) => c.id === clientId)
   if (!client || newStatus === client.status) return
@@ -1159,7 +1161,7 @@ const exportToCsv = () => {
 }
 
 const onDragStart = (event: DragEvent, client: Client) => {
-  if (!event.dataTransfer || isReadOnly.value) return
+  if (!event.dataTransfer || isStatusLocked.value) return
   event.dataTransfer.effectAllowed = 'move'
   // Set a dummy payload so Firefox actually starts the drag.
   try { event.dataTransfer.setData('text/plain', client.id) } catch {}
@@ -1174,6 +1176,7 @@ const onDragOver = (event: DragEvent) => {
 
 const onDrop = (event: DragEvent, newStatus: Client['status']) => {
   event.preventDefault()
+  if (isStatusLocked.value) return
   const clientId = draggedClientId.value
   // Clear drag state synchronously so the browser can finalize the drag
   // before any Vue re-render kicks in.
@@ -1515,10 +1518,14 @@ if (route.query.expand) {
                         </div>
                         <div>
                             <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Email</span>
-                            <button type="button" class="text-primary hover:text-primary-dark hover:underline flex items-center gap-1 font-medium" @click="emailClientOwner(client)">
+                            <button v-if="!isLeadowiec" type="button" class="text-primary hover:text-primary-dark hover:underline flex items-center gap-1 font-medium" @click="emailClientOwner(client)">
                                 <AppIcon name="envelope" class="w-3 h-3" />
                                 <span>{{ getClientOwner(client)?.email }}</span>
                             </button>
+                            <span v-else class="font-medium text-slate-800 flex items-center gap-1">
+                                <AppIcon name="envelope" class="w-3 h-3" />
+                                {{ getClientOwner(client)?.email || 'Brak' }}
+                            </span>
                         </div>
                         <div>
                             <span class="font-bold block text-slate-400 uppercase text-[10px] mb-1">Rola</span>
@@ -1533,7 +1540,7 @@ if (route.query.expand) {
                     </div>
                 
                     <div class="flex items-center gap-2">
-                       <button type="button" class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" title="Wyślij wiadomość" @click="emailClientOwner(client)">
+                       <button v-if="!isLeadowiec" type="button" class="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition shadow-sm" title="Wyślij wiadomość" @click="emailClientOwner(client)">
                            <AppIcon name="chat-bubble-left-ellipsis" class="w-5 h-5" />
                        </button>
 
@@ -1712,7 +1719,7 @@ if (route.query.expand) {
           <div class="flex items-center gap-4 mt-6">
             <div class="flex items-center gap-2">
               <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
-            <select :value="selectedClient.status" class="py-1.5 pl-3 pr-8 text-sm font-medium rounded-lg border-slate-300 focus:ring-primary focus:border-primary bg-white shadow-sm" :disabled="isReadOnly" @change="changeStatus($event, selectedClient.id)">
+            <select :value="selectedClient.status" class="py-1.5 pl-3 pr-8 text-sm font-medium rounded-lg border-slate-300 focus:ring-primary focus:border-primary bg-white shadow-sm" :disabled="isStatusLocked" @change="changeStatus($event, selectedClient.id)">
                 <option value="NEW">Nowy</option>
                 <option value="IN_TALKS">W rozmowach</option>
                 <option value="SIGNED">Podpisany</option>
@@ -1808,7 +1815,7 @@ if (route.query.expand) {
                     type="checkbox"
                     class="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-all"
                     :checked="isConsentAccepted(consent.id)"
-                    :disabled="isReadOnly"
+                    :disabled="isStatusLocked"
                     @change="toggleClientConsent(consent.id, ($event.target as HTMLInputElement).checked)"
                   />
                   <div class="flex-1">
@@ -2043,7 +2050,7 @@ if (route.query.expand) {
                       <select
                         class="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
                         :value="calc.status"
-                        :disabled="isReadOnly"
+                        :disabled="isStatusLocked"
                         @change="updateCalculationStatus(calc.id, ($event.target as HTMLSelectElement).value)"
                       >
                         <option v-for="status in calculationStatuses" :key="status.key" :value="status.key">{{ status.label }}</option>

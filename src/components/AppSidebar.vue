@@ -116,10 +116,10 @@ const navLinks = computed((): NavLink[] => {
     )
   } else if (role === 'LEADOWIEC') {
     links.push(
-      { label: 'Moi Klienci',  path: '/app/leadowiec/clients',     icon: 'users',                viewKey: 'leadowiec-clients'     },
+      { label: 'Klienci w obsłudze',  path: '/app/clients',     icon: 'address-book',                viewKey: 'clients'     },
       { label: 'Kalendarz',    path: '/app/leadowiec/calendar',    icon: 'calendar',             viewKey: 'leadowiec-calendar'    },
       { label: 'Rozliczenia',  path: '/app/leadowiec/settlements', icon: 'hand-holding-dollar',  viewKey: 'leadowiec-settlements' },
-      { label: 'Rekrutacja',   path: '/app/recruitment',           icon: 'people-group',         viewKey: 'recruitment'           },
+      { label: 'Struktura',    path: '/app/structure',             icon: 'sitemap',              viewKey: 'structure'             },
       { label: 'Kalkulator',   path: '/app/quick-calculator',      icon: 'calculator',           viewKey: 'quick-calculator'      },
     )
   }
