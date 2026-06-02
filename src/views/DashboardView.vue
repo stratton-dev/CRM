@@ -587,7 +587,24 @@ watch(
           </div>
         </RouterLink>
 
-        <RouterLink v-if="userRole !== 'SALES' || isLeadowiec" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+        <!-- LEADOWIEC: kafelek Struktura (zamiast Rekrutacji) → własna podstruktura -->
+        <RouterLink v-if="isLeadowiec" to="/app/structure" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
+           <div class="absolute inset-0 z-0">
+             <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Struktura" />
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
+          </div>
+          <div class="relative z-10 w-full px-4 pt-6 pb-4 h-full flex flex-col justify-between">
+            <div class="text-stratton-gold">
+               <AppIcon name="sitemap" class="w-8 h-8" />
+            </div>
+            <div>
+              <h3 class="crm-tile-title text-xl text-slate-800 mb-1">Struktura</h3>
+              <p class="crm-tile-desc text-xs text-slate-500 font-medium">Twoja podstruktura i prowizje</p>
+            </div>
+          </div>
+        </RouterLink>
+
+        <RouterLink v-if="userRole !== 'SALES' && !isLeadowiec" to="/app/recruitment" class="crm-tile h-44 group relative overflow-hidden bg-slate-100 border border-slate-200">
            <div class="absolute inset-0 z-0">
              <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=2670&auto=format&fit=crop" class="w-full h-full object-cover opacity-20 transition-transform duration-700 group-hover:scale-105" alt="Rekrutacja" />
              <div class="absolute inset-0 bg-gradient-to-t from-slate-100/90 via-slate-100/40 to-slate-100/20"></div>
