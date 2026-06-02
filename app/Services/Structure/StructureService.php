@@ -108,10 +108,14 @@ class StructureService
         // pipeline. Admins are global; CLIENT_HR is attached to an external
         // organization; LEADOWIEC chains under a sales rep without team scope.
         if (in_array($role, ['LEADOWIEC', 'ADMIN', 'CLIENT_HR'], true)) {
-            // LEADOWIEC może mieć tylko uprawnionego agenta jako parenta.
-            if ($role === 'LEADOWIEC' && $parent && !(bool) $parent->is_agent_authorized) {
+            // LEADOWIEC może być pod innym LEADOWCEM (łańcuch MLM, prowizja L1/L2)
+            // albo bezpośrednio pod uprawnionym agentem (is_agent_authorized=true).
+            // AgentResolverService i tak znajdzie agenta wyżej w łańcuchu.
+            if ($role === 'LEADOWIEC' && $parent
+                && ($parent->role_cached ?? '') !== 'LEADOWIEC'
+                && !(bool) $parent->is_agent_authorized) {
                 throw ValidationException::withMessages([
-                    'parent_supabase_id' => ['Leadowiec może być tworzony tylko pod uprawnionym agentem (is_agent_authorized=true).'],
+                    'parent_supabase_id' => ['Leadowiec może być pod innym leadowcem lub pod uprawnionym agentem (is_agent_authorized=true).'],
                 ]);
             }
 
@@ -375,12 +379,13 @@ class StructureService
             ]);
         }
 
-        // LEADOWIEC może mieć tylko uprawnionego AGENTA jako parenta.
-        // Filtr: parent musi mieć is_agent_authorized=true (niezależnie od roli).
+        // LEADOWIEC może mieć przełożonego: innego LEADOWCA (łańcuch MLM) lub uprawnionego AGENTA.
         // Wyjątek: parent=null (usunięcie z chain) zawsze dozwolony.
-        if (($user->role_cached ?? '') === 'LEADOWIEC' && $newParent && !(bool) $newParent->is_agent_authorized) {
+        if (($user->role_cached ?? '') === 'LEADOWIEC' && $newParent
+            && ($newParent->role_cached ?? '') !== 'LEADOWIEC'
+            && !(bool) $newParent->is_agent_authorized) {
             throw ValidationException::withMessages([
-                'new_parent_supabase_id' => ['Leadowiec może mieć tylko uprawnionego agenta jako przełożonego (is_agent_authorized=true).'],
+                'new_parent_supabase_id' => ['Leadowiec może być pod innym leadowcem lub pod uprawnionym agentem (is_agent_authorized=true).'],
             ]);
         }
 

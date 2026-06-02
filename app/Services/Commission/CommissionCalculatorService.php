@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\DB;
  * Dwa różne tryby zależnie od roli SOURCE (kto przyniósł deal):
  *
  *  TRYB A — LEADOWIEC source:
- *    • Self (level 0): default 10% (config commission.leadowiec.self_rate)
- *      lub users.override_commission_rate jeśli ustawiony jawnie.
+ *    • Self (level 0): users.leadowiec_commission_rate (JEDNO źródło, wspólne z
+ *      LeadowiecController/Fakturownia); fallback config commission.leadowiec.self_rate (10%).
  *    • Walk UP chain — TYLKO LEADOWIEC ancestor-ów, max 2 poziomy:
  *        L1 LEADOWIEC parent: default 5% (commission.leadowiec.l1_rate)
  *        L2 LEADOWIEC grandparent: default 2% (commission.leadowiec.l2_rate)
@@ -114,9 +114,11 @@ class CommissionCalculatorService
 
         $items = [];
 
-        // Level 0 — self leadowiec
-        $selfRate = $source->override_commission_rate !== null
-            ? (float) $source->override_commission_rate
+        // Level 0 — self leadowiec.
+        // JEDNO ŹRÓDŁO PRAWDY: users.leadowiec_commission_rate (per-user, edytowalne przez admina,
+        // używane też przez LeadowiecController::settlements / Fakturownia). Config = tylko fallback.
+        $selfRate = $source->leadowiec_commission_rate !== null
+            ? (float) $source->leadowiec_commission_rate
             : (float) ($defaults['self_rate'] ?? 0.10);
         $items[] = $this->buildItem($source, 0, $baseAmount, $selfRate);
 
