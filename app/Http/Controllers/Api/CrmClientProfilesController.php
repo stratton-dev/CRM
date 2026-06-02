@@ -16,6 +16,19 @@ class CrmClientProfilesController extends Controller
     {
         $q = CrmClientProfile::query();
 
+        $authUser = $request->user();
+
+        // LEADOWIEC: widzi profile tylko swoich (zgłoszonych) klientów — read-only.
+        if ($authUser && $authUser->role_cached === 'LEADOWIEC') {
+            $q->whereHas('client', function ($c) use ($authUser) {
+                $c->where('added_by_user_id', $authUser->id);
+            });
+            if ($clientId = $request->integer('client_id')) {
+                $q->where('client_id', $clientId);
+            }
+            return $q->paginate($request->integer('per_page', 100));
+        }
+
         $role = $context->primaryRole();
         if ($role !== 'ADMIN') {
             $users = $structure->listUsers($context);
@@ -50,6 +63,13 @@ class CrmClientProfilesController extends Controller
 
     public function update(Request $request, CrmClientProfile $crmClientProfile, TokenContext $context)
     {
+        // LEADOWIEC nie może zmieniać profilu/statusu — to robi agent.
+        abort_if(
+            $request->user() && $request->user()->role_cached === 'LEADOWIEC',
+            403,
+            'Leadowiec nie może zmieniać statusu klienta.'
+        );
+
         $oldStatus = $crmClientProfile->status;
         $data = $this->validatedData($request, true);
         $crmClientProfile->update($data);

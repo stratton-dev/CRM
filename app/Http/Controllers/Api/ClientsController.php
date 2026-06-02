@@ -167,55 +167,58 @@ class ClientsController extends Controller
             ->except(['contact_name', 'contact_phone', 'contact_email', 'source'])
             ->all();
 
-        // LEADOWIEC: auto-set added_by_user_id, force status=lead
+        // LEADOWIEC: wyznacz agenta (najbliższy is_agent_authorized w górę struktury).
+        // Klient staje się własnością AGENTA — ląduje w jego kanbanie "Klienci w obsłudze".
+        // Leadowiec pozostaje źródłem (added_by_user_id) z podglądem read-only.
+        $agent = null;
         if ($authUser && $authUser->role_cached === 'LEADOWIEC') {
             $companyData['added_by_user_id'] = $authUser->id;
+            $agent = app(\App\Services\Structure\AgentResolverService::class)->resolveForLeadowiec($authUser);
         }
 
         $client = Client::create($companyData);
 
-        // Auto-assign owner and create CRM profile
-        $userId = $authUser?->id ?? $this->resolveUserId($context->actorSupabaseId());
-        if ($userId) {
+        // Właściciel profilu CRM: agent dla leadowca, w przeciwnym razie aktor.
+        $ownerId = $agent?->id
+            ?? $authUser?->id
+            ?? $this->resolveUserId($context->actorSupabaseId());
+
+        if ($ownerId) {
             $client->crmProfile()->create(array_merge([
-                'owner_user_id' => $userId,
+                'owner_user_id' => $ownerId,
                 'status' => 'NEW',
             ], $profileExtras));
 
             CrmClientActivity::create([
                 'client_id' => $client->id,
-                'user_id' => $userId,
+                'user_id' => $ownerId,
                 'type' => 'NOTE',
-                'description' => 'Utworzono rekord klienta',
+                'description' => $agent
+                    ? "Lead od leadowca {$authUser->name} — przypisano do agenta"
+                    : 'Utworzono rekord klienta',
                 'occurred_at' => now(),
             ]);
         }
 
-        // LEADOWIEC: notify opiekun
-        if ($authUser && $authUser->role_cached === 'LEADOWIEC' && $authUser->leadowiec_opiekun_id) {
-            $this->notifyOpiekun($authUser, $client);
+        // LEADOWIEC: powiadom agenta o nowym leadzie.
+        if ($agent) {
+            $this->notifyAgent($authUser, $agent, $client);
         }
 
         return response()->json($client->load(['crmProfile', 'crmProfile.owner:id,supabase_id,name']), 201);
     }
 
-    private function notifyOpiekun(User $leadowiec, Client $company): void
+    private function notifyAgent(User $leadowiec, User $agent, Client $company): void
     {
-        $opiekun = $leadowiec->opiekun;
-        if (!$opiekun) {
-            \Illuminate\Support\Facades\Log::warning('LEADOWIEC notifyOpiekun: opiekun not found', ['leadowiec_id' => $leadowiec->id]);
-            return;
-        }
-
         $notification = Notification::create([
-            'user_id'   => $opiekun->id,
+            'user_id'   => $agent->id,
             'sender_id' => $leadowiec->id,
             'type'      => 'new_lead_from_leadowiec',
             'title'     => "Nowy lead od {$leadowiec->name}",
             'body'      => "Dodano klienta: {$company->name}",
         ]);
 
-        event(new NotificationCreated($notification));
+        event(new NotificationCreated($notification, $agent));
     }
 
     public function update(Request $request, Client $client, TokenContext $context)
