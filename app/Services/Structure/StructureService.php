@@ -110,14 +110,14 @@ class StructureService
         // pipeline. Admins are global; CLIENT_HR is attached to an external
         // organization; LEADOWIEC chains under a sales rep without team scope.
         if (in_array($role, ['LEADOWIEC', 'ADMIN', 'CLIENT_HR'], true)) {
-            // LEADOWIEC może być pod innym LEADOWCEM (łańcuch MLM, prowizja L1/L2)
-            // albo bezpośrednio pod uprawnionym agentem (is_agent_authorized=true).
-            // AgentResolverService i tak znajdzie agenta wyżej w łańcuchu.
+            // LEADOWIEC może być pod dowolnym węzłem pionu sprzedaży:
+            // LEADOWIEC / SALES / MANAGER / DIRECTOR. Nie wymagamy is_agent_authorized
+            // na bezpośrednim rodzicu — AgentResolverService i tak wyznaczy agenta
+            // (najbliższy is_agent_authorized w górę) lub fallback.
             if ($role === 'LEADOWIEC' && $parent
-                && ($parent->role_cached ?? '') !== 'LEADOWIEC'
-                && !(bool) $parent->is_agent_authorized) {
+                && !in_array($parent->role_cached ?? '', ['LEADOWIEC', 'SALES', 'MANAGER', 'DIRECTOR'], true)) {
                 throw ValidationException::withMessages([
-                    'parent_supabase_id' => ['Leadowiec może być pod innym leadowcem lub pod uprawnionym agentem (is_agent_authorized=true).'],
+                    'parent_supabase_id' => ['Leadowiec może być pod leadowcem, handlowcem, menedżerem lub dyrektorem.'],
                 ]);
             }
 
@@ -381,13 +381,12 @@ class StructureService
             ]);
         }
 
-        // LEADOWIEC może mieć przełożonego: innego LEADOWCA (łańcuch MLM) lub uprawnionego AGENTA.
+        // LEADOWIEC może mieć przełożonego z pionu: LEADOWIEC/SALES/MANAGER/DIRECTOR.
         // Wyjątek: parent=null (usunięcie z chain) zawsze dozwolony.
         if (($user->role_cached ?? '') === 'LEADOWIEC' && $newParent
-            && ($newParent->role_cached ?? '') !== 'LEADOWIEC'
-            && !(bool) $newParent->is_agent_authorized) {
+            && !in_array($newParent->role_cached ?? '', ['LEADOWIEC', 'SALES', 'MANAGER', 'DIRECTOR'], true)) {
             throw ValidationException::withMessages([
-                'new_parent_supabase_id' => ['Leadowiec może być pod innym leadowcem lub pod uprawnionym agentem (is_agent_authorized=true).'],
+                'new_parent_supabase_id' => ['Leadowiec może być pod leadowcem, handlowcem, menedżerem lub dyrektorem.'],
             ]);
         }
 
