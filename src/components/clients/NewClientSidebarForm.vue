@@ -129,15 +129,24 @@ const submit = async () => {
     <form class="p-2.5 space-y-2" @submit.prevent="submit">
       <fieldset class="border border-slate-200 rounded-md p-2 space-y-1.5">
         <legend class="px-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider">GUS API (NIP / REGON / KRS)</legend>
-        <div class="grid grid-cols-3 gap-1.5">
-          <input
-            v-model="form.nip"
-            type="text"
-            inputmode="numeric"
-            placeholder="NIP"
-            class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-            @keydown.enter.prevent="fetchGus"
-          />
+        <input
+          v-model="form.nip"
+          type="text"
+          inputmode="numeric"
+          placeholder="NIP"
+          class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+          @keydown.enter.prevent="fetchGus"
+        />
+        <button
+          type="button"
+          class="w-full px-2 py-1.5 rounded bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
+          :disabled="isFetchingGus"
+          @click="fetchGus"
+        >
+          <span v-if="isFetchingGus">Pobieranie…</span>
+          <span v-else>Pobierz dane z GUS</span>
+        </button>
+        <div class="grid grid-cols-2 gap-1.5">
           <input
             v-model="form.regon"
             type="text"
@@ -153,18 +162,9 @@ const submit = async () => {
             class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
           />
         </div>
-        <button
-          type="button"
-          class="w-full px-2 py-1.5 rounded bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
-          :disabled="isFetchingGus"
-          @click="fetchGus"
-        >
-          <span v-if="isFetchingGus">Pobieranie…</span>
-          <span v-else>Pobierz dane z GUS</span>
-        </button>
       </fieldset>
 
-      <div>
+      <div class="pt-1.5">
         <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Nazwa firmy <span class="text-rose-500">*</span></label>
         <input
           v-model="form.name"
