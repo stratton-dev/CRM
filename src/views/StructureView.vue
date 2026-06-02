@@ -589,8 +589,15 @@ const resetForm = () => {
     newUserData.role = 'DIRECTOR'
   } else if (targetParent.value?.role === 'ADMIN') {
     newUserData.role = 'ADMIN'
+  } else if (targetParent.value?.role === 'DIRECTOR') {
+    newUserData.role = 'MANAGER'
+  } else if (targetParent.value?.role === 'MANAGER') {
+    newUserData.role = 'SALES'
+  } else if (targetParent.value?.role === 'SALES' || targetParent.value?.role === 'LEADOWIEC') {
+    // Pod handlowcem i pod leadowcem dodajemy (sub)leadowca — łańcuch MLM.
+    newUserData.role = 'LEADOWIEC'
   } else {
-    newUserData.role = targetParent.value?.role === 'DIRECTOR' ? 'MANAGER' : targetParent.value?.role === 'MANAGER' ? 'SALES' : 'DIRECTOR'
+    newUserData.role = 'DIRECTOR'
   }
   newUserData.email = ''
   newUserData.phone = ''
@@ -813,6 +820,8 @@ const availableRoles = computed(() => {
   if (targetParent.value.role === 'DIRECTOR') return [{ val: 'MANAGER', label: 'Manager' }]
   if (targetParent.value.role === 'MANAGER') return [{ val: 'SALES', label: 'Handlowiec' }]
   if (targetParent.value.role === 'SALES') return [{ val: 'LEADOWIEC', label: 'Leadowiec' }]
+  // Pod leadowcem można dodać kolejnego leadowca (łańcuch MLM L1/L2).
+  if (targetParent.value.role === 'LEADOWIEC') return [{ val: 'LEADOWIEC', label: 'Leadowiec' }]
   return []
 })
 
