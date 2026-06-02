@@ -142,6 +142,13 @@ class StructureService
         }
 
         $supabaseUuid = $data['supabase_id'] ?? null;
+
+        // Jedno hasło: trafia do Supabase Auth ORAZ zapisywane jawnie (plain_password)
+        // do podglądu/edycji w panelu admina. Format czytelny do podyktowania.
+        $plainPassword = !empty($data['password'])
+            ? $data['password']
+            : $this->generateReadablePassword();
+
         $inviteSent = null;
         $inviteError = null;
         $inviteLink = null;
@@ -155,7 +162,7 @@ class StructureService
             try {
                 $supabaseUser = $this->supabaseAdmin->createUser([
                     'email' => $data['email'],
-                    'password' => $data['password'] ?? Str::random(24),
+                    'password' => $plainPassword,
                     'name' => $data['name'] ?? null,
                     'role' => $role,
                     'phone' => $data['phone'] ?? null,
@@ -212,7 +219,8 @@ class StructureService
             'is_removed_from_structure' => false,
             'active' => true,
             'enabled' => true,
-            'password' => $data['password'] ?? Str::random(32),
+            'password' => $plainPassword,
+            'plain_password' => $plainPassword,
         ]);
 
         if (config('autenti.enabled') && !empty($data['documents_json'])) {
@@ -631,6 +639,23 @@ class StructureService
         }
 
         return null;
+    }
+
+    /**
+     * Generuje czytelne hasło łatwe do podyktowania: Słowo + '-' + 4 cyfry
+     * (np. "Sokol-4827"). ~10-12 znaków, spełnia min. 8.
+     */
+    private function generateReadablePassword(): string
+    {
+        $words = [
+            'Sokol', 'Orzel', 'Lampart', 'Tygrys', 'Delfin', 'Kondor', 'Pantera',
+            'Rekin', 'Jaguar', 'Bizon', 'Gepard', 'Wilk', 'Ryjowka', 'Feniks',
+            'Diament', 'Granit', 'Bursztyn', 'Szafir', 'Kobalt', 'Tytan',
+        ];
+        $word = $words[random_int(0, count($words) - 1)];
+        $digits = str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+
+        return $word . '-' . $digits;
     }
 
     private function initialsFromName(?string $name): string

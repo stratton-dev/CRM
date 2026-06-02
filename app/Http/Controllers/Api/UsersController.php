@@ -101,10 +101,14 @@ class UsersController extends Controller
                 'leadowiec_commission_rate'   => 'nullable|numeric|min:0|max:1',
             ]);
 
-            // Password update goes only to Supabase, NOT to the local DB
-            // (the DB column is unused for auth — we authenticate via Supabase).
+            // Hasło: ustawiamy w Supabase Auth (źródło logowania) ORAZ zapisujemy
+            // jawnie w plain_password (do podglądu/edycji w panelu). Kolumna `password`
+            // (hashed) nie jest używana do logowania.
             $newPassword = $data['password'] ?? null;
             unset($data['password']);
+            if (!empty($newPassword)) {
+                $data['plain_password'] = $newPassword;
+            }
 
             if (!isset($data['role_id']) && isset($data['role'])) {
                 $role = $this->resolveRole($data['role']);
@@ -311,6 +315,7 @@ class UsersController extends Controller
             'leadowiecCommissionRate' => $user->leadowiec_commission_rate,
             'firstName' => $user->first_name,
             'lastName' => $user->last_name,
+            'plainPassword' => $user->plain_password,
         ];
     }
 

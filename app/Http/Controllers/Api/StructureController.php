@@ -172,6 +172,9 @@ class StructureController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'enabled' => $user->enabled,
+            'leadowiecOpiekunId' => $user->leadowiec_opiekun_id,
+            'leadowiecCommissionRate' => $user->leadowiec_commission_rate,
+            'plainPassword' => $user->plain_password,
         ];
     }
 }

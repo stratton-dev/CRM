@@ -48,6 +48,7 @@ class User extends Authenticatable
         'email',
         'phone',
         'password',
+        'plain_password',
         'active',
         'enabled',
         'pending_setup',
