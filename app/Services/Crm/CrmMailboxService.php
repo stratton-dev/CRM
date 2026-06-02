@@ -72,6 +72,41 @@ class CrmMailboxService
         });
     }
 
+    /**
+     * Lista wiadomości z krótkim cache (domyślnie 30s) — przy nawigacji po
+     * folderach/stronach nie odpalamy za każdym razem nowego procesu Node +
+     * połączenia IMAP (home.pl limituje liczbę równoległych połączeń, stąd
+     * zawieszenia). Invalidacja wersjonowana: każda mutacja (send/mark/move)
+     * podbija wersję folderu → następny list pobiera świeże dane.
+     */
+    public function listMessagesCached(CrmMailConfig $config, int $userId, string $folderKey, int $limit, int $offset, bool $refresh = false): array
+    {
+        $ttl = (int) env('IMAP_MESSAGES_CACHE_TTL', 30);
+        if ($ttl <= 0) {
+            return $this->listMessages($config, $folderKey, $limit, $offset);
+        }
+        if ($refresh) {
+            $this->invalidateMessagesCache($userId, $folderKey);
+        }
+        $version = (int) Cache::get($this->messagesVersionKey($userId, $folderKey), 1);
+        $key = "imap_msgs_{$userId}_{$folderKey}_{$limit}_{$offset}_v{$version}";
+        return Cache::remember($key, $ttl, function () use ($config, $folderKey, $limit, $offset) {
+            return $this->listMessages($config, $folderKey, $limit, $offset);
+        });
+    }
+
+    public function invalidateMessagesCache(int $userId, string $folderKey): void
+    {
+        $vKey = $this->messagesVersionKey($userId, $folderKey);
+        $cur = (int) Cache::get($vKey, 1);
+        Cache::put($vKey, $cur + 1, 86400);
+    }
+
+    private function messagesVersionKey(int $userId, string $folderKey): string
+    {
+        return "imap_msgver_{$userId}_{$folderKey}";
+    }
+
     public function testConnection(CrmMailConfig $config): void
     {
         $payload = [

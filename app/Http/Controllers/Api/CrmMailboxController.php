@@ -67,7 +67,14 @@ class CrmMailboxController extends Controller
         }
 
         try {
-            $payload = $this->mailbox->listMessages($config, $folder, $limit, $offset);
+            $payload = $this->mailbox->listMessagesCached(
+                $config,
+                $user->id,
+                $folder,
+                $limit,
+                $offset,
+                $request->boolean('refresh')
+            );
         } catch (RuntimeException $exception) {
             \Log::channel('mail')->warning('Mailbox list failed', [
                 'user_id' => $user->id,
@@ -229,6 +236,9 @@ class CrmMailboxController extends Controller
             'subject' => $data['subject'] ?? null,
         ]);
 
+        $this->mailbox->invalidateMessagesCache($user->id, 'SENT');
+        $this->mailbox->invalidateMessagesCache($user->id, 'INBOX');
+
         return response()->json(['data' => ['ok' => true]]);
     }
 
@@ -254,6 +264,8 @@ class CrmMailboxController extends Controller
             \Log::channel('mail')->warning('Mailbox saveDraft failed', ['user_id' => $user->id, 'message' => $e->getMessage()]);
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        $this->mailbox->invalidateMessagesCache($user->id, 'DRAFTS');
 
         return response()->json(['data' => ['ok' => true]]);
     }
@@ -285,6 +297,9 @@ class CrmMailboxController extends Controller
             \Log::channel('mail')->warning('Mailbox moveMessage failed', ['user_id' => $user->id, 'message_id' => $messageId, 'message' => $e->getMessage()]);
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        $this->mailbox->invalidateMessagesCache($user->id, $folderKey);
+        $this->mailbox->invalidateMessagesCache($user->id, $toFolder);
 
         return response()->json(['data' => ['ok' => true]]);
     }
@@ -323,6 +338,8 @@ class CrmMailboxController extends Controller
             ]);
             return response()->json(['message' => $exception->getMessage()], 422);
         }
+
+        $this->mailbox->invalidateMessagesCache($user->id, $folderKey);
 
         return response()->json(['data' => ['ok' => true]]);
     }
