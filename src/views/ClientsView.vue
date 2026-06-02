@@ -339,8 +339,12 @@ const statusLabel = (status: Client['status']) => {
 onMounted(() => {
   if (auth.enabled) {
     clientStore.refreshApiData()
-    fetchConsentCatalog()
-    fetchCalculationStatuses()
+    // LEADOWIEC nie ma uprawnień do katalogu zgód (/v1/consents) ani configu
+    // kalkulatora (/v1/calculator-configs) — pomijamy, by nie generować 403.
+    if (!isLeadowiec.value) {
+      fetchConsentCatalog()
+      fetchCalculationStatuses()
+    }
   }
 })
 
