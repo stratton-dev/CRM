@@ -270,23 +270,47 @@ const sendMessage = async ({ config, params }) => {
       : undefined,
   }
 
-  const transport = nodemailer.createTransport({
-    host: config.smtp.host,
-    port: config.smtp.port,
-    secure: config.smtp.secure,
-    auth: config.smtp.auth,
-    // Bez tych limitów sendMail wisi w nieskończoność gdy port SMTP jest
-    // zablokowany/nieosiągalny (proces Node ginie dopiero na globalnym 60s).
-    connectionTimeout: 20000,
-    greetingTimeout: 15000,
-    socketTimeout: 25000,
-  })
+  // Próby połączenia SMTP. Część hostingów (np. Railway) blokuje port 465/SSL,
+  // a przepuszcza 587/STARTTLS — dlatego przy 465 dokładamy fallback na 587.
+  // Krótkie timeouty, żeby obie próby zmieściły się w globalnym limicie procesu.
+  const attempts = [
+    { port: Number(config.smtp.port), secure: !!config.smtp.secure },
+  ]
+  if (Number(config.smtp.port) === 465) {
+    attempts.push({ port: 587, secure: false })
+  } else if (Number(config.smtp.port) === 587) {
+    attempts.push({ port: 465, secure: true })
+  }
 
-  process.stderr.write(`[send] SMTP connect ${config.smtp.host}:${config.smtp.port} secure=${config.smtp.secure}\n`)
-  const smtpStart = Date.now()
-  const info = await transport.sendMail(mailOptions)
-  process.stderr.write(`[send] SMTP ok in ${Date.now() - smtpStart}ms id=${info.messageId}\n`)
-  transport.close()
+  let info = null
+  let lastErr = null
+  for (const a of attempts) {
+    const transport = nodemailer.createTransport({
+      host: config.smtp.host,
+      port: a.port,
+      secure: a.secure,
+      auth: config.smtp.auth,
+      requireTLS: !a.secure,
+      connectionTimeout: 12000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    })
+    try {
+      process.stderr.write(`[send] SMTP try ${config.smtp.host}:${a.port} secure=${a.secure}\n`)
+      const t0 = Date.now()
+      info = await transport.sendMail(mailOptions)
+      process.stderr.write(`[send] SMTP ok via ${a.port} in ${Date.now() - t0}ms id=${info.messageId}\n`)
+      transport.close()
+      break
+    } catch (err) {
+      lastErr = err
+      process.stderr.write(`[send] SMTP fail ${config.smtp.host}:${a.port}: ${err?.message || err}\n`)
+      try { transport.close() } catch {}
+    }
+  }
+  if (!info) {
+    throw lastErr || new Error('SMTP send failed')
+  }
 
   // Zapis do "Wysłane" jest best-effort — gdy IMAP append zawiśnie/odmówi,
   // mail i tak został wysłany przez SMTP, więc NIE wywalamy całej wysyłki.
