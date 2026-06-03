@@ -270,54 +270,52 @@ const sendMessage = async ({ config, params }) => {
       : undefined,
   }
 
-  // Próby połączenia SMTP. Część hostingów (np. Railway) blokuje port 465/SSL,
-  // a przepuszcza 587/STARTTLS — dlatego przy 465 dokładamy fallback na 587.
-  // Krótkie timeouty, żeby obie próby zmieściły się w globalnym limicie procesu.
-  const attempts = [
-    { port: Number(config.smtp.port), secure: !!config.smtp.secure },
-  ]
-  if (Number(config.smtp.port) === 465) {
-    attempts.push({ port: 587, secure: false })
-  } else if (Number(config.smtp.port) === 587) {
-    attempts.push({ port: 465, secure: true })
-  }
+  // Wysyłka przez przekaźnik HTTP na home.pl (Railway blokuje wychodzący SMTP 465/587).
+  // Budujemy gotowy MIME i przekazujemy go relay-owi, który łączy się z SMTP home.pl
+  // LOKALNIE (bez blokady portów) i wysyła wiadomość.
+  const composer = new MailComposer(mailOptions)
+  const raw = await composer.compile().build()
 
-  let info = null
-  let lastErr = null
-  for (const a of attempts) {
-    const transport = nodemailer.createTransport({
-      host: config.smtp.host,
-      port: a.port,
-      secure: a.secure,
-      auth: config.smtp.auth,
-      requireTLS: !a.secure,
-      connectionTimeout: 12000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
+  const relayUrl = process.env.MAIL_RELAY_URL
+  if (!relayUrl) {
+    throw new Error('MAIL_RELAY_URL nie ustawiony — skonfiguruj przekaźnik poczty (mail-relay.php na home.pl).')
+  }
+  const rcpt = String(params.to || '').split(/[,;]/).map((s) => s.trim()).filter(Boolean)
+
+  process.stderr.write(`[send] relay -> ${relayUrl} from=${fromEmail} rcpt=${rcpt.join(',')}\n`)
+  const relayStart = Date.now()
+  let relayJson = {}
+  try {
+    const relayResp = await fetch(relayUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        secret: process.env.MAIL_RELAY_SECRET || '',
+        host: config.smtp.host,
+        port: config.smtp.port,
+        secure: config.smtp.secure,
+        user: config.smtp.auth?.user,
+        pass: config.smtp.auth?.pass,
+        mail_from: fromEmail,
+        rcpt,
+        raw_base64: raw.toString('base64'),
+      }),
+      signal: AbortSignal.timeout(40000),
     })
-    try {
-      process.stderr.write(`[send] SMTP try ${config.smtp.host}:${a.port} secure=${a.secure}\n`)
-      const t0 = Date.now()
-      info = await transport.sendMail(mailOptions)
-      process.stderr.write(`[send] SMTP ok via ${a.port} in ${Date.now() - t0}ms id=${info.messageId}\n`)
-      transport.close()
-      break
-    } catch (err) {
-      lastErr = err
-      process.stderr.write(`[send] SMTP fail ${config.smtp.host}:${a.port}: ${err?.message || err}\n`)
-      try { transport.close() } catch {}
+    try { relayJson = await relayResp.json() } catch { relayJson = {} }
+    if (!relayResp.ok || !relayJson.ok) {
+      throw new Error(relayJson.error || ('HTTP ' + relayResp.status))
     }
+  } catch (err) {
+    process.stderr.write(`[send] relay fail: ${err?.message || err}\n`)
+    throw new Error('Relay send failed: ' + (err?.message || err))
   }
-  if (!info) {
-    throw lastErr || new Error('SMTP send failed')
-  }
+  process.stderr.write(`[send] relay ok in ${Date.now() - relayStart}ms\n`)
 
-  // Zapis do "Wysłane" jest best-effort — gdy IMAP append zawiśnie/odmówi,
-  // mail i tak został wysłany przez SMTP, więc NIE wywalamy całej wysyłki.
+  // Zapis do "Wysłane" (best-effort) — IMAP 993 działa z Railway. Błąd tu NIE
+  // oznacza nieudanej wysyłki (mail już poszedł przez relay).
   if (config.imap && config.folderName) {
     try {
-      const composer = new MailComposer(mailOptions)
-      const raw = await composer.compile().build()
       const client = await connectImap(config.imap)
       try {
         await withTimeout(client.append(config.folderName, raw, ['\\Seen'], new Date()), 15000, 'append')
@@ -330,7 +328,7 @@ const sendMessage = async ({ config, params }) => {
     }
   }
 
-  return { messageId: info.messageId, response: info.response }
+  return { messageId: relayJson.messageId || null, response: 'sent-via-relay' }
 }
 
 const getMessageBody = async ({ config, params }) => {
