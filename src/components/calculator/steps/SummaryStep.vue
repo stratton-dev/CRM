@@ -59,10 +59,16 @@ const tZusPracWnikEP  = computed(() => tableScope.value.reduce((a, w) => a + w.p
 const tNettoStd       = computed(() => tableScope.value.reduce((a, w) => a + w.standard.netto, 0));
 const tNettoEP        = computed(() => tableScope.value.reduce((a, w) => a + w.podzial.zasadnicza.netto + w.podzial.swiadczenie.netto, 0));
 const tProwizja       = computed(() => tableScope.value.reduce((a, w) => a + w.podzial.swiadczenie.netto * (store.prowizjaProc / 100), 0));
-// Legalizacja Gotówki (isPlus) nie ma już podwyżek (4%) ani bonusu HR (2%).
-// Eliton Prime (isStandard) ma tylko bonus HR 2%.
+// Prowizja dzieli się na: część bazową (opłata serwisowa Stratton) + bonus dla
+// księgowości (reszta). Bonus = aktywna stawka − stawka bazowa:
+//   Eliton Prime: baza 20% → bonus 2% gdy zaznaczony (22%), 0% gdy odznaczony (20%).
+//   Legalizacja Gotówki: baza 15%, brak bonusu.
+// Dzięki temu (tOplataSerwisowa + tAdminBonus === tProwizja) i bonus znika gdy odznaczony.
+const baseRate        = computed(() => isPlus.value ? store.comparisonState.customPrimeRate : store.comparisonState.customStandardRateNoBonus);
+const bonusRate       = computed(() => Math.max(0, store.prowizjaProc - baseRate.value));
+const tOplataSerwisowa= computed(() => tableScope.value.reduce((a, w) => a + w.podzial.swiadczenie.netto * (baseRate.value / 100), 0));
 const tPodwyzka       = computed(() => 0);
-const tAdminBonus     = computed(() => isPlus.value ? 0 : tableScope.value.reduce((a, w) => a + w.podzial.swiadczenie.netto * 0.02, 0));
+const tAdminBonus     = computed(() => tableScope.value.reduce((a, w) => a + w.podzial.swiadczenie.netto * (bonusRate.value / 100), 0));
 const tStandardTotal  = computed(() => tableScope.value.reduce((a, w) => a + w.standard.kosztPracodawcy, 0));
 const tPodzialTotal   = computed(() => tableScope.value.reduce((a, w) => a + w.podzial.kosztPracodawcy, 0) + tProwizja.value);
 const tOszczednosc    = computed(() => tStandardTotal.value - tPodzialTotal.value);
@@ -711,20 +717,20 @@ onMounted(async () => {
                 <td class="px-5 py-3 text-[12px] font-medium text-slate-700">
                   <div class="flex items-center gap-2">
                     <div class="w-1 h-4 rounded-full bg-stratton-gold shrink-0"></div>
-                    Opłata serwisowa EBS <span class="text-slate-400 font-normal">(prowizja {{ store.prowizjaProc }}%)</span>
+                    Opłata serwisowa EBS <span class="text-slate-400 font-normal">(prowizja {{ baseRate }}%)</span>
                   </div>
                 </td>
                 <td class="px-5 py-3 text-right text-slate-300 tabular-nums text-[12px]">—</td>
-                <td class="px-5 py-3 text-right font-bold text-stratton-gold tabular-nums text-[12px] bg-amber-50/40">{{ formatPLN(tProwizja) }}</td>
-                <td class="px-5 py-3 text-right font-black text-amber-500 tabular-nums text-[12px] bg-emerald-50/40">+{{ formatPLN(tProwizja) }}</td>
+                <td class="px-5 py-3 text-right font-bold text-stratton-gold tabular-nums text-[12px] bg-amber-50/40">{{ formatPLN(tOplataSerwisowa) }}</td>
+                <td class="px-5 py-3 text-right font-black text-amber-500 tabular-nums text-[12px] bg-emerald-50/40">+{{ formatPLN(tOplataSerwisowa) }}</td>
               </tr>
               <!-- 4% podwyżka usunięte z modelu Legalizacja Gotówki (post 2026-05-31) -->
 
-              <tr v-if="!isPlus" class="border-b border-slate-50 hover:bg-blue-50/30 transition-colors group">
+              <tr v-if="bonusRate > 0" class="border-b border-slate-50 hover:bg-blue-50/30 transition-colors group">
                 <td class="px-5 py-3 text-[12px] font-medium text-slate-700">
                   <div class="flex items-center gap-2">
                     <div class="w-1 h-4 rounded-full bg-violet-400 shrink-0"></div>
-                    Bonus dla działu administracji <span class="text-slate-400 font-normal">(2%)</span>
+                    Bonus dla księgowości <span class="text-slate-400 font-normal">({{ bonusRate }}%)</span>
                   </div>
                 </td>
                 <td class="px-5 py-3 text-right text-slate-300 tabular-nums text-[12px]">—</td>
