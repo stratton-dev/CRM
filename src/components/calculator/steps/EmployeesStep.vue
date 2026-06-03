@@ -84,6 +84,18 @@ const applyMinWage = (type: 'UOP' | 'UZ') => {
   else showUzMinDropdown.value = false;
 };
 
+// Przełączenie typu umowy (UoP/UZ) przez przyciski zamiast selecta.
+const setUmowa = (emp: any, type: 'UOP' | 'UZ') => {
+  if (emp.typUmowy === type) return;
+  emp.typUmowy = type;
+  store.updateEmployee(emp.id, {
+    typUmowy: type,
+    nettoZasadnicza: type === 'UZ'
+      ? store.config.minimalnaKwotaUZ.zasadniczaNetto
+      : store.config.placaMinimalna.netto,
+  });
+};
+
 const uopCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UOP').length);
 const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ').length);
 </script>
@@ -124,7 +136,7 @@ const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ')
             v-model="search"
             type="text"
             placeholder="Szukaj..."
-            class="h-7 pl-7 pr-3 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold w-40 transition-colors"
+            class="h-7 pl-9 pr-3 text-xs border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-stratton-gold focus:border-stratton-gold w-44 transition-colors"
           />
         </div>
         <!-- Command bar actions (tekst + przyciski po prawej) -->
@@ -258,14 +270,10 @@ const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ')
         <div class="px-3 py-2.5 grid grid-cols-3 gap-2">
           <div>
             <label class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Umowa</label>
-            <select
-              v-model="emp.typUmowy"
-              class="h-7 border border-slate-200 focus:border-indigo-400 rounded-md px-1.5 text-xs w-full outline-none bg-white"
-              @change="store.updateEmployee(emp.id, { typUmowy: emp.typUmowy, nettoZasadnicza: emp.typUmowy === 'UZ' ? store.config.minimalnaKwotaUZ.zasadniczaNetto : store.config.placaMinimalna.netto })"
-            >
-              <option value="UOP">UOP</option>
-              <option value="UZ">UZ</option>
-            </select>
+            <div class="inline-flex h-7 w-full rounded-md border border-slate-200 overflow-hidden">
+              <button type="button" class="flex-1 text-[11px] font-bold transition-colors" :class="emp.typUmowy === 'UOP' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" @click="setUmowa(emp, 'UOP')">UoP</button>
+              <button type="button" class="flex-1 text-[11px] font-bold border-l border-slate-200 transition-colors" :class="emp.typUmowy === 'UZ' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" @click="setUmowa(emp, 'UZ')">UZ</button>
+            </div>
           </div>
           <div>
             <label class="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Netto docelowe</label>
@@ -391,14 +399,10 @@ const uzCount = computed(() => store.pracownicy.filter(e => e.typUmowy === 'UZ')
                   </div>
                 </td>
                 <td class="px-4 py-2.5">
-                  <select
-                    v-model="emp.typUmowy"
-                    class="h-7 border border-slate-200 focus:border-indigo-400 rounded-md px-1.5 text-xs outline-none bg-white cursor-pointer transition-colors"
-                    @change="store.updateEmployee(emp.id, { typUmowy: emp.typUmowy, nettoZasadnicza: emp.typUmowy === 'UZ' ? store.config.minimalnaKwotaUZ.zasadniczaNetto : store.config.placaMinimalna.netto })"
-                  >
-                    <option value="UOP">UOP</option>
-                    <option value="UZ">UZ</option>
-                  </select>
+                  <div class="inline-flex h-7 rounded-md border border-slate-200 overflow-hidden">
+                    <button type="button" class="px-3 text-[11px] font-bold transition-colors" :class="emp.typUmowy === 'UOP' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" @click="setUmowa(emp, 'UOP')">UoP</button>
+                    <button type="button" class="px-3 text-[11px] font-bold border-l border-slate-200 transition-colors" :class="emp.typUmowy === 'UZ' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'" @click="setUmowa(emp, 'UZ')">UZ</button>
+                  </div>
                 </td>
                 <td class="px-4 py-2.5 text-right">
                   <input v-model.number="emp.nettoDocelowe" type="number" class="h-7 border border-slate-200 focus:border-indigo-400 rounded-md px-2 w-28 text-right font-mono text-xs outline-none transition-colors" @input="store.updateEmployee(emp.id, { nettoDocelowe: emp.nettoDocelowe })" />
