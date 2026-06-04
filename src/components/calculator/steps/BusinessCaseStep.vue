@@ -104,6 +104,7 @@ const stats = computed(() => {
     oszczednoscNetto: oszczednoscBrutto - totalCommissionAmount,
     baseSavings: oszczednoscBrutto,
     benefitBase: benefitBruttoTotal,
+    benefitNetto: benefitNettoTotal,
     oszczednoscRoczna: (oszczednoscBrutto - totalCommissionAmount) * 12,
     prowizja: totalCommissionAmount,
     qualifiedCount: qualifiedEmployees.length,
@@ -116,12 +117,14 @@ const profitStandardCalc = computed(() => {
   const rate = store.hasExternalAccounting
     ? store.comparisonState.customStandardRate
     : store.comparisonState.customStandardRateNoBonus;
-  return stats.value.baseSavings - stats.value.benefitBase * (rate / 100);
+  // Prowizja liczona od NETTO świadczeń (jak opłata serwisowa i reszta systemu),
+  // żeby ta wartość zgadzała się z metryką "Oszczędność firmy" (oszczednoscNetto).
+  return stats.value.baseSavings - stats.value.benefitNetto * (rate / 100);
 });
 
 const profitPrimeCalc = computed(() => {
   if (!stats.value) return 0;
-  return stats.value.baseSavings - stats.value.benefitBase * (store.comparisonState.customPrimeRate / 100);
+  return stats.value.baseSavings - stats.value.benefitNetto * (store.comparisonState.customPrimeRate / 100);
 });
 
 
