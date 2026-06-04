@@ -83,11 +83,14 @@ class SupabaseAuthenticate
         }
 
         $selectedRole = $this->syncRole($user, $this->tokens->extractRoles($payload));
-        if ($selectedRole) {
+        if ($selectedRole && $user->role_cached !== $selectedRole) {
             $user->fill(['role_cached' => $selectedRole])->save();
         }
 
-        return $user->refresh();
+        // Bez $user->refresh() — to był zbędny pełny SELECT na KAŻDYM requeście.
+        // Atrybuty są już aktualne w pamięci (ustawione powyżej). Przy połączeniu
+        // cross-region do Supabase każdy round-trip kosztuje ~150ms, więc to liczyło się.
+        return $user;
     }
 
     private function syncRole(User $user, array $roles): ?string
@@ -114,12 +117,19 @@ class SupabaseAuthenticate
             return null;
         }
 
-        $role = Role::firstOrCreate(['code' => $selected], ['name' => $selected]);
+        // Cache id roli per kod (file cache = lokalny, ~0ms) zamiast SELECT/firstOrCreate
+        // do Supabase na KAŻDYM authenticated requeście. Role zmieniają się rzadko.
+        $roleId = \Illuminate\Support\Facades\Cache::remember(
+            "supabase_role_id:{$selected}",
+            3600,
+            fn () => Role::firstOrCreate(['code' => $selected], ['name' => $selected])->id
+        );
 
-        if ($user->role_id !== $role->id) {
-            $user->role()->associate($role)->save();
+        if ($user->role_id !== $roleId) {
+            $user->role_id = $roleId;
+            $user->save();
         }
 
-        return $role->code;
+        return $selected;
     }
 }
