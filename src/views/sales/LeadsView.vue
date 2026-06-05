@@ -9,7 +9,6 @@ import { useSessionStore } from '@/stores/session'
 import { useToastStore } from '@/stores/toast'
 import AppIcon from '@/components/AppIcon.vue'
 import TabHeader from '@/components/ui/TabHeader.vue'
-import * as ExcelJS from 'exceljs'
 
 // Stores
 const router = useRouter()
@@ -188,6 +187,7 @@ const handleDrop = (e: DragEvent) => {
 }
 
 const downloadTemplate = async () => {
+    const ExcelJS = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Szablon Leadów');
     sheet.columns = [
@@ -228,6 +228,7 @@ const runImport = async () => {
     
     try {
         const buffer = await importFile.value.arrayBuffer();
+        const ExcelJS = await import('exceljs');
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(buffer);
         const worksheet = workbook.getWorksheet(1);

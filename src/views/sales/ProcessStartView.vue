@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
@@ -16,7 +16,12 @@ import { useCalculatorStore } from '@/components/calculator/store/useCalculatorS
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import type { FileCategory, KnowledgeFile } from '@/types/models'
-import { VueFilesPreview } from 'vue-files-preview'
+// vue-files-preview (~3 MB — pdf.js/docx/xlsx renderery) ładowane leniwie tylko
+// gdy użytkownik faktycznie otworzy podgląd pliku. Wcześniej wisiało statycznie
+// w chunku ProcessStartView (3,9 MB).
+const VueFilesPreview = defineAsyncComponent(() =>
+  import('vue-files-preview').then((m) => m.VueFilesPreview)
+)
 import 'vue-files-preview/lib/style.css'
 
 const auth = useAuthStore()

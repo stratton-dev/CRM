@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+// apexcharts (~508 KB) ładowany leniwie tylko tu — to jedyny widok z wykresami.
+// Wcześniej był rejestrowany globalnie w main.ts → wisiał w głównym bundlu na każdej stronie.
+const apexchart = defineAsyncComponent(() => import('vue3-apexcharts'))
 import { useSessionStore } from '@/stores/session'
 import { useNotificationStore } from '@/stores/notification'
 import { useClientStore } from '@/stores/client'

@@ -1,5 +1,5 @@
 
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs'; // tylko typy (erased) — runtime ładowany dynamicznie niżej
 import { Firma } from '../models/company';
 import { GlobalneWyniki } from '../models/calculation';
 
@@ -13,12 +13,9 @@ interface GeneratorOptions {
 const round = (val: number) => Math.round(val * 100) / 100;
 
 export const generatePremiumExcel = async ({ firma, wyniki, prowizjaProc }: GeneratorOptions) => {
-    if (!(window as any).ExcelJS && !ExcelJS) {
-        console.error('ExcelJS wrapper not found or library missing');
-        // Fallback or error handling if needed, but assuming calling context handles dependencies
-    }
+    const ExcelJSRuntime = (await import('exceljs')).default;
 
-    const workbook = new ExcelJS.Workbook();
+    const workbook = new ExcelJSRuntime.Workbook();
 
     // --- PRZYGOTOWANIE DANYCH ---
     const totalStandardCost = wyniki.szczegoly.reduce((acc, w) => {

@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs'; // tylko typy (erased) — runtime ładowany dynamicznie niżej
 import { Firma } from '../models/company';
 import { GlobalneWyniki } from '../models/calculation';
 
@@ -65,7 +65,8 @@ export const excelGenerator = {
     { firma, wyniki, prowizjaProc }: ReportData,
     options?: { returnBuffer?: boolean }
   ) => {
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJSRuntime = (await import('exceljs')).default;
+    const workbook = new ExcelJSRuntime.Workbook();
     const styles = {
       headerFill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } } as ExcelJS.Fill,
       headerFont: { bold: true, size: 10, color: { argb: 'FF334155' } },
@@ -363,7 +364,8 @@ export const excelGenerator = {
   },
 
   generateDetailedReport: async ({ firma, wyniki }: ReportData) => {
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJSRuntime = (await import('exceljs')).default;
+    const workbook = new ExcelJSRuntime.Workbook();
 
     const currency = '#,##0.00';
 
@@ -617,7 +619,8 @@ export const excelGenerator = {
   },
 
   generateImportTemplate: async (rowsToGenerate: number = 10) => {
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJSRuntime = (await import('exceljs')).default;
+    const workbook = new ExcelJSRuntime.Workbook();
     const worksheet = workbook.addWorksheet('Szablon Import');
 
     worksheet.columns = [

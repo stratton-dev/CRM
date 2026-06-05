@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import ExcelJS from 'exceljs';
 import AppIcon from '@/components/AppIcon.vue';
 import { parseExcelData, ImportRow } from '../utils/excelParser';
 import { useCalculatorStore } from '../store/useCalculatorStore';
@@ -31,6 +30,7 @@ const handleFile = async (file: File) => {
   
   try {
     const arrayBuffer = await file.arrayBuffer();
+    const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(arrayBuffer);
     
