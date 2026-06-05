@@ -72,10 +72,17 @@ export const useStructureStore = defineStore('structure', () => {
   const fetchTeams = async (options?: { refresh?: boolean }) => {
     if (!auth.enabled) return
     const params = options?.refresh ? { refresh: 1 } : undefined
-    const { data } = await api.get('/v1/admin/teams', { params })
-    const paths = Array.isArray(data?.paths) ? data.paths : []
-    teamGroups.value = Array.from(new Set(paths))
-    return paths as string[]
+    try {
+      const { data } = await api.get('/v1/admin/teams', { params })
+      const paths = Array.isArray(data?.paths) ? data.paths : []
+      teamGroups.value = Array.from(new Set(paths))
+      return paths as string[]
+    } catch (error) {
+      // /v1/admin/teams jest tylko dla ADMINA — non-admini (MANAGER/DIRECTOR/SALES)
+      // dostają 403; teamGroups jest istotne wyłącznie w panelu admina, więc cicho pomijamy
+      // (bez tego catch leciał Uncaught (in promise) AxiosError 403 z NotificationsView).
+      return teamGroups.value
+    }
   }
 
   const createTeam = async (code: string, displayName?: string) => {

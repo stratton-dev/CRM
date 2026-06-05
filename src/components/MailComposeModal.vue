@@ -51,6 +51,9 @@ watch(
   () => composeState.value,
   async (state) => {
     if (state?.open) {
+      // Książka adresowa potrzebuje listy klientów — ładujemy leniwie przy otwarciu
+      // (modal jest globalny, poza routerem, więc nie obejmuje go guard).
+      void clientStore.ensureClientData()
       composeData.value = {
         to: state.to || '',
         subject: state.subject || 'Wiadomość',

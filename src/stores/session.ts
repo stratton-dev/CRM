@@ -35,22 +35,33 @@ export const useSessionStore = defineStore('session', () => {
   const isImpersonating = computed(() => originalUserId.value !== null)
   const isReadOnly = computed(() => isImpersonating.value)
 
-  const resolveUserFromAuth = async () => {
+  let inflightMe: Promise<void> | null = null
+
+  const resolveUserFromAuth = async (options?: { force?: boolean }) => {
     if (!auth.isAuthenticated) return
 
     if (auth.enabled) {
-      try {
-        currentUserId.value = null
-        // Check local storage for impersonation marker
-        const impersonationId = localStorage.getItem('x_impersonate_user')
-        originalUserId.value = impersonationId ? 'ADMIN_MARKER' : null
-        
-        const { data } = await api.get('/v1/me')
-        apiUser.value = data
-      } catch (error) {
-        apiUser.value = null
-      }
-      return
+      // Dedup: profil już pobrany i nie wymuszamy odświeżenia (np. impersonacja) → pomiń.
+      if (!options?.force && apiUser.value) return
+      // Dedup: scal równoległe wywołania w jeden request /v1/me.
+      // (5 triggerów: 2 watchery + guard + App.vue + login → wcześniej 5× /v1/me
+      //  do wolnego backendu Railway; teraz 1.)
+      if (inflightMe) return inflightMe
+      inflightMe = (async () => {
+        try {
+          currentUserId.value = null
+          const impersonationId = localStorage.getItem('x_impersonate_user')
+          originalUserId.value = impersonationId ? 'ADMIN_MARKER' : null
+
+          const { data } = await api.get('/v1/me')
+          apiUser.value = data
+        } catch (error) {
+          apiUser.value = null
+        } finally {
+          inflightMe = null
+        }
+      })()
+      return inflightMe
     }
 
     const list = Array.isArray(users.value) ? users.value : []
@@ -79,7 +90,7 @@ export const useSessionStore = defineStore('session', () => {
   const impersonate = async (targetUserId: string) => {
     if (auth.enabled) {
       localStorage.setItem('x_impersonate_user', targetUserId)
-      await resolveUserFromAuth()
+      await resolveUserFromAuth({ force: true })
       return
     }
 
@@ -96,7 +107,7 @@ export const useSessionStore = defineStore('session', () => {
   const stopImpersonation = async () => {
     if (auth.enabled) {
       localStorage.removeItem('x_impersonate_user')
-      await resolveUserFromAuth()
+      await resolveUserFromAuth({ force: true })
       return
     }
 

@@ -255,8 +255,19 @@ const handleGlobalKeyDown = (event: KeyboardEvent) => {
 
 watch(showCommandPalette, async (isOpen) => {
   if (isOpen) {
+    // Paleta poleceń przeszukuje klientów — załaduj dane leniwie przy otwarciu
+    void clientStore.ensureClientData()
     await nextTick()
     commandInput.value?.focus()
+  }
+})
+
+// SLA/rezerwacje liczą się z listy klientów — przelicz, gdy dane się załadują
+// (przy starcie aplikacji lista jest jeszcze pusta — lazy-load).
+watch(() => clientStore.dataLoaded, (loaded) => {
+  if (loaded) {
+    clientStore.checkSla()
+    clientStore.checkReservations()
   }
 })
 

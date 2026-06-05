@@ -2,6 +2,19 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
+import { useClientStore } from '@/stores/client'
+
+// Widoki, które faktycznie czytają dane klienckie (clients/activities/offers).
+// Tylko dla nich ładujemy ciężkie listy (leniwie, raz na sesję — cache w store).
+// Lekkie widoki (knowledge-base, notifications, leaderboard, structure, leads,
+// recruitment, admin-*) NIE pobierają tych danych — to była przyczyna zbędnych
+// zapytań per_page=500 na każdym widoku.
+const CLIENT_DATA_ROUTES = new Set([
+  'dashboard', 'sales-start', 'sales-email-compose', 'analytics', 'clients',
+  'offer-tool', 'sales-contract-preview', 'contract-preview', 'invoice-preview',
+  'hr-panel', 'admin-analytics', 'autenti-panel', 'calendar', 'mailbox',
+  'calculator', 'payroll', 'settings',
+])
 
 const routes: RouteRecordRaw[] = [
   { path: '/', redirect: '/login' },
@@ -70,6 +83,13 @@ router.beforeEach(async (to) => {
   }
 
   await viewPermissions.ensureLoaded()
+
+  // Leniwe ładowanie danych klienckich tylko dla widoków, które ich używają
+  // (non-blocking — nie opóźnia renderu; cache w store zapobiega ponownym fetchom).
+  if (CLIENT_DATA_ROUTES.has(String(to.name || ''))) {
+    void useClientStore().ensureClientData()
+  }
+
   const role = session.currentUser?.role || auth.user?.roles?.find((r) => typeof r === 'string')
 
   if (String(to.name || '') === 'settings') {

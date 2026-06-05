@@ -56,6 +56,12 @@ export const useClientStore = defineStore('client', () => {
   const apiMeetings = ref<ApiMeeting[]>([])
   const apiActivities = ref<any[]>([])
   const apiSavedOffers = ref<any[]>([])
+  // Lazy-load: ciężkie dane (clients/activities/offers per_page=500) ładujemy
+  // tylko na widokach, które ich używają (przez ensureClientData), a nie
+  // globalnie po zalogowaniu. dataLoaded = cache (jeden fetch na sesję,
+  // odświeżany przez refreshApiData przy mutacjach / na widoku Klienci).
+  const dataLoaded = ref(false)
+  let inflightData: Promise<boolean> | null = null
   const clientPage = ref(1)
   const clientPagination = ref({
     currentPage: 1,
@@ -287,21 +293,36 @@ export const useClientStore = defineStore('client', () => {
       }
     })
 
+    dataLoaded.value = true
     return !criticalFailure
+  }
+
+  // Idempotentne, leniwe załadowanie danych klienckich. Wywoływane z guardu
+  // routera tylko dla widoków, które czytają `clients` (pasywni konsumenci),
+  // oraz z globalnego MailComposeModal przy otwarciu. Cache przez dataLoaded —
+  // nawigacja między widokami nie powoduje ponownego pobrania.
+  const ensureClientData = (): Promise<boolean> => {
+    if (!auth.enabled || !auth.isAuthenticated) return Promise.resolve(true)
+    if (dataLoaded.value) return Promise.resolve(true)
+    if (inflightData) return inflightData
+    inflightData = refreshApiData().finally(() => { inflightData = null })
+    return inflightData
   }
 
   watch(
     () => auth.isAuthenticated,
     (isAuthed) => {
       if (!auth.enabled) return
-      if (isAuthed) {
-        refreshApiData()
-      } else {
+      if (!isAuthed) {
+        // Wyloguj → wyczyść cache (kolejny login pobierze leniwie przy wejściu na widok)
         apiClients.value = []
         apiMeetings.value = []
         apiActivities.value = []
         apiSavedOffers.value = []
+        dataLoaded.value = false
+        inflightData = null
       }
+      // Brak eager-fetch na login — dane ładują się leniwie (ensureClientData)
     },
     { immediate: true }
   )
@@ -697,14 +718,10 @@ export const useClientStore = defineStore('client', () => {
     }
   }
 
-  watch(() => auth.isAuthenticated, (newVal) => {
-    if (newVal) {
-      fetchClients()
-      fetchMeetings()
-      fetchActivities()
-      fetchSavedOffers()
-    }
-  })
+  // (usunięto zduplikowany watcher auth.isAuthenticated — refreshApiData() powyżej
+  //  już pobiera clients/meetings/activities/savedOffers z { immediate: true }.
+  //  Drugi watcher powodował podwójne wywołania ciężkich zapytań per_page=500,
+  //  które na Railwayu trwają 3-8s i blokowały pierwszy paint → pusta biała strona.)
 
   return {
     clients,
@@ -724,6 +741,8 @@ export const useClientStore = defineStore('client', () => {
     fetchActivities,
     fetchSavedOffers,
     refreshApiData,
+    ensureClientData,
+    dataLoaded,
     prospects,
     customers,
   }
