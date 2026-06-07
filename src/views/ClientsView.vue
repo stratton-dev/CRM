@@ -1265,24 +1265,43 @@ const downloadContract = async (client: any) => {
       doc.open()
       doc.write(html)
       doc.close()
+      // Marginesy góra/dół dodajemy per-stronę niżej (cięcie obrazu na strony),
+      // więc zerujemy własny padding góra/dół body TYLKO w renderze klienckim
+      // (padding boczny zostaje = marginesy boczne). Współdzielony HTML
+      // (ścieżka e-mail / backend convert_to_pdf) pozostaje nietknięty.
+      doc.body.style.paddingTop = '0'
+      doc.body.style.paddingBottom = '0'
       await new Promise((r) => setTimeout(r, 400))
 
       const canvas = await html2canvas(doc.body, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' })
-      const imgData = canvas.toDataURL('image/jpeg', 0.92)
       const pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' })
       const pageW = pdf.internal.pageSize.getWidth()
       const pageH = pdf.internal.pageSize.getHeight()
-      const imgW = pageW
-      const imgH = (canvas.height * imgW) / canvas.width
-      let heightLeft = imgH
-      let position = 0
-      pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH)
-      heightLeft -= pageH
-      while (heightLeft > 0) {
-        position = heightLeft - imgH
-        pdf.addPage()
-        pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH)
-        heightLeft -= pageH
+
+      // 15 mm marginesu góra i dół na KAŻDEJ stronie (1 mm = 72/25.4 pt).
+      const marginY = 15 * (72 / 25.4)
+      const ptPerPx = pageW / canvas.width            // obraz na pełną szerokość strony
+      const usablePx = Math.floor((pageH - marginY * 2) / ptPerPx) // wysokość treści na stronę (px kanwy)
+
+      let renderedPx = 0
+      let pageIndex = 0
+      while (renderedPx < canvas.height) {
+        const slicePx = Math.min(usablePx, canvas.height - renderedPx)
+        const slice = document.createElement('canvas')
+        slice.width = canvas.width
+        slice.height = slicePx
+        const ctx = slice.getContext('2d')!
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(0, 0, slice.width, slice.height)
+        ctx.drawImage(canvas, 0, renderedPx, canvas.width, slicePx, 0, 0, canvas.width, slicePx)
+        const sliceData = slice.toDataURL('image/jpeg', 0.92)
+        const sliceHpt = slicePx * ptPerPx
+        if (pageIndex > 0) pdf.addPage()
+        // wstawiamy slice na y = marginY → górny margines; reszta strony (białe tło
+        // jsPDF) poniżej slice'a daje dolny margines (≥ marginY).
+        pdf.addImage(sliceData, 'JPEG', 0, marginY, pageW, sliceHpt)
+        renderedPx += slicePx
+        pageIndex++
       }
       pdf.save(fileName)
       toast.success('Umowa pobrana.')
