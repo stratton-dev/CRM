@@ -32,3 +32,4 @@ oferta-z-systemu.pdf
 .docker-compose.yml
 .vercel
 .env*.local
+.gstack/
