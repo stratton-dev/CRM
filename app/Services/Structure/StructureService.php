@@ -51,10 +51,11 @@ class StructureService
             return collect($this->collectSubtreeUsers($actor))->values();
         }
 
-        $teamPath = $context->teamGroupPath();
-        if (!$teamPath) {
-            return $query->whereRaw('1 = 0')->get();
-        }
+        // Uwaga: BEZ guardu na team_group_path. DIRECTOR/MANAGER korzystają z
+        // collectSubtreeUsers (trawersacja po parent_supabase_id), a SALES filtruje
+        // po sobie — żadne z nich nie potrzebuje team_group_path. Director na szczycie
+        // drzewa ma team_group_path=null i przez stary guard zwracał pustą listę
+        // (→ ClientsController robił `1=0` i pokazywał 0 klientów, także własnych).
 
         if ($role === 'DIRECTOR') {
              $actor = User::query()->where('supabase_id', $context->actorSupabaseId())->first();
