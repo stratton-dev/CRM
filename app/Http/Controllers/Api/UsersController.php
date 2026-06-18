@@ -83,6 +83,7 @@ class UsersController extends Controller
                 'role'                        => 'nullable|string|max:100',
                 'role_id'                     => 'nullable|integer|exists:roles,id',
                 'parent_id'                   => 'nullable|integer|exists:users,id',
+                'parent_supabase_id'          => 'nullable|string',
                 'hierarchical_id'             => 'nullable|string|max:255',
                 'crm_number'                  => 'nullable|string|max:255',
                 'rank'                        => 'nullable|string|max:255',
@@ -123,6 +124,15 @@ class UsersController extends Controller
 
             unset($data['role']);
 
+            // Opcja A — zmiana roli w zakładce Użytkownicy może od razu ustawić pozycję
+            // w strukturze. `parent_supabase_id` (jeśli przysłane) NIE idzie przez surowy
+            // fill, tylko przez StructureService::moveUser PO zapisie roli — żeby przeliczyć
+            // pod-gałąź/opiekuna i wyemitować StructureUserMoved (widok Struktura odświeża
+            // się na żywo). Null = węzeł-korzeń (DYREKTOR / poza drzewem).
+            $repositionRequested = $request->exists('parent_supabase_id');
+            $newParentSupabaseId = $request->input('parent_supabase_id') ?: null;
+            unset($data['parent_supabase_id']);
+
             // Validate opiekun role when assigning leadowiec_opiekun_id
             if (array_key_exists('leadowiec_opiekun_id', $data) && $data['leadowiec_opiekun_id']) {
                 $opiekun = User::find($data['leadowiec_opiekun_id']);
@@ -145,6 +155,31 @@ class UsersController extends Controller
 
         $user->fill($data)->save();
         $user->load('role:id,code,name');
+
+        // Reposition in the structure to follow the (new) role — atomic with the role
+        // change (Opcja A). ADMIN-only path: moveUser enforces no-cycle + emits events so
+        // the Struktura view stays in sync. ADMIN/CLIENT_HR live outside the sales tree,
+        // so they are simply detached to the root instead of moved.
+        if ($isAdmin && ($repositionRequested ?? false)) {
+            $roleCode = $user->role_cached;
+            if (in_array($roleCode, ['ADMIN', 'CLIENT_HR'], true)) {
+                if ($user->parent_supabase_id !== null) {
+                    $user->fill(['parent_supabase_id' => null])->save();
+                }
+            } else {
+                try {
+                    app(\App\Services\Structure\StructureService::class)
+                        ->moveUser($user->supabase_id, $newParentSupabaseId, $context);
+                    $user->refresh()->load('role:id,code,name');
+                } catch (\Illuminate\Validation\ValidationException $e) {
+                    return response()->json([
+                        'message' => collect($e->errors())->flatten()->first() ?? 'Nieprawidłowy przełożony.',
+                    ], 422);
+                } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                    return response()->json(['message' => 'Brak uprawnień do zmiany pozycji w strukturze.'], 403);
+                }
+            }
+        }
 
         // Sync role/email/phone/password to Supabase Auth so login + role
         // enforcement stay consistent. Failures here are not fatal — DB is
