@@ -363,6 +363,12 @@ export const useStructureStore = defineStore('structure', () => {
         active: partial.active,
       }
       if (partial.password) payload.password = partial.password
+      // Opcja A: zmiana roli może też ustawić pozycję w strukturze. Gdy widok poda
+      // parent_supabase_id, backend (UsersController::update) przepuści go przez
+      // StructureService::moveUser — atomowo z rolą. null = węzeł-korzeń (DYREKTOR).
+      if (partial.parentSupabaseId !== undefined) {
+        payload.parent_supabase_id = partial.parentSupabaseId
+      }
       if (partial.renewalCommissionRate !== undefined) {
         payload.renewal_commission_rate = partial.renewalCommissionRate
       }

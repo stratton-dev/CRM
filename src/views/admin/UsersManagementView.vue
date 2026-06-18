@@ -40,6 +40,17 @@ const roleFilter = ref<string>('ALL')
 const selectedUserForEdit = ref<User | null>(null)
 const editPasswordOverride = ref<string>('')
 const editPasswordOriginal = ref<string>('')
+// Opcja A — pozycja w strukturze sterowana rolą. Trzymamy wybranego przełożonego oraz
+// rolę/rodzica sprzed edycji, by wiedzieć kiedy faktycznie przepiąć węzeł.
+const editParentSupabaseId = ref<string | null>(null)
+const editOriginalRole = ref<string>('')
+const editOriginalParent = ref<string | null>(null)
+
+// Jaki przełożony jest dozwolony pod daną (nową) rolą.
+const PARENT_ROLES: Record<string, string[]> = {
+  MANAGER: ['DIRECTOR'],
+  SALES: ['MANAGER'],
+}
 const isCreating = ref(false)
 const isSaving = ref(false)
 const isDeleting = ref(false)
@@ -87,6 +98,20 @@ const filteredUsers = computed(() => {
 const opiekunList = computed(() => {
   const userList = Array.isArray(users.value) ? users.value : []
   return userList.filter((u) => opiekunRoles.includes(u.role ?? ''))
+})
+
+// Rola wybrana w panelu edycji + reguły pozycji w strukturze.
+const editRole = computed(() => selectedUserForEdit.value?.role ?? '')
+const isRootRole = computed(() => editRole.value === 'DIRECTOR')
+const requiresParent = computed(() => editRole.value in PARENT_ROLES)
+const parentOptions = computed(() => {
+  const allow = PARENT_ROLES[editRole.value]
+  if (!allow) return []
+  const selfId = selectedUserForEdit.value?.id
+  const userList = Array.isArray(users.value) ? users.value : []
+  return userList.filter(
+    (u) => allow.includes(u.role ?? '') && !u.isRemovedFromStructure && u.id !== selfId,
+  )
 })
 
 const roleCounts = computed(() => {
@@ -181,12 +206,18 @@ const editUser = (user: User) => {
   // Pole "Hasło" pokazuje aktualne (jawne) hasło z bazy; edycja = ustawienie nowego.
   editPasswordOverride.value = (user as any).plainPassword || ''
   editPasswordOriginal.value = editPasswordOverride.value
+  editParentSupabaseId.value = user.parentSupabaseId ?? null
+  editOriginalRole.value = user.role ?? ''
+  editOriginalParent.value = user.parentSupabaseId ?? null
 }
 
 const closeEditPanel = () => {
   selectedUserForEdit.value = null
   editPasswordOverride.value = ''
   editPasswordOriginal.value = ''
+  editParentSupabaseId.value = null
+  editOriginalRole.value = ''
+  editOriginalParent.value = null
 }
 
 const copyPassword = async () => {
@@ -276,6 +307,27 @@ const saveUser = async () => {
       toast.error('Hasło musi mieć min. 8 znaków.')
       return
     }
+    // Opcja A — wyznacz nową pozycję w strukturze na podstawie (nowej) roli.
+    // Przepinamy węzeł tylko gdy zmieniła się rola LUB ręcznie zmieniono przełożonego,
+    // żeby zwykła edycja nazwiska/telefonu nie ruszała struktury.
+    const role = userToSave.role ?? ''
+    const roleChanged = role !== editOriginalRole.value
+    const parentChanged = (editParentSupabaseId.value ?? null) !== (editOriginalParent.value ?? null)
+    let newParent: string | null | undefined = undefined
+    if (role === 'DIRECTOR' || role === 'ADMIN' || role === 'CLIENT_HR') {
+      // Szczyt struktury / poza drzewem — bez przełożonego.
+      if (roleChanged) newParent = null
+    } else if (role === 'MANAGER' || role === 'SALES') {
+      if (roleChanged || parentChanged) {
+        if (!editParentSupabaseId.value) {
+          toast.error(role === 'MANAGER' ? 'Wybierz dyrektora jako przełożonego.' : 'Wybierz menadżera jako przełożonego.')
+          return
+        }
+        newParent = editParentSupabaseId.value
+      }
+    }
+    // LEADOWIEC i brak zmian → pozycji nie ruszamy (newParent = undefined).
+
     isSaving.value = true
     try {
       const partial: any = {
@@ -288,6 +340,9 @@ const saveUser = async () => {
       }
       // Wyślij hasło tylko gdy zmienione względem aktualnego (pole jest prefillowane).
       if (passwordChanged && editPasswordOverride.value) partial.password = editPasswordOverride.value
+      // Pozycję w strukturze wysyłamy TYLKO gdy faktycznie ma się zmienić.
+      delete partial.parentSupabaseId
+      if (newParent !== undefined) partial.parentSupabaseId = newParent
       // Self-rate (override_commission_rate) and per-relacja override-y
       // ustawiane teraz w widoku Struktura (CommissionChain section).
       // Tu nie wysyłamy overrideCommissionRate żeby przypadkiem nie nadpisać.
@@ -571,6 +626,27 @@ const saveUser = async () => {
               <select v-model="selectedUserForEdit.role" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold cursor-pointer bg-white">
                 <option v-for="r in ALL_ROLES" :key="r.value" :value="r.value">{{ r.label }}</option>
               </select>
+              <p v-if="selectedUserForEdit.role !== editOriginalRole" class="text-xs text-stratton-gold font-semibold mt-1">
+                Zmiana roli przestawi też pozycję w strukturze.
+              </p>
+            </div>
+
+            <!-- Opcja A: pozycja w strukturze sterowana rolą -->
+            <div v-if="isRootRole" class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-xs text-indigo-700 flex items-start gap-2">
+              <AppIcon name="info" class="w-4 h-4 mt-0.5 shrink-0" />
+              <span>Dyrektor staje na szczycie struktury — bez przełożonego.</span>
+            </div>
+            <div v-else-if="requiresParent">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Przełożony * <span class="normal-case font-medium text-slate-400">({{ selectedUserForEdit.role === 'MANAGER' ? 'dyrektor' : 'menadżer' }})</span>
+              </label>
+              <select v-model="editParentSupabaseId" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:outline-none focus:border-stratton-gold cursor-pointer bg-white">
+                <option :value="null">— wybierz przełożonego —</option>
+                <option v-for="p in parentOptions" :key="p.id" :value="p.id">{{ p.name }} ({{ p.role }})</option>
+              </select>
+              <p v-if="parentOptions.length === 0" class="text-xs text-amber-600 mt-1">
+                Brak dostępnych {{ selectedUserForEdit.role === 'MANAGER' ? 'dyrektorów' : 'menadżerów' }} w strukturze.
+              </p>
             </div>
 
             <template v-if="selectedUserForEdit.role === 'LEADOWIEC'">
