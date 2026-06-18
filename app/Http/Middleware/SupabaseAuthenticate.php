@@ -82,9 +82,19 @@ class SupabaseAuthenticate
             ])->save();
         }
 
-        $selectedRole = $this->syncRole($user, $this->tokens->extractRoles($payload));
-        if ($selectedRole && $user->role_cached !== $selectedRole) {
-            $user->fill(['role_cached' => $selectedRole])->save();
+        // Rola: token Supabase (app_metadata.role) służy WYŁĄCZNIE do *inicjalizacji*
+        // roli przy pierwszym logowaniu konta, które jeszcze nie ma roli w bazie.
+        // Gdy użytkownik ma już rolę w DB, baza jest jedynym źródłem prawdy — zmiany
+        // z panelu (Użytkownicy/Struktura) zapisują się do DB i NIE wolno ich cofać
+        // rolą zapieczoną w już wydanym (potencjalnie nieaktualnym) JWT. Inaczej
+        // zmiana roli „nie zapisuje się" — middleware nadpisuje ją starą wartością
+        // z tokenu przy następnym requeście tego użytkownika.
+        $hasDbRole = $user->role_id !== null || !empty($user->role_cached);
+        if (!$hasDbRole) {
+            $selectedRole = $this->syncRole($user, $this->tokens->extractRoles($payload));
+            if ($selectedRole && $user->role_cached !== $selectedRole) {
+                $user->fill(['role_cached' => $selectedRole])->save();
+            }
         }
 
         // Bez $user->refresh() — to był zbędny pełny SELECT na KAŻDYM requeście.
