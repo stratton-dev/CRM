@@ -13,9 +13,10 @@ class SetupMailConfigs extends Command
 
     protected $description = 'Create/update IMAP/SMTP mail configs for CRM users';
 
-    private const IMAP_HOST = 'serwer2577868.home.pl';
+    // Nowy serwer pocztowy home.pl (migracja czerwiec 2026). Porty SSL bez zmian.
+    private const IMAP_HOST = 'serwer2690202.home.pl';
     private const IMAP_PORT = 993;
-    private const SMTP_HOST = 'serwer2577868.home.pl';
+    private const SMTP_HOST = 'serwer2690202.home.pl';
     private const SMTP_PORT = 465;
 
     public function handle(): int

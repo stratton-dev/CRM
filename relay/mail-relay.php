@@ -42,7 +42,7 @@ if (!hash_equals($SECRET, (string) ($in['secret'] ?? ''))) {
     relay_out(403, ['ok' => false, 'error' => 'forbidden']);
 }
 
-$host     = (string) ($in['host'] ?? 'serwer2577868.home.pl');
+$host     = (string) ($in['host'] ?? 'serwer2690202.home.pl');
 $port     = (int) ($in['port'] ?? 465);
 $secure   = array_key_exists('secure', $in) ? (bool) $in['secure'] : ($port === 465);
 $user     = (string) ($in['user'] ?? '');
