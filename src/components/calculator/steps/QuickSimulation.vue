@@ -243,6 +243,18 @@ const buildQuickSimHtml = () => {
   const zyskNetto = oszczRocz - prowizja * 12;
   const liczbaPrac = s.countUOP + s.countUZ;
 
+  // Opiekun = zalogowany użytkownik (wcześniej zahardkodowane: Agnieszka Cięciara),
+  // przez co KAŻDA oferta szła z jej danymi zamiast danych wysyłającego.
+  const me = session.currentUser as any;
+  const opiekunName = (me?.name && String(me.name).trim()) || 'Zespół Stratton Prime';
+  const opiekunEmail = me?.email || 'kontakt@stratton-prime.pl';
+  const opiekunTitle = ({
+    SALES: 'Doradca Biznesowy',
+    MANAGER: 'Menedżer',
+    DIRECTOR: 'Dyrektor',
+    ADMIN: 'Stratton Prime',
+  } as Record<string, string>)[String(me?.role || '').toUpperCase()] || 'Doradca Biznesowy';
+
   return `<!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -283,7 +295,7 @@ const buildQuickSimHtml = () => {
       <div style="text-align:right;font-size:9px;letter-spacing:.1em;text-transform:uppercase;line-height:2;color:rgba(255,255,255,.5);">
         <div>DATA: ${date}</div>
         <div>WAŻNA DO: <span style="color:#C5A059;">${dateWaz}</span></div>
-        <div>OPIEKUN: <span style="color:#C5A059;">Agnieszka Cięciara</span></div>
+        <div>OPIEKUN: <span style="color:#C5A059;">${opiekunName}</span></div>
       </div>
     </div>
     <div style="font-size:9px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#C5A059;margin-bottom:8px;">OFERTA SZACUNKOWA · ANALIZA LISTY PŁAC</div>
@@ -408,12 +420,12 @@ const buildQuickSimHtml = () => {
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div>
         <div style="font-size:8px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#C5A059;margin-bottom:3px;">Opiekun Projektu</div>
-        <div class="serif" style="font-size:16px;font-weight:700;">Agnieszka Cięciara</div>
-        <div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.04em;">Dyrektor ds. Wdrożeń i Relacji Biznesowych</div>
+        <div class="serif" style="font-size:16px;font-weight:700;">${opiekunName}</div>
+        <div style="font-size:9px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.04em;">${opiekunTitle}</div>
       </div>
       <div style="text-align:right;font-size:9px;line-height:2;letter-spacing:.1em;text-transform:uppercase;">
         <div style="color:#C5A059;font-weight:700;">STRATTON PRIME</div>
-        <div>EMAIL: a.cieciara@stratton-prime.pl</div>
+        <div>EMAIL: ${opiekunEmail}</div>
         <div style="color:#C5A059;">WWW.STRATTON-PRIME.PL</div>
       </div>
     </div>
@@ -450,10 +462,10 @@ const handleShortOffer = async () => {
       zyskNetto: oszczRocz - prowizja * 12,
     },
     handlowiec: {
-      imie: 'Agnieszka',
-      nazwisko: 'Cięciara',
-      email: 'a.cieciara@stratton-prime.pl',
-      telefon: '',
+      imie: (session.currentUser as any)?.firstName || (session.currentUser?.name?.split(' ')[0] ?? ''),
+      nazwisko: (session.currentUser as any)?.lastName || (session.currentUser?.name?.split(' ').slice(1).join(' ') ?? ''),
+      email: session.currentUser?.email || '',
+      telefon: (session.currentUser as any)?.phone || '',
     },
     dataWystawienia: new Date().toLocaleDateString('pl-PL'),
     dataWaznosci: new Date(Date.now() + 14 * 86400000).toLocaleDateString('pl-PL'),
