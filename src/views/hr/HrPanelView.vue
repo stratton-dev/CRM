@@ -247,7 +247,8 @@ const parseCsv = (file: File) => {
         <h3 class="text-lg font-medium text-gray-900">Lista Pracowników</h3>
         <button type="button" class="px-3 py-2 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700" @click="openAddModal">+ Dodaj Pracownika</button>
       </div>
-      <table v-if="myEmployees.length > 0" class="crm-table divide-y divide-gray-200">
+      <div v-if="myEmployees.length > 0" class="overflow-x-auto">
+      <table class="crm-table divide-y divide-gray-200">
         <thead class="crm-table-head">
           <tr>
             <th class="crm-table-th crm-table-th-xs">Imię Nazwisko</th>
@@ -269,13 +270,14 @@ const parseCsv = (file: File) => {
           </tr>
         </tbody>
       </table>
+      </div>
       <div v-else class="p-10 text-center text-gray-500">Brak pracowników na liście. Zaimportuj plik lub dodaj ręcznie.</div>
     </section>
 
     <section class="bg-white shadow rounded-lg p-6">
       <h3 class="text-lg font-medium mb-4 text-gray-900">Faktury i Historia Zamówień</h3>
       <div class="space-y-4">
-        <div v-for="inv in myInvoices" :key="inv.id" class="flex items-center justify-between border-b border-gray-100 pb-3 last:border-0 hover:bg-gray-50 p-2 rounded transition">
+        <div v-for="inv in myInvoices" :key="inv.id" class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3 last:border-0 hover:bg-gray-50 p-2 rounded transition">
           <div class="flex items-center space-x-4">
             <div class="bg-gray-100 p-2 rounded text-gray-500">
               <AppIcon name="document-text" class="w-4 h-4" />

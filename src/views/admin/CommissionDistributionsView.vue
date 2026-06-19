@@ -287,7 +287,8 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <table class="w-full">
+              <div class="overflow-x-auto">
+              <table class="w-full min-w-[480px]">
                 <thead>
                   <tr class="text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
                     <th class="text-left py-2">Poziom</th>
@@ -328,6 +329,7 @@ onMounted(async () => {
                   </tr>
                 </tfoot>
               </table>
+              </div>
 
               <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                 <div class="md:col-span-2">
@@ -357,7 +359,7 @@ onMounted(async () => {
               <h3 class="font-bold text-slate-800 text-lg">Historia Distributions</h3>
               <p class="text-xs text-slate-500 mt-0.5">{{ history.length }} rekordów</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <input v-model="filterPeriod" type="month" placeholder="Okres" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-stratton-gold" />
               <select v-model="filterSourceUser" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-stratton-gold cursor-pointer">
                 <option value="">Wszyscy handlowcy</option>
@@ -369,10 +371,10 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="max-h-[500px] overflow-y-auto">
+          <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
             <div v-if="isLoadingHistory" class="p-10 text-center text-slate-400 text-sm">Ładuje...</div>
             <div v-else-if="history.length === 0" class="p-10 text-center text-slate-400 text-sm">Brak distributions w wybranym filtrze.</div>
-            <table v-else class="w-full divide-y divide-slate-100">
+            <table v-else class="w-full min-w-[640px] divide-y divide-slate-100">
               <thead class="bg-slate-50 sticky top-0 z-10">
                 <tr>
                   <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">#</th>

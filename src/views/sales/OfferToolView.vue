@@ -165,7 +165,7 @@ const finish = () => {
 
           <div v-else-if="step === 4" class="text-center space-y-8 max-w-3xl mx-auto">
             <h3 class="text-xl font-light text-gray-600">Potencjał Oszczędności</h3>
-            <div class="grid grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
               <div class="bg-white p-6 rounded border border-gray-200 shadow-sm relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-1 h-full bg-brand-main"></div>
                 <div class="text-xs text-gray-500 uppercase tracking-wide font-bold mb-1">Miesięcznie</div>

@@ -21,7 +21,7 @@ const {
   loadingUsers,
   chatUsers,
   generalConversation,
-  teamConversations,
+  groupConversations,
   dmConversations,
 } = storeToRefs(chat)
 
@@ -524,15 +524,15 @@ const handleLeave = async () => {
                 :class="theme.sidebarItem"
                 @click="toggleSection('teams')"
               >
-                <span class="text-[9px] font-black uppercase tracking-[0.2em]" :class="theme.sectionTitle">Zespoły</span>
+                <span class="text-[9px] font-black uppercase tracking-[0.2em]" :class="theme.sectionTitle">Grupy</span>
                 <AppIcon :name="expandedSections.teams ? 'chevron-down' : 'chevron-right'" class="w-3 h-3" :class="theme.sectionTitle" />
               </button>
               <div v-show="expandedSections.teams">
-                <div v-if="teamConversations.length === 0" class="px-4 py-2">
-                  <p class="text-[10px]" :class="theme.subText">Brak czatów zespołowych</p>
+                <div v-if="groupConversations.length === 0" class="px-4 py-2">
+                  <p class="text-[10px]" :class="theme.subText">Brak grup</p>
                 </div>
                 <button
-                  v-for="conv in teamConversations"
+                  v-for="conv in groupConversations"
                   :key="conv.id"
                   class="w-full flex items-center gap-2.5 px-3 py-2 transition-all"
                   :class="[
@@ -546,7 +546,7 @@ const handleLeave = async () => {
                   </div>
                   <div class="flex-1 min-w-0">
                     <p class="text-[12px] font-semibold truncate" :class="theme.nameText">{{ conv.name }}</p>
-                    <p class="text-[10px] truncate" :class="theme.subText">{{ conv.lastMessage?.body ?? 'Czat zespołu' }}</p>
+                    <p class="text-[10px] truncate" :class="theme.subText">{{ conv.lastMessage?.body ?? 'Czat grupowy' }}</p>
                   </div>
                   <span v-if="conv.unread > 0" class="text-[9px] font-black min-w-4 h-4 rounded-full flex items-center justify-center px-1" :class="theme.badge">
                     {{ conv.unread }}
@@ -822,6 +822,9 @@ const handleLeave = async () => {
                 <AppIcon v-else name="user-group" class="w-4 h-4" />
                 {{ creatingGroup ? 'Tworzenie...' : 'Utwórz grupę' }}
               </button>
+              <p v-if="!newGroupName.trim()" class="mt-2 text-[11px] text-center" :class="theme.subText">
+                Wpisz nazwę grupy, aby kontynuować
+              </p>
             </div>
           </template>
 

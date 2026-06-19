@@ -637,7 +637,7 @@ const sendMissingDocuments = () => {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div v-if="form.type !== 'company'">
                         <label class="block text-sm font-medium text-gray-700">Imię <span class="text-red-500">*</span></label>
                         <input 
@@ -670,7 +670,7 @@ const sendMissingDocuments = () => {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Email <span class="text-red-500">*</span></label>
                         <input 
@@ -898,7 +898,7 @@ const sendMissingDocuments = () => {
                         <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Nazwa Firmy</label>
                         <input v-model="editForm.company_name" type="text" class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" />
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div v-if="editForm.type !== 'company'">
                             <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Imię</label>
                             <input v-model="editForm.first_name" type="text" class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" />
@@ -912,7 +912,7 @@ const sendMissingDocuments = () => {
                              <input v-model="editForm.company_representative" type="text" class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" />
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div v-if="editForm.type !== 'person'">
                             <label class="block text-xs font-medium text-gray-500 uppercase mb-1">NIP</label>
                             <input v-model="editForm.nip" type="text" class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" />
@@ -928,7 +928,7 @@ const sendMissingDocuments = () => {
                <!-- Contact Info -->
               <div class="bg-white p-5 border border-gray-200 rounded-xl shadow-sm">
                 <h4 class="font-bold text-gray-900 text-sm uppercase tracking-wider mb-4">Kontakt</h4>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Email</label>
                         <input v-model="editForm.email" type="email" class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm" />

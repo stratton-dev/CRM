@@ -62,7 +62,8 @@ export const useChatStore = defineStore('chat', () => {
   const activeMessages = computed(() => (activeConversationId.value ? messages.value[activeConversationId.value] ?? [] : []))
 
   const generalConversation = computed(() => conversations.value.find((c) => c.key === 'general') ?? null)
-  const teamConversations = computed(() => conversations.value.filter((c) => c.key?.startsWith('team:') ?? false))
+  // Wszystkie czaty grupowe (team:* oraz tworzone ręcznie przez użytkowników), poza kanałem ogólnym
+  const groupConversations = computed(() => conversations.value.filter((c) => c.isGroup && c.key !== 'general'))
   const dmConversations = computed(() => conversations.value.filter((c) => !c.isGroup))
 
   const chatUsers = computed<ChatUser[]>(() => apiChatUsers.value)
@@ -302,7 +303,7 @@ export const useChatStore = defineStore('chat', () => {
     activeConversation,
     activeMessages,
     generalConversation,
-    teamConversations,
+    groupConversations,
     dmConversations,
     toggle,
     close,

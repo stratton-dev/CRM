@@ -986,7 +986,7 @@ const addUser = async () => {
             v-model="searchQuery"
             type="text"
             placeholder="Szukaj..."
-            class="pl-8 pr-3 py-1.5 w-56 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-stratton-gold shadow-sm"
+            class="pl-8 pr-3 py-1.5 w-56 max-w-full text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-stratton-gold shadow-sm"
           />
           <AppIcon name="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
@@ -1471,7 +1471,7 @@ const addUser = async () => {
 
           <div class="bg-slate-50 p-6 rounded-card border border-slate-200">
             <h4 class="text-sm font-bold text-slate-700 uppercase border-b border-slate-200 pb-2 mb-4">Adres Zamieszkania / Siedziby</h4>
-            <div class="grid grid-cols-6 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
               <div class="col-span-4">
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ulica</label>
                 <input v-model="newUserData.address.street" type="text" class="w-full border border-slate-300 p-2.5 rounded-input focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors text-sm bg-white" />

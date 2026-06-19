@@ -79,8 +79,8 @@ const goBack = () => {
 </script>
 
 <template>
-  <div class="bg-gray-100 min-h-screen pb-10">
-    <div class="no-print bg-slate-900 text-white p-4 flex justify-between items-center shadow-lg sticky top-0 z-50">
+  <div class="bg-gray-100 min-h-screen pb-10 overflow-x-auto">
+    <div class="no-print bg-slate-900 text-white p-4 flex flex-wrap gap-3 justify-between items-center shadow-lg sticky top-0 z-50">
       <div class="flex items-center space-x-4">
         <button type="button" class="hover:text-sky-400 flex items-center" @click="goBack">
           <AppIcon name="arrow-left" class="w-5 h-5 mr-1" />

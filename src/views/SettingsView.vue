@@ -1525,8 +1525,8 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
             </div>
           </div>
 
-          <div class="border rounded">
-            <div class="grid grid-cols-7 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+          <div class="border rounded overflow-x-auto">
+            <div class="grid grid-cols-7 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 min-w-[720px]">
               <div>Kod</div>
               <div>Tytuł</div>
               <div class="col-span-2">Opis</div>
@@ -1538,7 +1538,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
             <div v-else-if="consentsError" class="px-3 py-3 text-sm text-red-600">{{ consentsError }}</div>
             <div v-else-if="consents.length === 0" class="px-3 py-3 text-sm text-gray-500">Brak zgód w bazie.</div>
             <div v-else class="divide-y">
-              <div v-for="consent in consents" :key="consent.id" class="grid grid-cols-7 gap-2 px-3 py-2 text-sm items-center">
+              <div v-for="consent in consents" :key="consent.id" class="grid grid-cols-7 gap-2 px-3 py-2 text-sm items-center min-w-[720px]">
                 <template v-if="editingConsentId === String(consent.id)">
                   <input v-model="editingConsent.code" type="text" class="border-gray-300 rounded text-xs font-mono" />
                   <input v-model="editingConsent.title" type="text" class="border-gray-300 rounded text-sm" />
@@ -1625,12 +1625,12 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           Tryb DEV: zarządzanie uprawnieniami dostępne tylko w trybie API.
         </div>
 
-        <div v-else class="border border-gray-200 rounded-lg overflow-hidden">
-          <div class="grid grid-cols-[minmax(140px,1fr)_repeat(6,110px)] bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
+        <div v-else class="border border-gray-200 rounded-lg overflow-x-auto">
+          <div class="grid grid-cols-[minmax(140px,1fr)_repeat(6,110px)] min-w-[800px] bg-gray-50 text-xs font-semibold uppercase tracking-wider text-gray-500">
             <div class="px-3 py-2">Widok</div>
             <div v-for="role in viewPermissions.roles" :key="role" class="px-3 py-2 text-center">{{ role }}</div>
           </div>
-          <div v-for="view in viewPermissions.viewOptions" :key="view.key" class="grid grid-cols-[minmax(140px,1fr)_repeat(6,110px)] border-t border-gray-200 text-sm">
+          <div v-for="view in viewPermissions.viewOptions" :key="view.key" class="grid grid-cols-[minmax(140px,1fr)_repeat(6,110px)] min-w-[800px] border-t border-gray-200 text-sm">
             <div class="px-3 py-2 font-medium text-gray-700">{{ view.label }}</div>
             <label v-for="role in viewPermissions.roles" :key="`${view.key}-${role}`" class="flex items-center justify-center px-3 py-2">
               <input
@@ -2094,8 +2094,8 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           </div>
         </div>
 
-        <div class="border rounded">
-          <div class="grid grid-cols-6 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+        <div class="border rounded overflow-x-auto">
+          <div class="grid grid-cols-6 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 min-w-[640px]">
             <div>Key</div>
             <div>Nazwa</div>
             <div class="col-span-2">Opis</div>
@@ -2105,7 +2105,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           <div v-if="statusLoading" class="px-3 py-3 text-sm text-gray-500">Ładowanie...</div>
           <div v-else-if="statuses.length === 0" class="px-3 py-3 text-sm text-gray-500">Brak statusów.</div>
           <div v-else class="divide-y">
-            <div v-for="status in statuses" :key="status.id" class="grid grid-cols-6 gap-2 px-3 py-2 text-sm items-center">
+            <div v-for="status in statuses" :key="status.id" class="grid grid-cols-6 gap-2 px-3 py-2 text-sm items-center min-w-[640px]">
               <template v-if="editingStatusId === String(status.id)">
                 <input v-model="editingStatus.key" type="text" class="border-gray-300 rounded text-xs font-mono" />
                 <input v-model="editingStatus.label" type="text" class="border-gray-300 rounded text-sm" />
@@ -2154,8 +2154,8 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           </div>
         </div>
 
-        <div class="border rounded">
-          <div class="grid grid-cols-5 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+        <div class="border rounded overflow-x-auto">
+          <div class="grid grid-cols-5 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 min-w-[560px]">
             <div>Event Key</div>
             <div>Nazwa</div>
             <div class="col-span-2">Opis</div>
@@ -2164,7 +2164,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           <div v-if="eventLoading" class="px-3 py-3 text-sm text-gray-500">Ładowanie...</div>
           <div v-else-if="events.length === 0" class="px-3 py-3 text-sm text-gray-500">Brak eventów.</div>
           <div v-else class="divide-y">
-            <div v-for="event in events" :key="event.id" class="grid grid-cols-5 gap-2 px-3 py-2 text-sm items-center">
+            <div v-for="event in events" :key="event.id" class="grid grid-cols-5 gap-2 px-3 py-2 text-sm items-center min-w-[560px]">
               <template v-if="editingEventId === String(event.id)">
                 <input v-model="editingEvent.key" type="text" class="border-gray-300 rounded text-xs font-mono" />
                 <input v-model="editingEvent.label" type="text" class="border-gray-300 rounded text-sm" />
@@ -2305,8 +2305,8 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           </div>
         </div>
 
-        <div class="border rounded">
-          <div class="grid grid-cols-5 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+        <div class="border rounded overflow-x-auto">
+          <div class="grid grid-cols-5 gap-2 px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 min-w-[560px]">
             <div>Nazwa</div>
             <div>Event Key</div>
             <div class="col-span-2">Targety</div>
@@ -2315,7 +2315,7 @@ VITE_SUPABASE_ANON_KEY=&lt;anon-key&gt;</pre>
           <div v-if="broadcastLoading" class="px-3 py-3 text-sm text-gray-500">Ładowanie...</div>
           <div v-else-if="broadcasts.length === 0" class="px-3 py-3 text-sm text-gray-500">Brak broadcastów.</div>
           <div v-else class="divide-y">
-            <div v-for="broadcast in broadcasts" :key="broadcast.id" class="grid grid-cols-5 gap-2 px-3 py-2 text-sm items-center">
+            <div v-for="broadcast in broadcasts" :key="broadcast.id" class="grid grid-cols-5 gap-2 px-3 py-2 text-sm items-center min-w-[560px]">
               <template v-if="editingBroadcastId === String(broadcast.id)">
                 <input v-model="editingBroadcast.name" type="text" class="border-gray-300 rounded text-sm" />
                 <input v-model="editingBroadcast.event_key" type="text" class="border-gray-300 rounded text-xs font-mono" />

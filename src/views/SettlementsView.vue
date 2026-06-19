@@ -293,7 +293,7 @@ onMounted(async () => {
     <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
 
       <!-- ═══════════════════════ KPI === osobiste ═══════════════════════ -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white border border-slate-200 p-4 rounded-card shadow-sm">
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
             <span>Suma prowizji (okres)</span>
@@ -347,7 +347,7 @@ onMounted(async () => {
       </div>
 
       <!-- ═══════════════════════ KPI === zespół ═══════════════════════ -->
-      <div v-if="isManagerView" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div v-if="isManagerView" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div class="bg-slate-50 border border-slate-200 p-4 rounded-card shadow-sm">
           <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Łącznie zespół (okres)</div>
           <div class="text-3xl font-bold text-slate-800 font-serif">{{ formatPLN(teamTotal) }}</div>
