@@ -97,6 +97,13 @@ const attachKbFile = async (file: any) => {
 const showMobileDrawer = ref(false)
 
 const currentFolder = ref<'INBOX' | 'SENT' | 'TRASH' | 'DRAFTS' | 'SPAM' | 'STARRED'>('INBOX')
+// W folderach wychodzących (Wysłane / Robocze) nadawcą jest zawsze zalogowany
+// użytkownik — pokazujemy ODBIORCĘ ("Do:"), nie nadawcę. Inaczej widać tylko siebie.
+const isOutgoingFolder = computed(() => currentFolder.value === 'SENT' || currentFolder.value === 'DRAFTS')
+const contactName = (email: any) => isOutgoingFolder.value
+  ? (email?.toName || email?.toEmail || '—')
+  : (email?.fromName || email?.fromEmail || '—')
+const contactEmail = (email: any) => isOutgoingFolder.value ? (email?.toEmail || '') : (email?.fromEmail || '')
 const starredIds = ref<Set<string>>(new Set(JSON.parse(localStorage.getItem('mailbox_starred') || '[]')))
 const saveStarred = () => localStorage.setItem('mailbox_starred', JSON.stringify([...starredIds.value]))
 const selectedEmail = ref<Email | null>(null)
@@ -998,13 +1005,13 @@ watch(searchQuery, () => {
             <div class="flex gap-3 items-center">
               <div class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center font-black text-[11px] transition-transform group-hover:scale-105"
                 :class="selectedEmail?.id === email.id ? 'bg-white text-sky-600 border border-sky-100' : 'bg-slate-100 text-slate-500 border border-slate-200/50'">
-                {{ email.fromName.substring(0, 2).toUpperCase() }}
+                {{ contactName(email).substring(0, 2).toUpperCase() }}
               </div>
-              
+
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-center mb-0.5">
                   <p class="text-[12px] font-black text-slate-900 group-hover:text-stratton-gold transition-colors truncate pr-1" :class="!email.read ? 'font-black' : 'font-bold opacity-80'">
-                    {{ email.fromName }}
+                    <span v-if="isOutgoingFolder" class="text-slate-400 font-bold">Do: </span>{{ contactName(email) }}
                   </p>
                   <div class="flex items-center gap-0.5 shrink-0">
                     <button
@@ -1101,11 +1108,12 @@ watch(searchQuery, () => {
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
               </button>
               <div class="w-8 h-8 rounded-xl shrink-0 bg-slate-100 border border-slate-200/60 flex items-center justify-center font-black text-slate-500 text-[11px]">
-                {{ selectedEmail.fromName.charAt(0).toUpperCase() }}
+                {{ contactName(selectedEmail).charAt(0).toUpperCase() }}
               </div>
               <div class="flex-1 min-w-0 flex items-baseline gap-2">
-                <span class="font-black text-slate-900 text-[13px] truncate max-w-[180px] shrink-0">{{ selectedEmail.fromName }}</span>
-                <span class="text-slate-400 text-[11px] truncate max-w-[160px] shrink-0 hidden sm:inline">&lt;{{ selectedEmail.fromEmail }}&gt;</span>
+                <span v-if="isOutgoingFolder" class="text-slate-400 text-[12px] font-bold shrink-0">Do:</span>
+                <span class="font-black text-slate-900 text-[13px] truncate max-w-[180px] shrink-0">{{ contactName(selectedEmail) }}</span>
+                <span class="text-slate-400 text-[11px] truncate max-w-[160px] shrink-0 hidden sm:inline">&lt;{{ contactEmail(selectedEmail) }}&gt;</span>
                 <span class="text-slate-200 mx-0.5 shrink-0">·</span>
                 <span class="font-semibold text-slate-700 text-[13px] truncate">{{ selectedEmail.subject }}</span>
               </div>
