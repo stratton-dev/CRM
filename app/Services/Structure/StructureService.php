@@ -533,9 +533,11 @@ class StructureService
     {
         if ($parent) {
             if (!$parent->team_group_path) {
-                throw ValidationException::withMessages([
-                    'parent_supabase_id' => ['Parent user has no team assigned.'],
-                ]);
+                // Self-heal: uzytkownicy zmigrowani z Keycloak / zaseedowani nie maja
+                // team_group_path, przez co nie da sie nikogo pod nimi dodac. Zamiast
+                // twardego bledu wyznaczamy team z najwyzszego przodka i backfillujemy
+                // cala galaz (root -> parent), tak by branch dzielil jeden team.
+                return $this->ensureTeamPathForChain($parent);
             }
 
             return $parent->team_group_path;
@@ -553,6 +555,41 @@ class StructureService
         }
 
         return $actorTeam;
+    }
+
+    /**
+     * Wyznacza (i utrwala) team_group_path dla galezi konczacej sie na $parent.
+     * Team pochodzi od najwyzszego przodka — caly branch ma jeden team. Backfill
+     * zapisuje team na wszystkich wezlach lancucha, ktore go nie maja.
+     */
+    private function ensureTeamPathForChain(User $parent): string
+    {
+        // Zbierz lancuch root -> ... -> parent (po parent_supabase_id).
+        $chain = [];
+        $cursor = $parent;
+        $guard = 0;
+        while ($cursor && $guard++ < 50) {
+            array_unshift($chain, $cursor);
+            $cursor = $cursor->parent_supabase_id
+                ? User::query()->where('supabase_id', $cursor->parent_supabase_id)->first()
+                : null;
+        }
+
+        $root = $chain[0];
+        // Team rootu: istniejacy lub deterministyczny TEAM<id> (string, kolumna team_id = string).
+        $teamPath = $root->team_group_path ?: ('TEAM' . $root->id);
+        $teamId = $this->extractTeamId($teamPath);
+
+        foreach ($chain as $node) {
+            if (!$node->team_group_path) {
+                $node->forceFill([
+                    'team_group_path' => $teamPath,
+                    'team_id' => $teamId,
+                ])->save();
+            }
+        }
+
+        return $teamPath;
     }
 
     private function ensureNoCycle(User $user, ?User $newParent): void
