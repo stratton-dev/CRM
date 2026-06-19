@@ -47,6 +47,12 @@
 
   body {
     font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+    /* Globalne zmniejszenie całego layoutu o 25% (skala 0.75). Działa jak zoom
+       przeglądarki — skaluje DOSŁOWNIE wszystko (widoki, modale, overlaye, FAB),
+       a efektywny viewport robi się ~33% szerszy, więc więcej się mieści i lepiej
+       działają breakpointy (większa responsywność). Sterowane zmienną --crm-zoom. */
+    --crm-zoom: 0.75;
+    zoom: var(--crm-zoom);
   }
 }
 
