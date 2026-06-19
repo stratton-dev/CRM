@@ -1372,10 +1372,11 @@ if (route.query.expand) {
             class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors whitespace-nowrap"
             :class="fromMyLeadowcy ? 'bg-[#001f3d] text-white border-[#001f3d]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
           >
-            <AppIcon name="users" class="w-3.5 h-3.5" />
-            Leady od moich leadowców
+            <AppIcon name="users" class="w-3.5 h-3.5 shrink-0" />
+            <span class="hidden lg:inline">Leady od moich leadowców</span>
+            <span class="lg:hidden">Leady</span>
           </button>
-          <div class="w-full md:w-96 relative">
+          <div class="relative w-full md:w-56 lg:w-72 xl:w-96">
             <input v-model="filterText" type="text" placeholder="Szukaj klienta, firmy lub NIP..." class="w-full border-slate-200 rounded-lg text-sm pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-stratton-gold/20 focus:border-stratton-gold bg-white text-slate-800 shadow-sm text-right font-bold transition-all placeholder-slate-400" />
             <AppIcon name="search" class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
@@ -1675,8 +1676,8 @@ if (route.query.expand) {
             :client-name="notesClient?.name"
             @close="closeNotes"
           />
-          <div class="flex space-x-4 flex-1 min-h-[400px] overflow-x-auto">
-            <div v-for="stage in kanbanData" :key="stage.status" class="w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col flex-shrink-0">
+          <div class="flex space-x-4 flex-1 min-h-[400px] overflow-x-auto pb-2">
+            <div v-for="stage in kanbanData" :key="stage.status" class="w-64 lg:w-72 2xl:w-80 bg-slate-50/50 rounded-card shadow-sm border border-slate-200 flex flex-col flex-shrink-0">
           <div class="p-3 border-b border-slate-200 bg-white/50 rounded-t-card">
             <h3 class="font-bold text-sm text-slate-700">{{ stage.title }} <span class="text-xs text-slate-400 font-normal">({{ stage.clients.length }})</span></h3>
           </div>
