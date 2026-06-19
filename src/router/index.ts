@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSessionStore } from '@/stores/session'
 import { useViewPermissionsStore } from '@/stores/viewPermissions'
 import { useClientStore } from '@/stores/client'
+import { isChunkLoadError, shouldReloadForChunkError } from './chunkReload'
 
 // Widoki, które faktycznie czytają dane klienckie (clients/activities/offers).
 // Tylko dla nich ładujemy ciężkie listy (leniwie, raz na sesję — cache w store).
@@ -118,18 +119,25 @@ router.beforeEach(async (to) => {
   return true
 })
 
+// Stale lazy-route chunk after a new deploy (old hashed asset 404s) → the import
+// rejects and the view goes blank. Recover with ONE full reload to pull the fresh
+// index + chunk names. A sessionStorage timestamp guards against reload loops
+// (and avoids the old approach's leftover `?reload=true` in the URL).
+const CHUNK_RELOAD_KEY = 'chunk-reload-at'
 router.onError((error, to) => {
-  if (
-    error.message.includes('Failed to fetch dynamically imported module') ||
-    error.message.includes('Importing a module script failed')
-  ) {
-    if (!to.query?.reload) {
-      // Force reload the page if the chunk fails to load
-      // Append reload query parameter to avoid infinite loops
-      window.location.href = to.fullPath + (to.fullPath.includes('?') ? '&' : '?') + 'reload=true'
-    } else {
-      console.error('Failed to load dynamic import even after reload', error)
+  const message = (error as { message?: unknown })?.message
+  const lastReloadAt = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY)) || null
+  if (shouldReloadForChunkError(message, Date.now(), lastReloadAt)) {
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+    // href assignment (not .assign()) — navigation isn't implemented in jsdom and
+    // .assign() throws there; the setter is a harmless no-op in tests.
+    try {
+      window.location.href = to.fullPath
+    } catch {
+      /* navigation unavailable (e.g. test env) — nothing to recover */
     }
+  } else if (isChunkLoadError(message)) {
+    console.error('Failed to load dynamic import even after reload', error)
   }
 })
 
