@@ -342,8 +342,14 @@ export const useClientStore = defineStore('client', () => {
         phone: clientData.contactPhone || null,
         employee_count: clientData.employeesTotal || 0,
       }).then(async ({ data: created }) => {
-        await api.post('/v1/crm-client-profiles', {
-          client_id: created.id,
+        // Backend (ClientsController::store) JUŻ tworzy profil CRM (owner = bieżący
+        // użytkownik, status NEW). Wcześniej front robił tu DODATKOWY POST, który
+        // (a) tworzył drugi, zduplikowany profil, oraz (b) gdy to żądanie padło
+        // (blokada przeglądarki/sieci), całe `createClient` się odrzucało i UI
+        // pokazywał "nie udało się dodać klienta", mimo że klient FAKTYCZNIE powstał.
+        // Teraz: aktualizujemy ISTNIEJĄCY profil (override opiekuna + dodatkowe pola),
+        // best-effort — błąd tutaj NIE może wywalić dodawania klienta.
+        const profilePayload = {
           owner_user_id: clientData.ownerId || null,
           status: clientData.status,
           contact_name: clientData.contactName,
@@ -356,7 +362,17 @@ export const useClientStore = defineStore('client', () => {
           avg_wage_uz: clientData.avgWageUz,
           service_fee_percent: clientData.serviceFeePercent,
           reservation_end_date: clientData.reservationEndDate || null,
-        })
+        }
+        const existingProfileId = (created as any)?.crm_profile?.id
+        try {
+          if (existingProfileId) {
+            await api.patch(`/v1/crm-client-profiles/${existingProfileId}`, profilePayload)
+          } else {
+            await api.post('/v1/crm-client-profiles', { client_id: created.id, ...profilePayload })
+          }
+        } catch (err) {
+          console.warn('[clientStore] Profil klienta — dodatkowe pola nie zapisane (klient został dodany):', err)
+        }
         await refreshApiData()
         return created
       })
