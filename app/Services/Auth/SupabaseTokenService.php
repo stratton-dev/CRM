@@ -57,21 +57,48 @@ class SupabaseTokenService
     {
         $ttl = (int) config('supabase.jwks_cache_ttl', 3600);
 
-        $jwks = Cache::remember('supabase.jwks', $ttl, function () {
-            $url = config('supabase.jwks_url') ?: $this->defaultJwksUrl();
-            if (!$url) {
-                throw new RuntimeException('Brak konfiguracji SUPABASE_URL lub SUPABASE_JWKS_URL.');
+        // Fresh cache hit — fast path, no network.
+        $jwks = Cache::get('supabase.jwks');
+        if (is_array($jwks) && !empty($jwks['keys'])) {
+            return JWK::parseKeySet($jwks);
+        }
+
+        try {
+            $jwks = $this->fetchJwks();
+            Cache::put('supabase.jwks', $jwks, $ttl);
+            // Long-lived "last known good" copy so a Supabase outage doesn't take
+            // the whole API down (auth keeps verifying with the previous keys).
+            Cache::put('supabase.jwks_stale', $jwks, 60 * 60 * 24 * 7);
+            return JWK::parseKeySet($jwks);
+        } catch (\Throwable $e) {
+            $stale = Cache::get('supabase.jwks_stale');
+            if (is_array($stale) && !empty($stale['keys'])) {
+                return JWK::parseKeySet($stale);
             }
+            // No keys at all → this is infrastructure-down, not a bad token.
+            // Code 503 so the middleware returns 503 (retry) instead of 401 (logout).
+            throw new RuntimeException('JWKS unavailable: ' . $e->getMessage(), 503);
+        }
+    }
 
-            $response = Http::get($url);
-            if (!$response->ok()) {
-                throw new RuntimeException('Nie mozna pobrac kluczy JWKS z Supabase.');
-            }
+    private function fetchJwks(): array
+    {
+        $url = config('supabase.jwks_url') ?: $this->defaultJwksUrl();
+        if (!$url) {
+            throw new RuntimeException('Brak konfiguracji SUPABASE_URL lub SUPABASE_JWKS_URL.');
+        }
 
-            return $response->json();
-        });
+        $response = Http::timeout(5)->retry(2, 200)->get($url);
+        if (!$response->ok()) {
+            throw new RuntimeException('JWKS fetch HTTP ' . $response->status());
+        }
 
-        return JWK::parseKeySet($jwks);
+        $data = $response->json();
+        if (!is_array($data) || empty($data['keys'])) {
+            throw new RuntimeException('JWKS response empty/invalid');
+        }
+
+        return $data;
     }
 
     private function defaultIssuer(): ?string

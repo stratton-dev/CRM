@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'supabase'  => \App\Http\Middleware\SupabaseAuthenticate::class,
         ]);
+        // Cap per_page on every API request (DoS / memory guard).
+        $middleware->appendToGroup('api', \App\Http\Middleware\ClampPerPage::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

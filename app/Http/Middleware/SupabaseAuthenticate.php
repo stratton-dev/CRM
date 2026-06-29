@@ -32,7 +32,10 @@ class SupabaseAuthenticate
         try {
             $payload = $this->tokens->decode($token);
         } catch (RuntimeException $exception) {
-            return response()->json(['message' => $exception->getMessage()], 401);
+            // 503 = auth infrastructure down (e.g. JWKS unreachable) → client retries
+            // and keeps the session. 401 = genuinely bad/expired token.
+            $status = $exception->getCode() === 503 ? 503 : 401;
+            return response()->json(['message' => $exception->getMessage()], $status);
         }
 
         // Przechowaj payload do uzycia przez TokenContext
