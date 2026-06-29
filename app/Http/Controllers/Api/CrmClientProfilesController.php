@@ -57,7 +57,12 @@ class CrmClientProfilesController extends Controller
     public function store(Request $request)
     {
         $data = $this->validatedData($request);
-        $profile = CrmClientProfile::create($data);
+        // One profile per client: idempotent on client_id so a second POST updates
+        // the existing row instead of creating a duplicate (unique-safe now too).
+        $profile = CrmClientProfile::updateOrCreate(
+            ['client_id' => $data['client_id']],
+            collect($data)->except('client_id')->all()
+        );
         return response()->json($profile, 201);
     }
 

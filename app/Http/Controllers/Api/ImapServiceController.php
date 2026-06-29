@@ -10,8 +10,12 @@ class ImapServiceController extends Controller
 {
     public function configs(Request $request)
     {
+        // Service-to-service endpoint (IMAP node helper) guarded by a shared token.
+        // FAIL CLOSED: if the token isn't configured, refuse — otherwise an empty
+        // header would pass hash_equals('','') and dump every mailbox password.
+        $expected = (string) config('services.imap_service_token', env('IMAP_SERVICE_TOKEN', ''));
         $token = (string) $request->header('X-IMAP-SERVICE-TOKEN', '');
-        if (!hash_equals((string) env('IMAP_SERVICE_TOKEN', ''), $token)) {
+        if ($expected === '' || !hash_equals($expected, $token)) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 

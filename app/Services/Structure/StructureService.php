@@ -314,11 +314,14 @@ class StructureService
             ->where('supabase_id', $userSupabaseId)
             ->firstOrFail();
 
-        $teamPath = $user->team_group_path;
         $role = (string) ($user->role_cached ?? '');
-        if (!$teamPath || $role === '') {
+        // Teams are unused (team_group_path is NULL for root DIRECTORs and most
+        // users), so only require a role here — otherwise the "Przywróć" button
+        // 422s for exactly the top-of-tree users. Mirrors listUsers/create/move,
+        // which were already de-coupled from team_group_path.
+        if ($role === '') {
             throw ValidationException::withMessages([
-                'team_group_path' => ['Missing team or role for restore.'],
+                'role' => ['Missing role for restore.'],
             ]);
         }
 

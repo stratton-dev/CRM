@@ -20,8 +20,13 @@
 declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
-// MUSI być identyczny z MAIL_RELAY_SECRET na Railway:
-$SECRET = 'sprelay_9Fk2Lq7Px4Nv8Bz6Wt1Yd5Hc3Rj0Mg';
+// Sekret WYŁĄCZNIE ze środowiska (getenv MAIL_RELAY_SECRET). Bez literału w repo.
+// Ten plik to nieaktywny fallback (relay działa na Vercel) — gdyby go wgrać na home.pl,
+// ustaw MAIL_RELAY_SECRET w środowisku PHP. Fail-closed gdy pusty.
+$SECRET = (string) (getenv('MAIL_RELAY_SECRET') ?: '');
+if ($SECRET === '') {
+    relay_out(500, ['ok' => false, 'error' => 'relay not configured']);
+}
 
 function relay_out(int $code, array $arr): void {
     http_response_code($code);

@@ -40,8 +40,22 @@ class UsersController extends Controller
         return $users->map(fn (User $user) => $this->formatUser($user));
     }
 
-    public function show(User $user)
+    public function show(Request $request, User $user, TokenContext $context)
     {
+        // Scope single-user reads like index(): only ADMIN/DIRECTOR, a MANAGER of
+        // the same team, or the user themselves. Prevents IDOR enumeration of other
+        // users' data via /v1/users/{id}.
+        $actor = $request->user();
+        $roleCode = $context->primaryRole();
+        $isAdmin = in_array($roleCode, ['ADMIN', 'DIRECTOR'], true);
+        $isSelf = $actor && $actor->id === $user->id;
+        $isManagerOfUser = $roleCode === 'MANAGER'
+            && $actor?->team_id !== null
+            && $user->team_id === $actor->team_id;
+        if (!$isAdmin && !$isSelf && !$isManagerOfUser) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
         $user->load('role:id,code,name');
         return $this->formatUser($user);
     }
@@ -350,7 +364,9 @@ class UsersController extends Controller
             'leadowiecCommissionRate' => $user->leadowiec_commission_rate,
             'firstName' => $user->first_name,
             'lastName' => $user->last_name,
-            'plainPassword' => $user->plain_password,
+            // Cleartext password is only ever exposed to an ADMIN viewer (the user
+            // admin panel). Never leak it to SALES/MANAGER/DIRECTOR/LEADOWIEC.
+            'plainPassword' => (optional(auth()->user())->role_cached === 'ADMIN') ? $user->plain_password : null,
         ];
     }
 

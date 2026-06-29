@@ -22,6 +22,18 @@ RUN apt-get update && apt-get install -y \
     && echo "post_max_size = 50M" >> /usr/local/etc/php/conf.d/custom.ini \
     && echo "max_execution_time = 600" >> /usr/local/etc/php/conf.d/custom.ini
 
+# Size the PHP-FPM pool for the 512MB Railway container (stock default is only
+# pm.max_children=5 → requests queue/502 under the SPA's concurrent bursts).
+# Edit the existing [www] pool in place (php-fpm rejects a duplicate [www] pool).
+RUN sed -i \
+        -e 's/^pm = .*/pm = dynamic/' \
+        -e 's/^pm.max_children = .*/pm.max_children = 8/' \
+        -e 's/^pm.start_servers = .*/pm.start_servers = 2/' \
+        -e 's/^pm.min_spare_servers = .*/pm.min_spare_servers = 1/' \
+        -e 's/^pm.max_spare_servers = .*/pm.max_spare_servers = 4/' \
+        /usr/local/etc/php-fpm.d/www.conf \
+    && echo "pm.max_requests = 300" >> /usr/local/etc/php-fpm.d/www.conf
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html

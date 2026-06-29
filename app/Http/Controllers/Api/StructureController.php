@@ -175,7 +175,9 @@ class StructureController extends Controller
             'enabled' => $user->enabled,
             'leadowiecOpiekunId' => $user->leadowiec_opiekun_id,
             'leadowiecCommissionRate' => $user->leadowiec_commission_rate,
-            'plainPassword' => $user->plain_password,
+            // Cleartext password only for ADMIN viewers (never to structure viewers
+            // like MANAGER/DIRECTOR/LEADOWIEC).
+            'plainPassword' => (optional(auth()->user())->role_cached === 'ADMIN') ? $user->plain_password : null,
         ];
     }
 }

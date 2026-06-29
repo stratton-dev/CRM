@@ -35,23 +35,37 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::before(function (User $user, string $ability) {
+        // Abilities that MANAGER/SALES must NOT get for free — they fall through to
+        // the per-role permission check (permission_role) instead of the blanket
+        // bypass. Closes the hole where a SALES user could manage roles/permissions,
+        // org records, IMAP-admin monitoring, or commission config.
+        $adminOnlyPrefixes = [
+            'roles.', 'permissions.',
+            'organizations.create', 'organizations.update', 'organizations.delete',
+            'imap-admin', 'crm-commission-config', 'crm-team-commission-thresholds',
+        ];
+
+        Gate::before(function (User $user, string $ability) use ($adminOnlyPrefixes) {
             $roleCode = $user->role_cached ?? $user->role?->code;
 
-            // ADMIN and DIRECTOR: full bypass
-            if (in_array($roleCode, ['ADMIN', 'DIRECTOR', 'director', 'admin'], true) || $user->email === 'admin@stratton.pl') {
+            // ADMIN and DIRECTOR: full bypass (top of the hierarchy).
+            if (in_array($roleCode, ['ADMIN', 'DIRECTOR', 'director', 'admin'], true)) {
                 return true;
             }
 
-            // MANAGER: full bypass
-            if ($roleCode === 'MANAGER') {
+            // MANAGER / SALES: bypass for everyday abilities, but for sensitive
+            // admin abilities return null → defer to the explicit permission_role
+            // check (so only roles actually granted the permission pass).
+            if (in_array($roleCode, ['MANAGER', 'SALES'], true)) {
+                foreach ($adminOnlyPrefixes as $prefix) {
+                    if (str_starts_with($ability, $prefix)) {
+                        return null; // fall through to Gate::define / permission_role
+                    }
+                }
                 return true;
             }
 
-            // SALES: full bypass except crm-commission-config
-            if ($roleCode === 'SALES' && !str_starts_with($ability, 'crm-commission-config')) {
-                return true;
-            }
+            return null;
         });
 
         Gate::policy(Client::class, ClientPolicy::class);
