@@ -4,6 +4,7 @@ import { useNewsStore } from '@/stores/news'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import TabHeader from '@/components/ui/TabHeader.vue'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
 const newsStore = useNewsStore()
 const isEditing = ref(false)
@@ -344,7 +345,7 @@ onMounted(() => {
                 </div>
                 
                 <h3 class="text-xl font-serif font-bold text-slate-900 mb-2 group-hover:text-stratton-gold transition-colors">{{ item.title }}</h3>
-                <div class="text-sm text-slate-500 line-clamp-2 overflow-hidden italic leading-relaxed" v-html="item.content"></div> 
+                <div class="text-sm text-slate-500 line-clamp-2 overflow-hidden italic leading-relaxed" v-html="sanitizeHtml(item.content)"></div>
                 
                 <div class="mt-5 flex items-center gap-4 border-t border-slate-50 pt-4">
                     <div class="flex items-center gap-2">

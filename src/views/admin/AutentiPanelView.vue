@@ -11,6 +11,7 @@ import { useClientStore } from '@/stores/client'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
 import { getAutentiStatusTone } from '@/utils/uiColors'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 import type { AutentiDocument, DocumentTemplate } from '@/types/models'
 
 const data = useDataStore()
@@ -840,7 +841,7 @@ onBeforeUnmount(() => {
           </div>
           <label class="block text-xs font-semibold text-gray-600">Treść HTML</label>
           <textarea v-if="newEditorMode === 'code'" ref="newHtmlTextarea" v-model="newTemplateHtml" rows="8" class="w-full border rounded px-3 py-2 text-sm font-mono" placeholder="<h1>Umowa</h1>"></textarea>
-          <div v-else class="w-full border rounded px-3 py-2 text-sm bg-white min-h-[160px]" v-html="renderPreview(newTemplateHtml)"></div>
+          <div v-else class="w-full border rounded px-3 py-2 text-sm bg-white min-h-[160px]" v-html="sanitizeHtml(renderPreview(newTemplateHtml))"></div>
           <div class="space-y-2">
             <div class="text-xs font-semibold text-gray-600">Sekcje HTML</div>
             <div class="flex flex-wrap gap-2">
@@ -939,7 +940,7 @@ onBeforeUnmount(() => {
           </div>
           <label class="block text-xs font-semibold text-gray-600">Treść HTML</label>
           <textarea v-if="editEditorMode === 'code'" ref="editHtmlTextarea" v-model="editHtml" rows="8" class="w-full border rounded px-3 py-2 text-sm font-mono"></textarea>
-          <div v-else class="w-full border rounded px-3 py-2 text-sm bg-white min-h-[160px]" v-html="renderPreview(editHtml)"></div>
+          <div v-else class="w-full border rounded px-3 py-2 text-sm bg-white min-h-[160px]" v-html="sanitizeHtml(renderPreview(editHtml))"></div>
           <div class="space-y-2">
             <div class="text-xs font-semibold text-gray-600">Sekcje HTML</div>
             <div class="flex flex-wrap gap-2">

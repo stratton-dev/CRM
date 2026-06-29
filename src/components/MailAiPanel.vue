@@ -2,6 +2,7 @@
 import { ref, watch, nextTick } from 'vue'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 import type { Email } from '@/types/models'
 
 const props = defineProps<{
@@ -90,10 +91,11 @@ const resetConversation = () => {
 }
 
 const formatContent = (text: string) => {
-  return text
+  const html = text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/\n/g, '<br>')
+  return sanitizeHtml(html)
 }
 </script>
 

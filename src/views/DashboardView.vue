@@ -14,6 +14,7 @@ import StructureView from '@/views/StructureView.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import TabHeader from '@/components/ui/TabHeader.vue'
 import GaugeChart from '@/components/GaugeChart.vue'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 
 type UserRole = 'SALES' | 'MANAGER' | 'DIRECTOR' | 'ADMIN' | 'CLIENT_HR' | 'LEADOWIEC'
 
@@ -726,7 +727,7 @@ watch(
                       <span v-if="newsItems[currentNewsIndex]?.date" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.date }}</span>
                     </div>
                     <h4 class="font-bold text-slate-900 text-lg mb-2 uppercase tracking-tight hover:text-primary transition-colors line-clamp-2" :class="{'text-white hover:text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}">{{ newsItems[currentNewsIndex]?.title }}</h4>
-                    <div class="news-content-area text-slate-700 leading-relaxed text-sm line-clamp-3" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}" v-html="newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej treści</i>'"></div>
+                    <div class="news-content-area text-slate-700 leading-relaxed text-sm line-clamp-3" :class="{'text-white': newsItems[currentNewsIndex]?.title?.toUpperCase().includes('KONKURS')}" v-html="sanitizeHtml(newsItems[currentNewsIndex]?.content || '<i>Brak dodatkowej treści</i>')"></div>
                     </div>
                   </div>
                   <div v-else key="empty" class="flex items-center justify-center h-full text-slate-400 italic">Brak aktualności</div>
@@ -1034,7 +1035,7 @@ watch(
 
           <h2 class="font-serif font-bold text-xl md:text-3xl text-slate-900 mb-4 md:mb-6 leading-tight">{{ selectedNews.title }}</h2>
           
-          <div class="prose prose-slate max-w-none text-slate-700 leading-relaxed max-h-[60vh] overflow-y-auto mb-6" v-html="selectedNews.content || '<i>Brak treści</i>'"></div>
+          <div class="prose prose-slate max-w-none text-slate-700 leading-relaxed max-h-[60vh] overflow-y-auto mb-6" v-html="sanitizeHtml(selectedNews.content || '<i>Brak treści</i>')"></div>
           
           <div class="mt-8 border-t border-slate-100 pt-6 flex justify-between items-end">
             <div v-if="selectedNews.attachment" class="flex flex-col gap-2">
