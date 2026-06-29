@@ -8,6 +8,7 @@ import { formatPLN } from '../utils/formatters';
 import { ZapisanaKalkulacja } from '../models/history';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/stores/auth';
+import { useSessionStore } from '@/stores/session';
 
 import { useToastStore } from '@/stores/toast';
 import { generateOfferEmailBody } from '@/utils/offerEmailGenerator';
@@ -17,6 +18,20 @@ const emit = defineEmits<{ (event: 'backToDashboard'): void }>();
 const store = useCalculatorStore();
 const mailboxStore = useMailboxStore();
 const auth = useAuthStore();
+const session = useSessionStore();
+
+// Opiekun oferty = zalogowany użytkownik (wcześniej zahardkodowana Agnieszka Cięciara).
+const advisorInfo = () => {
+  const u: any = session.currentUser;
+  const name = String(u?.name || '').trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  return {
+    imie: u?.firstName || parts[0] || '',
+    nazwisko: u?.lastName || parts.slice(1).join(' ') || '',
+    email: u?.email || '',
+    telefon: u?.phone || '',
+  };
+};
 const toast = useToastStore();
 const router = useRouter();
 const isSaving = ref(false);
@@ -145,7 +160,7 @@ const buildLongOfferData = () => {
       oszczednosc: w.oszczednosc,
       podwyzka: w.podzial.nettoCalkowite - w.standard.netto,
     })),
-    handlowiec: { imie: 'Agnieszka', nazwisko: 'Cięciara', email: 'a.cieciara@stratton-prime.pl' },
+    handlowiec: advisorInfo(),
     dataWystawienia: new Date().toLocaleDateString('pl-PL'),
     dataWaznosci: new Date(Date.now() + 14 * 86400000).toLocaleDateString('pl-PL'),
   }
@@ -160,7 +175,7 @@ const handleLongOffer = async () => {
 const handleProductCard = async () => {
   await pdfGen.generatePdf('product-card', {
     firma: { nazwa: store.firma.nazwa || '', nip: store.firma.nip || '' },
-    handlowiec: { imie: 'Agnieszka', nazwisko: 'Cięciara', email: 'a.cieciara@stratton-prime.pl' },
+    handlowiec: advisorInfo(),
     dataWystawienia: new Date().toLocaleDateString('pl-PL'),
   })
 };

@@ -983,7 +983,7 @@ watch(
               <tr v-for="inv in paginatedOverdueInvoices" :key="inv.id" class="hover:bg-red-50/10 transition bg-white group">
                 <td class="px-6 py-4 font-bold text-slate-800 text-sm max-w-[350px] truncate" :title="inv.company">{{ inv.company }}</td>
                 <td class="px-6 py-4 text-slate-500 font-mono text-xs whitespace-nowrap">{{ inv.number }}</td>
-                <td class="px-6 py-4 font-bold text-slate-900 text-sm whitespace-nowrap">{{ inv.amountGross.toFixed(2) }} PLN</td>
+                <td class="px-6 py-4 font-bold text-slate-900 text-sm whitespace-nowrap">{{ (inv.amountGross ?? 0).toFixed(2) }} PLN</td>
                 <td class="px-6 py-4 text-slate-500 whitespace-nowrap">{{ inv.dueDate }}</td>
                 <td class="px-6 py-4 text-red-600 font-bold bg-red-50 whitespace-nowrap">+{{ inv.daysOverdue ?? 0 }} dni</td>
                 <td class="px-6 py-4 whitespace-nowrap"><span class="bg-red-100 text-red-700 px-3 py-1 rounded text-[10px] font-bold border border-red-200">UNPAID</span></td>

@@ -9,6 +9,7 @@ import { useStructureStore } from '@/stores/structure'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import { useKnowledgeBaseStore } from '@/stores/knowledgeBase'
+import { sanitizeHtml } from '@/utils/sanitizeHtml'
 import { api } from '@/api/client'
 import type { Email } from '@/types/models'
 import AppIcon from '@/components/AppIcon.vue'
@@ -1150,7 +1151,7 @@ watch(searchQuery, () => {
                   <svg class="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
                   Ładowanie treści...
                 </div>
-                <div v-else v-html="selectedEmail.body"></div>
+                <div v-else v-html="sanitizeHtml(selectedEmail.body)"></div>
               </div>
 
               <!-- Attachments -->

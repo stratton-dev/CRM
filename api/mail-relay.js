@@ -12,7 +12,9 @@
 
 import nodemailer from 'nodemailer'
 
-const SECRET = process.env.MAIL_RELAY_SECRET || 'sprelay_9Fk2Lq7Px4Nv8Bz6Wt1Yd5Hc3Rj0Mg'
+// Secret comes ONLY from the env var (set in Vercel project settings). No hardcoded
+// fallback — a literal in the repo defeats the whole auth check. Fails closed below.
+const SECRET = process.env.MAIL_RELAY_SECRET || ''
 
 function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false
@@ -36,6 +38,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'bad json' })
   }
 
+  if (SECRET === '') {
+    return res.status(500).json({ ok: false, error: 'relay not configured (MAIL_RELAY_SECRET unset)' })
+  }
   if (!safeEqual(String(body.secret || ''), SECRET)) {
     return res.status(403).json({ ok: false, error: 'forbidden' })
   }
