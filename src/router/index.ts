@@ -11,7 +11,7 @@ import { isChunkLoadError, shouldReloadForChunkError } from './chunkReload'
 // recruitment, admin-*) NIE pobierają tych danych — to była przyczyna zbędnych
 // zapytań per_page=500 na każdym widoku.
 const CLIENT_DATA_ROUTES = new Set([
-  'dashboard', 'sales-start', 'sales-email-compose', 'analytics', 'clients',
+  'dashboard', 'sales-start', 'sales-email-compose', 'analytics', 'clients', 'arp',
   'offer-tool', 'sales-contract-preview', 'contract-preview', 'invoice-preview',
   'hr-panel', 'admin-analytics', 'autenti-panel', 'calendar', 'mailbox',
   'calculator', 'payroll', 'settings',
@@ -47,6 +47,7 @@ const routes: RouteRecordRaw[] = [
   { path: '/app/mailbox', name: 'mailbox', component: () => import('@/views/MailboxView.vue'), meta: { requiresAuth: true, fullHeight: true } },
   { path: '/app/knowledge-base', name: 'knowledge-base', component: () => import('@/views/KnowledgeBaseView.vue'), meta: { requiresAuth: true } },
   { path: '/app/quick-calculator', name: 'quick-calculator', component: () => import('@/views/QuickCalculatorView.vue'), meta: { requiresAuth: true } },
+  { path: '/app/arp', name: 'arp', component: () => import('@/views/ArpView.vue'), meta: { requiresAuth: true } },
   { path: '/app/calculator', name: 'calculator', component: () => import('@/views/CalculatorView.vue'), meta: { requiresAuth: true } },
   { path: '/app/payroll', name: 'payroll', component: () => import('@/views/PayrollView.vue'), meta: { requiresAuth: true } },
   { path: '/app/leaderboard', name: 'leaderboard', component: () => import('@/views/LeaderboardView.vue'), meta: { requiresAuth: true } },

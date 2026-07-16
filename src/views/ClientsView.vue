@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { ARP_FUNNEL, arpStatusLabel, arpStatusBadge } from '@/config/arp'
 import { useFinanceStore } from '@/stores/finance'
 import { useDataStore } from '@/stores/data'
 import { useClientStore } from '@/stores/client'
@@ -140,17 +141,14 @@ const calculationsLoading = ref(false)
 const calculationStatuses = ref<Array<{ key: string; label: string }>>([])
 const calculationsError = ref<string | null>(null)
 
-const ALL_KANBAN_STAGES: Array<{ status: Client['status']; title: string }> = [
-  { status: 'NEW', title: 'Nowy' },
-  { status: 'IN_TALKS', title: 'W rozmowach' },
-  { status: 'SIGNED', title: 'Podpisany (Stratton Prime)' },
-  { status: 'TERMINATED', title: 'Umowa Rozwiązana' },
-  { status: 'RESIGNED', title: 'Rezygnacja' },
-]
+// Kolumny kanbana = lejek ARP (src/config/arp.ts), zmapowany na istniejące
+// statusy enuma. Etapy 3–6 używają dotąd nieużywanych wartości enuma.
+const ALL_KANBAN_STAGES: Array<{ status: Client['status']; title: string; adminOnly?: boolean }> =
+  ARP_FUNNEL.map((s) => ({ status: s.status as Client['status'], title: s.label, adminOnly: s.adminOnly }))
 
-// Non-admin users don't see the "Umowa Rozwiązana" column — TERMINATED is admin-only.
+// Non-admin users don't see admin-only columns (np. „Zakończony"/TERMINATED).
 const kanbanStages = computed(() =>
-  isAdmin.value ? ALL_KANBAN_STAGES : ALL_KANBAN_STAGES.filter((stage) => stage.status !== 'TERMINATED')
+  isAdmin.value ? ALL_KANBAN_STAGES : ALL_KANBAN_STAGES.filter((stage) => !stage.adminOnly)
 )
 
 const filteredContacts = computed(() => {
@@ -325,16 +323,7 @@ const sort = (field: keyof Client | 'opiekunDisplay') => {
   }
 }
 
-const statusLabel = (status: Client['status']) => {
-  const labels: Record<Client['status'], string> = {
-    NEW: 'Nowy',
-    IN_TALKS: 'W rozmowach',
-    SIGNED: 'Podpisany (Stratton Prime)',
-    TERMINATED: 'Umowa Rozwiązana',
-    RESIGNED: 'Rezygnacja',
-  }
-  return labels[status] || status
-}
+const statusLabel = (status: Client['status']) => arpStatusLabel(status)
 
 onMounted(() => {
   if (auth.enabled) {
@@ -1423,13 +1412,7 @@ if (route.query.expand) {
             </div>
             <span
               class="px-2 py-0.5 inline-flex shrink-0 text-xs leading-4 font-semibold rounded-full"
-              :class="{
-                'bg-yellow-100 text-yellow-800': client.status === 'NEW',
-                'bg-indigo-100 text-indigo-800': client.status === 'IN_TALKS',
-                'bg-emerald-100 text-emerald-800': client.status === 'SIGNED',
-                'bg-gray-200 text-gray-800': client.status === 'TERMINATED',
-                'bg-red-100 text-red-800': client.status === 'RESIGNED',
-              }"
+              :class="arpStatusBadge(client.status)"
             >{{ statusLabel(client.status) }}</span>
           </div>
           <div class="mt-2 flex items-center justify-between">
@@ -1496,13 +1479,7 @@ if (route.query.expand) {
               <td class="px-4 py-1.5 whitespace-nowrap">
                 <span
                   class="px-2 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full"
-                  :class="{
-                    'bg-yellow-100 text-yellow-800': client.status === 'NEW',
-                    'bg-indigo-100 text-indigo-800': client.status === 'IN_TALKS',
-                    'bg-emerald-100 text-emerald-800': client.status === 'SIGNED',
-                    'bg-gray-200 text-gray-800': client.status === 'TERMINATED',
-                    'bg-red-100 text-red-800': client.status === 'RESIGNED',
-                  }"
+                  :class="arpStatusBadge(client.status)"
                 >
                   {{ statusLabel(client.status) }}
                 </span>
@@ -1748,11 +1725,7 @@ if (route.query.expand) {
             <div class="flex items-center gap-2">
               <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
             <select :value="selectedClient.status" class="py-1.5 pl-3 pr-8 text-sm font-medium rounded-lg border-slate-300 focus:ring-primary focus:border-primary bg-white shadow-sm" :disabled="isStatusLocked" @change="changeStatus($event, selectedClient.id)">
-                <option value="NEW">Nowy</option>
-                <option value="IN_TALKS">W rozmowach</option>
-                <option value="SIGNED">Podpisany</option>
-                <option v-if="isAdmin" value="TERMINATED">Umowa rozwiązana</option>
-                <option value="RESIGNED">Rezygnacja</option>
+                <option v-for="stage in kanbanStages" :key="stage.status" :value="stage.status">{{ stage.title }}</option>
               </select>
             </div>
             <div class="flex-1"></div>

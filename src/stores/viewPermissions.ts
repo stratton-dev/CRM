@@ -30,6 +30,7 @@ export type CrmViewKey =
   | 'knowledge-base'
   | 'recruitment'
   | 'quick-calculator'
+  | 'arp'
   | 'calculator'
   | 'leaderboard'
   | 'meetings'
@@ -81,6 +82,7 @@ const VIEW_OPTIONS: Array<{ key: CrmViewKey; label: string }> = [
   { key: 'knowledge-base', label: 'Baza Wiedzy' },
   { key: 'recruitment', label: 'Rekrutacja' },
   { key: 'quick-calculator', label: 'Szybka Oferta' },
+  { key: 'arp', label: 'Audyt (ARP)' },
   { key: 'calculator', label: 'Kalkulator' },
   { key: 'leaderboard', label: 'Rankingi' },
   { key: 'meetings', label: 'Zarządzanie Spotkaniami' },
@@ -137,6 +139,7 @@ const DEFAULT_PERMISSIONS: Record<CrmViewKey, UserRole[]> = {
   'knowledge-base': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   recruitment: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'CLIENT_HR'],
   'quick-calculator': ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES', 'LEADOWIEC'],
+  arp: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   calculator: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   meetings: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],
   leaderboard: ['ADMIN', 'DIRECTOR', 'MANAGER', 'SALES'],

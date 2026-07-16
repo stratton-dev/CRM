@@ -101,7 +101,10 @@ export interface Client {
   nip: string
   regon?: string | null
   krs?: string | null
-  status: 'NEW' | 'IN_TALKS' | 'SIGNED' | 'TERMINATED' | 'RESIGNED'
+  // Pełny zestaw wartości enuma DB (bez zmian w DB) — środkowe cztery
+  // (OFFER_PREPARING/OFFER_GENERATED/CALCULATION_SENT/SPECIAL_OFFER) to etapy
+  // lejka ARP. Etykiety/kolory: src/config/arp.ts (ARP_FUNNEL).
+  status: 'NEW' | 'IN_TALKS' | 'OFFER_PREPARING' | 'OFFER_GENERATED' | 'CALCULATION_SENT' | 'SPECIAL_OFFER' | 'SIGNED' | 'TERMINATED' | 'RESIGNED'
   ownerId: string
   ownerName?: string
   meetingId?: string

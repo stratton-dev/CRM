@@ -83,6 +83,7 @@ const navLinks = computed((): NavLink[] => {
       { label: 'Logi Systemowe', path: '/app/admin-logs', icon: 'shield-check', viewKey: 'admin-logs' },
       { label: 'Analityka (Sprzedaż)', path: '/app/analytics', icon: 'chart-line', viewKey: 'analytics' },
       { label: 'Klienci', path: '/app/clients', icon: 'users', viewKey: 'clients' },
+      { label: 'Audyt (ARP)', path: '/app/arp', icon: 'invoice', viewKey: 'arp' },
       { label: 'Struktura', path: '/app/structure', icon: 'sitemap', viewKey: 'structure' },
       { label: 'Rozliczenia', path: '/app/settlements', icon: 'invoice', viewKey: 'settlements' },
       { label: 'Progi Prowizyjne', path: '/app/commission-thresholds', icon: 'sliders', viewKey: 'commission-thresholds' },
@@ -96,6 +97,7 @@ const navLinks = computed((): NavLink[] => {
       { label: 'Analityka', path: '/app/analytics', icon: 'chart-pie', viewKey: 'analytics' },
       { label: 'Mój Zespół', path: '/app/structure', icon: 'people-roof', viewKey: 'structure' },
       { label: 'Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
+      { label: 'Audyt (ARP)', path: '/app/arp', icon: 'invoice', viewKey: 'arp' },
       { label: 'Rozliczenia', path: '/app/settlements', icon: 'wallet', viewKey: 'settlements' },
       { label: 'Rankingi', path: '/app/leaderboard', icon: 'medal', viewKey: 'leaderboard' }
     )
@@ -103,6 +105,7 @@ const navLinks = computed((): NavLink[] => {
     links.push(
       { label: 'Mój Zespół', path: '/app/structure', icon: 'people-group', viewKey: 'structure' },
       { label: 'Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
+      { label: 'Audyt (ARP)', path: '/app/arp', icon: 'invoice', viewKey: 'arp' },
       { label: 'Rozliczenia', path: '/app/settlements', icon: 'wallet', viewKey: 'settlements' },
       { label: 'Rankingi', path: '/app/leaderboard', icon: 'medal', viewKey: 'leaderboard' }
     )
@@ -110,6 +113,7 @@ const navLinks = computed((): NavLink[] => {
     links.push(
       // Spotkania removed — activity panel on each client card handles it
       { label: 'Moi Klienci', path: '/app/clients', icon: 'address-book', viewKey: 'clients' },
+      { label: 'Audyt (ARP)', path: '/app/arp', icon: 'invoice', viewKey: 'arp' },
       { label: 'Szybka Oferta', path: '/app/quick-calculator', icon: 'calculator', viewKey: 'quick-calculator' },
       { label: 'Moje Prowizje', path: '/app/settlements', icon: 'hand-holding-dollar', viewKey: 'settlements' },
       { label: 'Ranking', path: '/app/leaderboard', icon: 'award', viewKey: 'leaderboard' }
