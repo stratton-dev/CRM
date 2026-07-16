@@ -43,6 +43,11 @@ class AppServiceProvider extends ServiceProvider
             'roles.', 'permissions.',
             'organizations.create', 'organizations.update', 'organizations.delete',
             'imap-admin', 'crm-commission-config', 'crm-team-commission-thresholds',
+            // structure.* MUSI przejść przez StructureAuthorization (Gate::define),
+            // inaczej blankietowe `true` niżej pozwoliłoby MANAGER/SALES tworzyć/
+            // przenosić userów z dowolną rolą (np. własne konto ADMIN). Po fall-through
+            // canCreate/canMove/canRemove poprawnie ogranicza ich do podwładnych.
+            'structure.',
         ];
 
         Gate::before(function (User $user, string $ability) use ($adminOnlyPrefixes) {

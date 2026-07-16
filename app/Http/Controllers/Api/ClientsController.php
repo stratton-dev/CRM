@@ -131,7 +131,10 @@ class ClientsController extends Controller
         $authUser = $request->user();
         $data = $request->validate([
             'organization_id' => 'nullable|exists:organizations,id',
-            'nip' => 'nullable|string|max:255|unique:companies,nip',
+            // Kolumna companies.nip = varchar(20) NOT NULL UNIQUE. Walidacja
+            // musi to odzwierciedlać, inaczej brak NIP → 23502 (500), a NIP > 20
+            // znaków → "value too long" (500) zamiast czytelnego 422.
+            'nip' => 'required|string|max:20|unique:companies,nip',
             'name' => 'required|string|max:255',
             'regon' => 'nullable|string|max:20',
             'krs' => 'nullable|string|max:20',

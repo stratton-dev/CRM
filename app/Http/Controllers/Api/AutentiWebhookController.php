@@ -19,12 +19,14 @@ class AutentiWebhookController extends Controller
 
     public function __invoke(Request $request)
     {
-        $secret = config('autenti.webhook_secret');
-        if (is_string($secret) && $secret !== '') {
-            $header = (string) $request->header('X-Autenti-Webhook-Secret', '');
-            if (!hash_equals($secret, $header)) {
-                return response()->json(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
-            }
+        // Fail-closed: publiczna trasa webhooka broni się WYŁĄCZNIE sekretem.
+        // Gdy sekret nie jest skonfigurowany, odrzucamy (a nie przepuszczamy) —
+        // inaczej ktokolwiek mógłby POST-ować sfałszowane callbacki podpisów
+        // i sterować stanem onboardingu. Wzorzec zgodny z Ebs/Imap kontrolerami.
+        $secret = (string) config('autenti.webhook_secret', '');
+        $header = (string) $request->header('X-Autenti-Webhook-Secret', '');
+        if ($secret === '' || !hash_equals($secret, $header)) {
+            return response()->json(['message' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
 
         $payload = $request->all();

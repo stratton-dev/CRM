@@ -58,8 +58,16 @@ class PdfProcessingService
                 ];
             }
 
+            $prev = $position;
             $position += mb_strlen($chunk) - $overlap;
-            if ($position <= 0) $position = $end;
+            // Gwarancja postępu: gdy ogon tekstu ma długość <= overlap, przyrost
+            // bywa 0/ujemny (np. textLen=5000/chunk=2000/overlap=400 → utyka na 4600)
+            // → pętla nieskończona i OOM joba KB. Guard `<= 0` tego NIE łapie (pozycja
+            // dodatnia). Przy braku postępu skaczemy na koniec chunku — a gdy to koniec
+            // tekstu, `while` się kończy.
+            if ($position <= $prev) {
+                $position = $end;
+            }
         }
 
         return $chunks;

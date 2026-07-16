@@ -52,8 +52,12 @@ class CrmClientActivitiesController extends Controller
         return response()->json($activity->load(['client:id,name', 'user:id,name,supabase_id']), 201);
     }
 
-    public function update(Request $request, CrmClientActivity $activity)
+    public function update(Request $request, CrmClientActivity $crmClientActivity)
     {
+        // Parametr MUSI nazywać się $crmClientActivity — apiResource generuje
+        // route param {crm_client_activity}, a route-model-binding dopasowuje po
+        // NAZWIE. Wcześniej ($activity) wstrzykiwał pusty model → PATCH nie
+        // aktualizował wiersza (edycja notatki po cichu nie działała).
         $data = $request->validate([
             'type' => 'sometimes|required|in:CALL,MEETING,EMAIL,NOTE',
             'description' => 'sometimes|required|string',
@@ -61,8 +65,8 @@ class CrmClientActivitiesController extends Controller
             'is_completed' => 'nullable|boolean',
         ]);
 
-        $activity->update($data);
-        return $activity->refresh()->load(['client:id,name', 'user:id,name,supabase_id']);
+        $crmClientActivity->update($data);
+        return $crmClientActivity->refresh()->load(['client:id,name', 'user:id,name,supabase_id']);
     }
 
     public function destroy(CrmClientActivity $crmClientActivity)

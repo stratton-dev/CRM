@@ -98,6 +98,22 @@ class SupabaseAuthenticate
             if ($selectedRole && $user->role_cached !== $selectedRole) {
                 $user->fill(['role_cached' => $selectedRole])->save();
             }
+        } elseif ($user->role_id === null && !empty($user->role_cached)) {
+            // Self-heal: userzy tworzeni przez Strukturę mają role_cached, ale
+            // role_id=NULL (init-only syncRole wyżej jest pomijany, bo role_cached
+            // jest już ustawione). NULL role_id psuje scoping listy userów
+            // (UsersController::index bez $current->role zwraca WSZYSTKICH) oraz
+            // granty permission_role (Gate::define zwraca false gdy !$user->role).
+            // Uzupełniamy role_id z DB (role_cached) — NIE z JWT, więc nie cofa roli.
+            $roleId = \Illuminate\Support\Facades\Cache::remember(
+                "supabase_role_id:{$user->role_cached}",
+                3600,
+                fn () => Role::firstOrCreate(['code' => $user->role_cached], ['name' => $user->role_cached])->id
+            );
+            if ($roleId) {
+                $user->role_id = $roleId;
+                $user->save();
+            }
         }
 
         // Bez $user->refresh() — to był zbędny pełny SELECT na KAŻDYM requeście.

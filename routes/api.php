@@ -17,12 +17,18 @@ Route::post('ebs/webhook', EbsWebhookController::class);
 Broadcast::routes(['middleware' => ['supabase']]);
 
 Route::prefix('v1')->group(function () {
+    // imap-service/configs broni się własnym tokenem serwisowym (fail-closed),
+    // więc może zostać poza `supabase`. GUS był tu OMYŁKOWO bez auth — dowolny
+    // anonim mógł odpytywać rejestr GUS naszym kluczem `GUS_BIR` (nadużycie limitu,
+    // masowy scraping NIP). Przeniesiony do grupy `supabase` niżej.
     Route::get('imap-service/configs', [ImapServiceController::class, 'configs']);
-    Route::get('gus', [GusController::class, 'byNip']);
 });
 
 Route::prefix('v1')->middleware('supabase')->group(function () {
     Route::get('me', MeController::class);
+    // GUS przeniesiony tu z grupy bez-auth — wywoływany wyłącznie przez
+    // zalogowany formularz nowego klienta (front dokłada Bearer do /v1/*).
+    Route::get('gus', [GusController::class, 'byNip']);
     // Meetings module retired — frontend no longer calls /v1/meetings* or
     // /v1/meeting-analyses*. Routes are disabled here; the controllers and
     // the underlying tables stay on the DB as a read-only archive until

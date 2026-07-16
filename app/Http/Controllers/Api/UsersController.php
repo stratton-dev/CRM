@@ -273,10 +273,14 @@ class UsersController extends Controller
 
     public function sendPasswordReset(User $user, TokenContext $context, SupabaseAdminService $admin)
     {
-        $actorRole = $context->primaryRole();
-        $isAdmin = in_array($actorRole, ['ADMIN', 'DIRECTOR'], true);
-        $isSelf = $context->actorSupabaseId() !== '' && $user->supabase_id === $context->actorSupabaseId();
-        if (!$isAdmin && !$isSelf) {
+        // Endpoint zwraca link resetu w odpowiedzi (admin kopiuje go do schowka).
+        // Reset CUDZEGO hasła musi być więc zawężony do ADMIN — inaczej DIRECTOR
+        // mógł wygenerować link resetu konta ADMIN i je przejąć. Rola z DB
+        // (role_cached), bo to jedyne źródło prawdy o roli. Self zawsze dozwolone.
+        $actor = auth()->user();
+        $actorRole = $actor->role_cached ?? $context->primaryRole();
+        $isSelf = $actor && $user->id === $actor->id;
+        if ($actorRole !== 'ADMIN' && !$isSelf) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
         if (!$user->email) {

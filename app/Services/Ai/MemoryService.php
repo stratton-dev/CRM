@@ -304,19 +304,26 @@ PROMPT;
                 ->orderByDesc('last_accessed_at')
                 ->limit($limit)
                 ->get(['id', 'content', 'memory_type', 'importance'])
-                ->toArray();
+                ->map(fn ($m) => (object) $m->toArray())
+                ->all();
         }
 
-        $query = AiMemory::where('user_id', $user->id);
-        foreach (array_slice($words, 0, 3) as $word) {
-            $query->orWhere('content', 'like', "%{$word}%");
-        }
-
-        return $query
+        // WAŻNE: `orWhere` na płasko skasowałby filtr `user_id`
+        // (WHERE user_id = A OR content LIKE ...) → wyciek wspomnień innych
+        // userów do promptu AI. OR-y muszą być w zagnieżdżonej grupie.
+        return AiMemory::where('user_id', $user->id)
+            ->where(function ($q) use ($words) {
+                foreach (array_slice($words, 0, 3) as $word) {
+                    $q->orWhere('content', 'like', "%{$word}%");
+                }
+            })
             ->orderByDesc('importance')
             ->limit($limit)
             ->get(['id', 'content', 'memory_type', 'importance'])
-            ->toArray();
+            // stdClass, spójnie z findByVector() (DB::select) — retrieveRelevant()
+            // mapuje `object $m`, tablice rzucałyby TypeError.
+            ->map(fn ($m) => (object) $m->toArray())
+            ->all();
     }
 
     private function isSimilarExists(int $userId, string $content): bool
