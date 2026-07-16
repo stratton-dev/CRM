@@ -114,6 +114,11 @@ router.beforeEach(async (to) => {
   }
 
   if (!viewPermissions.isViewAllowed(String(to.name || ''), role)) {
+    // Dashboard jest celem fallbacku. Gdyby sam dashboard był niedozwolony
+    // (np. admin usunął rolę z 'dashboard' w uprawnieniach widoków), ponowny
+    // redirect na dashboard zapętliłby się w nieskończoność i wybielił apkę.
+    // Renderujemy go jako bezpieczny fallback zamiast zapętlać.
+    if (String(to.name || '') === 'dashboard') return true
     return { path: '/app/dashboard' }
   }
   return true

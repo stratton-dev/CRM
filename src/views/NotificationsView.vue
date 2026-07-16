@@ -243,7 +243,7 @@ const getTypeLabel = (type: string) => {
               <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono">{{ new Date(notif.date).toLocaleString() }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-800 font-bold truncate max-w-xs" :title="notif.userId">
                   <div class="flex items-center gap-2">
-                       <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">{{ notif.userId.substring(0,2).toUpperCase() }}</div>
+                       <div class="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">{{ (notif.userId || '—').substring(0,2).toUpperCase() }}</div>
                        {{ notif.userId }}
                   </div>
               </td>
