@@ -29,6 +29,9 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
     // GUS przeniesiony tu z grupy bez-auth — wywoływany wyłącznie przez
     // zalogowany formularz nowego klienta (front dokłada Bearer do /v1/*).
     Route::get('gus', [GusController::class, 'byNip']);
+
+    // Konfiguracja modelu ARP (produkt/cennik/gwarancja/lejek/prowizje) — read-only.
+    Route::get('arp-config', [\App\Http\Controllers\Api\ArpConfigController::class, 'show']);
     // Meetings module retired — frontend no longer calls /v1/meetings* or
     // /v1/meeting-analyses*. Routes are disabled here; the controllers and
     // the underlying tables stay on the DB as a read-only archive until

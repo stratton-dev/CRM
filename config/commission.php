@@ -27,4 +27,18 @@ return [
         // dostaje to z każdej umowy podpisanej dla leadowca w jego pionie.
         'default_rate' => env('COMMISSION_AGENT_RATE', 0.10),
     ],
+
+    // Prowizje modelu ARP → EBS (lipiec 2026). Klucze DODANE addytywnie —
+    // silnik prowizji (CommissionCalculatorService) ich NIE czyta, więc nie
+    // zmieniają dotychczasowej matematyki. Referencja + źródło dla /v1/arp-config.
+    'arp' => [
+        // Partner (biuro rachunkowe / broker) od ceny sprzedanego audytu.
+        'partner_rate' => env('COMMISSION_ARP_PARTNER', 0.15),
+    ],
+    'ebs_partner' => [
+        // Program partnerski EBS — 3 poziomy polecenia.
+        'l1_rate' => env('COMMISSION_EBS_L1', 0.10),
+        'l2_rate' => env('COMMISSION_EBS_L2', 0.05),
+        'l3_rate' => env('COMMISSION_EBS_L3', 0.02),
+    ],
 ];
