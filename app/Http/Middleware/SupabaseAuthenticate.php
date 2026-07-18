@@ -78,11 +78,15 @@ class SupabaseAuthenticate
                 'active'           => true,
             ]);
         } else {
-            $user->fill([
-                'supabase_id'      => $supabaseId ?: $user->supabase_id,
-                'name'             => $name ?: $user->name,
-                'active'           => true,
-            ])->save();
+            // DB jest źródłem prawdy dla `name` i `active` — NIE nadpisujemy ich
+            // z JWT na każdym requeście (ta sama klasa co naprawiony role-revert:
+            // admin zmienia nazwę / dezaktywuje usera, a middleware cofałby to przy
+            // następnym jego requeście, w tym reaktywując dezaktywowane konto).
+            // Backfillujemy tylko supabase_id, gdy konto dopasowano po emailu i go nie ma.
+            if (!$user->supabase_id && $supabaseId) {
+                $user->supabase_id = $supabaseId;
+                $user->save();
+            }
         }
 
         // Rola: token Supabase (app_metadata.role) służy WYŁĄCZNIE do *inicjalizacji*

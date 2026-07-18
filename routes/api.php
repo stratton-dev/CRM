@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\EbsWebhookController;
 use App\Http\Controllers\Api\ImapServiceController;
 use App\Http\Controllers\Api\GusController;
 use App\Http\Controllers\Api\MeController;
-use App\Http\Controllers\Api\MeetingsController;
 
 Route::get('offers/{token}', PublicOffersController::class);
 Route::post('autenti/webhook', AutentiWebhookController::class);
@@ -32,17 +31,14 @@ Route::prefix('v1')->middleware('supabase')->group(function () {
 
     // Konfiguracja modelu ARP (produkt/cennik/gwarancja/lejek/prowizje) — read-only.
     Route::get('arp-config', [\App\Http\Controllers\Api\ArpConfigController::class, 'show']);
-    // Meetings module retired — frontend no longer calls /v1/meetings* or
-    // /v1/meeting-analyses*. Routes are disabled here; the controllers and
-    // the underlying tables stay on the DB as a read-only archive until
-    // a follow-up DROP migration after stabilization.
-    // Route::post('meetings/prospect', [MeetingsController::class, 'storeProspect']);
+    // Moduł meetings wycofany (kontrolery/trasy/serwis usunięte). Tabele
+    // `meetings`/`meeting_analysis` + modele zostają jako archiwum do czasu
+    // ewentualnej migracji DROP po stabilizacji.
 
     require __DIR__ . '/api/structure.php';
     require __DIR__ . '/api/admin.php';
     require __DIR__ . '/api/users.php';
     require __DIR__ . '/api/clients.php';
-    // require __DIR__ . '/api/meetings.php';
     require __DIR__ . '/api/sales.php';
     require __DIR__ . '/api/notifications.php';
     require __DIR__ . '/api/documents.php';

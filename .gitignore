@@ -5,6 +5,9 @@
 .env.production
 .phpactor.json
 .phpunit.result.cache
+junit.xml
+test_output.txt
+*.ipynb
 /.fleet
 /.idea
 /.nova
@@ -23,7 +26,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-database/migrations/2026_02_02_120000_create_crm_mail_configs_table.php
 exports/team-GDA001-20260202_233720.json
 exports/team-GDA001-20260203_001610.json
 exports/team-GDA001-20260203_011536.json
