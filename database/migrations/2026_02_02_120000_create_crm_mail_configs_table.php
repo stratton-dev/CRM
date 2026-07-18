@@ -8,6 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Idempotentne: ta migracja była wcześniej gitignorowana, więc na
+        // produkcji tabela istnieje, ale wpis w `migrations` może nie istnieć.
+        // Bez tego guardu `migrate --force` przy re-tracku zrobiłby CREATE na
+        // istniejącej tabeli → błąd i padnięty deploy.
+        if (Schema::hasTable('crm_mail_configs')) {
+            return;
+        }
+
         Schema::create('crm_mail_configs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
