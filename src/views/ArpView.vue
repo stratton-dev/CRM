@@ -32,7 +32,7 @@ const selectClient = () => {
   const c = clients.value.find((x) => String(x.id) === selectedClientId.value)
   if (!c) return
   headcount.value = Number(c.employeesTotal || (Number(c.employeesUop || 0) + Number(c.employeesUz || 0))) || 0
-  const existing: any = (c as any).analysis || {}
+  const existing = c.analysis ?? {}
   qual.value = {
     arpEmployeesUop: existing.arpEmployeesUop ?? c.employeesUop ?? null,
     arpEmployeesUz: existing.arpEmployeesUz ?? c.employeesUz ?? null,

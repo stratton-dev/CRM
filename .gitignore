@@ -33,3 +33,8 @@ oferta-z-systemu.pdf
 .vercel
 .env*.local
 .gstack/
+
+# scratch / backup artifacts
+*.ipynb
+*.bak
+Untitled-*.json

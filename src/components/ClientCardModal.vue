@@ -6,6 +6,7 @@ import { useSessionStore } from '@/stores/session'
 import { api } from '@/api/client'
 import AppIcon from '@/components/AppIcon.vue'
 import { industries, contactSources } from '@/constants/industries'
+import { arpStatusLabel, arpStatusBadge } from '@/config/arp'
 import type { Client } from '@/types/models'
 
 const props = defineProps<{
@@ -28,22 +29,6 @@ const isSubmitting = ref(false)
 const isFetchingGus = ref(false)
 const wasValidated = ref(false)
 const dateInput = ref<HTMLInputElement | null>(null)
-
-const STATUS_LABELS: Partial<Record<Client['status'], string>> = {
-  NEW: 'Nowy',
-  IN_TALKS: 'W rozmowach',
-  RESIGNED: 'Rezygnacja',
-  SIGNED: 'Podpisano',
-  TERMINATED: 'Zakończono',
-}
-
-const STATUS_COLORS: Partial<Record<Client['status'], string>> = {
-  NEW: 'bg-slate-100 text-slate-700',
-  IN_TALKS: 'bg-indigo-100 text-indigo-800',
-  RESIGNED: 'bg-rose-100 text-rose-700',
-  SIGNED: 'bg-emerald-100 text-emerald-800',
-  TERMINATED: 'bg-gray-100 text-gray-600',
-}
 
 const initialForm = {
   contactName: '',
@@ -245,9 +230,9 @@ const handleSave = () => {
             <span
               v-if="isEditing && client"
               class="text-xs font-bold px-2 py-0.5 rounded-full"
-              :class="STATUS_COLORS[client.status] || 'bg-slate-100 text-slate-700'"
+              :class="arpStatusBadge(client.status)"
             >
-              {{ STATUS_LABELS[client.status] || client.status }}
+              {{ arpStatusLabel(client.status) }}
             </span>
           </div>
           <p class="text-slate-300 text-sm mt-1">

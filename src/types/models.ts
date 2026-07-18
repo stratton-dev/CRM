@@ -148,6 +148,13 @@ export interface Client {
     contractEndDate?: string
     decisionMaker?: string
     notes?: string
+    // Pola kwalifikacyjne ARP (rozmowa 15 min) — zapisywane w analysis_json.
+    arpEmployeesUop?: number | null
+    arpEmployeesUz?: number | null
+    arpGoal?: string
+    arpWageStructure?: string
+    arpBiggestChallenge?: string
+    arpQualified?: boolean
   }
 }
 
