@@ -15,9 +15,14 @@
 return [
     'webhook_secret' => env('EBS_WEBHOOK_SECRET', ''),
 
-    // URL do EBS (gdy CRM ma sam pull-ować dane, na razie nie używane).
-    'base_url' => env('EBS_BASE_URL', ''),
-    'api_key' => env('EBS_API_KEY', ''),
+    // Outbound CRM → EBS (kierunek A: SIGNED → utwórz klienta w EBS).
+    // Integracja jest AKTYWNA tylko gdy base_url ORAZ api_key są ustawione
+    // (patrz App\Services\Ebs\EbsClient::enabled()). Puste = no-op (bezpieczne).
+    'base_url' => env('EBS_BASE_URL', ''),           // np. https://ebs-wersja-natywna.vercel.app
+    'api_key'  => env('EBS_API_KEY', ''),            // = INTERNAL_API_KEY po stronie EBS
+    // Ścieżka endpointu EBS przyjmującego push klienta z CRM (Bearer api_key).
+    'companies_sync_path' => env('EBS_COMPANIES_SYNC_PATH', '/api/integrations/crm/companies'),
+    'timeout' => (int) env('EBS_HTTP_TIMEOUT', 10),
 
     // Lokalizacja kodu EBS (uzupełnij gdy będziesz robił integrację).
     'project_path' => env('EBS_PROJECT_PATH', ''),

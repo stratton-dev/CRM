@@ -96,6 +96,17 @@ class CrmClientProfilesController extends Controller
             ]);
         }
 
+        // Kierunek A: przejście na SIGNED → wypchnij klienta do EBS.
+        // Gated: dispatch tylko gdy integracja skonfigurowana (EbsClient::enabled()).
+        // Job jest idempotentny i sam no-opuje, gdy wyłączona — check tutaj tylko
+        // po to, żeby nie zaśmiecać kolejki, gdy integracji nie ma.
+        if (
+            isset($data['status']) && $data['status'] === 'SIGNED' && $oldStatus !== 'SIGNED'
+            && app(\App\Services\Ebs\EbsClient::class)->enabled()
+        ) {
+            \App\Jobs\PushClientToEbsJob::dispatch((int) $crmClientProfile->client_id);
+        }
+
         return $crmClientProfile;
     }
 
